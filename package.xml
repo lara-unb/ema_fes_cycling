@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package>
+  <name>ema_fes_cycling</name>
+  <version>0.1.0</version>
+  <description>The ema_fes_cycling package</description>
+
+  <maintainer email="georgebrindeiro@lara.unb.br">George Brindeiro</maintainer>
+
+  <!-- One license tag required, multiple allowed, one license per tag -->
+  <!-- Commonly used license strings: -->
+  <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
+  <license>TODO</license>
+
+  <url type="website">https://github.com/lara-unb/ema_fes_cycling</url>
+
+  <author email="lucasfonseca27@gmail.com">Lucas Fonseca</author>
+  <author email="stephany0303@hotmail.com">Stephany Ribeiro</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>ema_common_msgs</build_depend>
+  <run_depend>roscpp</run_depend>
+  <run_depend>rospy</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <build_depend>ema_common_msgs</build_depend>
+
+</package>

@@ -1,0 +1,19 @@
+<launch>
+  <group ns="ema_trike">
+    <!-- load config files-->
+    <rosparam command="load" file="$(find ema_trike)/config/trike.yaml" ns="config" />
+    <rosparam command="load" file="$(find ema_trike)/config/imu.yaml" ns="imu" />
+    <rosparam command="load" file="$(find ema_trike)/config/stimulator.yaml" ns="stimulator" />
+    <rosparam command="load" file="$(find ema_trike)/config/control.yaml" ns="control" />
+
+    <!-- launch nodes -->
+    <node name="imu" pkg="ema_trike" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/>
+    <node name="stimulator" pkg="ema_trike" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/>
+    <node name="control" pkg="ema_trike" type="control_node.py" output="screen" respawn="true" respawn_delay="5"/>
+  </group>
+
+  <!-- launch utils -->
+  <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ema_trike)/config/rviz/imu.rviz" output="log" respawn="true" respawn_delay="5"/>
+  <node name="rqt_graph" pkg="rqt_graph" type="rqt_graph" output="log" respawn="true" respawn_delay="5"/>
+  <node name="rqt_plot" pkg="rqt_plot" type="rqt_plot" output="log" respawn="true" respawn_delay="5"/> -->
+</launch>

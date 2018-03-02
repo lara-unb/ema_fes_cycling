@@ -1,0 +1,6 @@
+# Variables
+xRange: 500
+
+# Addresses
+addressRemoteControl: 2
+addressPedal: 3
