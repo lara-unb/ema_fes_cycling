@@ -1,0 +1,17 @@
+## Stimulator config
+#
+# port:           port address for stimulator
+# channel_stim:   list of active channels
+# channel_lf:     list of low freq channels (NOTE: values must be in channel_stim)
+# n_factor:       number of skipped periods in low freq channels (0-7)
+# freq:           main stimulation frequency in Hz (NOTE: this overrides ts1)
+# ts1:            main stimulation period in ms (1-1024.5 ms in 0.5 steps)
+# ts2:            inter-pulse time in ms (1.5-17 ms in 0.5 steps)
+
+port: /dev/ttyUSB0
+channel_stim: [1, 2]
+channel_lf: []
+n_factor: 0
+freq: 50
+#ts1: 15
+ts2: 5

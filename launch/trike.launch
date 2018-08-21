@@ -9,7 +9,8 @@
     <!-- launch nodes -->
     <node name="imu" pkg="ema_trike" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/>
     <node name="stimulator" pkg="ema_trike" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/>
-    <node name="control" pkg="ema_trike" type="control_node.py" output="screen" respawn="true" respawn_delay="5"/>
+    <node name="control" pkg="ema_fes_cycling" type="control_node.py" output="screen" respawn="true" respawn_delay="5"/>
+    <node name="ema_fes_cycling" pkg="ema_fes_cycling" type="server.py" output="screen" respawn="true" respawn_delay="5"/>
   </group>
 
   <!-- launch utils -->

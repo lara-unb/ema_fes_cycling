@@ -9,8 +9,11 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   ema_common_msgs
+  dynamic_reconfigure
 )
-
+generate_dynamic_reconfigure_options(
+  cfg/Tutorials.cfg
+)
 ###################################
 ## catkin specific configuration ##
 ###################################
