@@ -17,16 +17,16 @@
 autocalibrate: true
 
 ## 1 Wired streaming test ##
- dev_names: ['pedal']
- dev_type: {'pedal': 'WL'}
- imu_mode: {'pedal': 'wired'}
- broadcast: false
- streaming: true
- streaming_interval: 0
- streaming_duration: 'unlimited'
- streaming_delay: 0
- streaming_slots: {'pedal': ['getTaredOrientationAsQuaternion', 'getNormalizedGyroRate', 'getButtonState']}
- wired_port: {'pedal': '/dev/ttyACM0'}
+dev_names: ['pedal']
+dev_type: {'pedal': 'WL'}
+imu_mode: {'pedal': 'wired'}
+broadcast: false
+streaming: true
+streaming_interval: 0
+streaming_duration: 'unlimited'
+streaming_delay: 0
+streaming_slots: {'pedal': ['getTaredOrientationAsQuaternion', 'getNormalizedGyroRate', 'getButtonState']}
+wired_port: {'pedal': '/dev/ttyACM0'}
 
 ## 2 Wired streaming test ##
 # dev_names: ['pedal', 'remote']

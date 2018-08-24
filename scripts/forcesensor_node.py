@@ -12,7 +12,7 @@ def main():
     rospy.init_node('forcesensor', anonymous=False)
 
     # get forcesensor config
-    forcesensor_manager = forcesensor.ForceSensor(rospy.get_param('/ema_trike/forcesensor'))
+    forcesensor_manager = forcesensor.ForceSensor(rospy.get_param('/ema_fes_cycling/forcesensor'))
 
     # list published topics
     pub = {}

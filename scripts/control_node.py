@@ -87,7 +87,7 @@ def main():
     controller = control.Control(rospy.init_node('control', anonymous=False))
 
     # get control config
-    config_dict = rospy.get_param('/ema_trike/control')
+    config_dict = rospy.get_param('/ema_fes_cycling/control')
 
     # list subscribed topics
     sub = {}
