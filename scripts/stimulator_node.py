@@ -45,7 +45,7 @@ def main():
     rospy.init_node('stimulator', anonymous=False)
 
     # get stimulator config
-    stim_manager = stimulator.Stimulator(rospy.get_param('/ema_trike/stimulator'))
+    stim_manager = stimulator.Stimulator(rospy.get_param('/ema_fes_cycling/stimulator'))
 
     # list subscribed topics
     sub_ccl = rospy.Subscriber('stimulator/ccl_update', Stimulator, callback = callback, callback_args = 'ccl_update')
