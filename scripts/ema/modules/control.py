@@ -9,8 +9,8 @@ class Control:
         
     def fx(self, id, angle, speed, speed_ref):
         
-	theta = rospy.get_param('/ema_fes_cycling/')    	
-	rospy.loginfo("min %d %s",theta["angle_"+id+"_min"],id)
+    	theta = rospy.get_param('/ema_fes_cycling/')    	
+    	rospy.loginfo("min %d %s",theta["angle_"+id+"_min"],id)
         rospy.loginfo("max %d %s",theta["angle_"+id+"_max"],id)
         dth = (speed/speed_ref)*theta['shift']
 	
@@ -35,6 +35,7 @@ class Control:
 
 
     def g(self, error):
+
         Kp = 1/float(5000)
         Ki = 1/float(100000)
         
@@ -57,6 +58,7 @@ class Control:
         return signal
             
     def calculate(self, angle, speed, speed_ref, speed_err):
+        
         pw_max = 500
 
         fx_left = self.fx('left', angle, speed, speed_ref)

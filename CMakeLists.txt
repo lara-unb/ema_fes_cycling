@@ -12,7 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   dynamic_reconfigure
 )
 generate_dynamic_reconfigure_options(
-  cfg/Tutorials.cfg
+  cfg/DynamicParams.cfg
 )
 ###################################
 ## catkin specific configuration ##

@@ -83,16 +83,17 @@ def remote_callback(data):
 
 def main():
     global stimMsg
+
     # init control node
     controller = control.Control(rospy.init_node('control', anonymous=False))
 
     # get control config
-    config_dict = rospy.get_param('/ema_fes_cycling/control')
+    config_dict = rospy.get_param('/ema/control')
 
     # list subscribed topics
     sub = {}
     sub['pedal'] = rospy.Subscriber('imu/pedal', Imu, callback = pedal_callback)
-    sub['remote'] = rospy.Subscriber('imu/remote_buttons', Int8, callback = remote_callback)
+    # sub['remote'] = rospy.Subscriber('imu/remote_buttons', Int8, callback = remote_callback)
     
     # list published topics
     pub = {}
@@ -119,28 +120,28 @@ def main():
     while not rospy.is_shutdown():
         # calculate control signal
        
-	if on_off == True:
-        	pwl, pwr = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
-        	
-	else:
-        	pwl, pwr = [0, 0]
-        
-        # send stimulator update
-        stimMsg.pulse_width = [pwl, pwr]
-        pub['control'].publish(stimMsg)
-        
+    	if on_off == True:
+            	pwl, pwr = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
+            	
+    	else:
+            pwl, pwr = [0, 0]
+            
+            # send stimulator update
+            stimMsg.pulse_width = [pwl, pwr]
+            pub['control'].publish(stimMsg)
+            
 
-        # send angle update
-        angleMsg.data = angle[-1]
-        pub['angle'].publish(angleMsg)
-        
-        # send speed update
-        speedMsg.data = speed[-1]
-        pub['speed'].publish(speedMsg)
-        
-        # store control signal for plotting
-        pw_left.append(pwl)
-        pw_right.append(pwr)
+            # send angle update
+            angleMsg.data = angle[-1]
+            pub['angle'].publish(angleMsg)
+            
+            # send speed update
+            speedMsg.data = speed[-1]
+            pub['speed'].publish(speedMsg)
+            
+            # store control signal for plotting
+            pw_left.append(pwl)
+            pw_right.append(pwr)
 
         # wait for next control loop
         rate.sleep()
