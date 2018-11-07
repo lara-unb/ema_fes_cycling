@@ -119,8 +119,10 @@ def main():
     # node loop
     while not rospy.is_shutdown():
         # calculate control signal
-       
-    	if on_off == True:
+        # theta = rospy.get_param('/ema_fes_cycling/')      
+        # rospy.loginfo("min %d %s",theta["angle_"+id+"_min"],id)
+        # rospy.loginfo("max %d %s",theta["angle_"+id+"_max"],id)
+        if on_off == True:
             	pwl, pwr = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
             	
     	else:

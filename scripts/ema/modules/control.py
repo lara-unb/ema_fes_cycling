@@ -1,23 +1,32 @@
 #!/usr/bin/env python
 
-import rospy
+theta = {
+    'left': {'min': 300, 'max': 40},
+    'right': {'min': 120, 'max': 220},
+    'shift': 35
+}
+
+
+
+# import rospy
 
 class Control:
 
     def __init__(self, config_dict):
-	self.config_dict = config_dict
+    	self.config_dict = config_dict
         
     def fx(self, id, angle, speed, speed_ref):
         
-    	theta = rospy.get_param('/ema_fes_cycling/')    	
-    	rospy.loginfo("min %d %s",theta["angle_"+id+"_min"],id)
-        rospy.loginfo("max %d %s",theta["angle_"+id+"_max"],id)
+    	# theta = rospy.get_param('/ema_fes_cycling/')    	
+    	# rospy.loginfo("min %d %s",theta["angle_"+id+"_min"],id)
+        # rospy.loginfo("max %d %s",theta["angle_"+id+"_max"],id)
         dth = (speed/speed_ref)*theta['shift']
 	
 
-        theta_min = theta["angle_"+id+"_min"] - dth
-        theta_max = theta["angle_"+id+"_max"] - dth
-    
+        # theta_min = theta["angle_"+id+"_min"] - dth
+        # theta_max = theta["angle_"+id+"_max"] - dth
+        theta_min = theta[id]['min'] - dth
+        theta_max = theta[id]['max'] - dth
 
         # check if angle in range (theta_min, theta_max)
         if theta_min <= angle and angle <= theta_max:
@@ -58,9 +67,8 @@ class Control:
         return signal
             
     def calculate(self, angle, speed, speed_ref, speed_err):
-        
         pw_max = 500
-
+        
         fx_left = self.fx('left', angle, speed, speed_ref)
         fx_right = self.fx('right', angle, speed, speed_ref)
         
