@@ -25,20 +25,32 @@ class Control:
 
         # theta_min = theta["angle_"+id+"_min"] - dth
         # theta_max = theta["angle_"+id+"_max"] - dth
+
+        # # check if angle in range (theta_min, theta_max)
+        # if theta_min <= angle and angle <= theta_max:
+        #     return 1
+        # elif theta["angle_"+id+"_min"] > ["angle_"+id+"_max"]:
+        #     if angle <= theta_min and angle <= theta_max:
+        #         if theta_min <= angle + 360 and angle <= theta_max:
+        #             return 1
+        #     elif angle >= theta_min and angle >= theta_max:
+        #         if theta_min <= angle and angle <= theta_max + 360:
+        #             return 1
+        
         theta_min = theta[id]['min'] - dth
         theta_max = theta[id]['max'] - dth
 
         # check if angle in range (theta_min, theta_max)
         if theta_min <= angle and angle <= theta_max:
             return 1
-        elif theta["angle_"+id+"_min"] > ["angle_"+id+"_max"]:
+        elif theta[id]['min'] > theta[id]['max']:
             if angle <= theta_min and angle <= theta_max:
                 if theta_min <= angle + 360 and angle <= theta_max:
                     return 1
             elif angle >= theta_min and angle >= theta_max:
                 if theta_min <= angle and angle <= theta_max + 360:
                     return 1
-                    
+
         # return 0 otherwise
         return 0
 
@@ -67,17 +79,23 @@ class Control:
         return signal
             
     def calculate(self, angle, speed, speed_ref, speed_err):
-        pw_max = 500
+        current_max = 80
         
         fx_left = self.fx('left', angle, speed, speed_ref)
         fx_right = self.fx('right', angle, speed, speed_ref)
         
-        g = self.g(speed_err)
+        # g = self.g(speed_err)
+
+        # pw_left = fx_left*g*pw_max
+        # pw_right = fx_right*g*pw_max
         
-        pw_left = fx_left*g*pw_max
-        pw_right = fx_right*g*pw_max
-        
+        g = 1  # for test purposes
+        bool_left = fx_left*g
+        bool_right = fx_right*g
+
         # print g, pw_left, pw_right
         # print [round(x) for x in speed_err[-10:]]
         
-        return pw_left, pw_right
+        # return pw_left, pw_right
+
+        return bool_left, bool_right

@@ -108,7 +108,7 @@ def main():
     stimMsg = Stimulator()
     stimMsg.channel = [1, 2]
     stimMsg.mode = ['single', 'single']
-    stimMsg.pulse_current = [18, 18]
+    stimMsg.pulse_width = [500, 500]
     
     # build basic angle message
     angleMsg = Float64()
@@ -122,28 +122,36 @@ def main():
         # theta = rospy.get_param('/ema_fes_cycling/')      
         # rospy.loginfo("min %d %s",theta["angle_"+id+"_min"],id)
         # rospy.loginfo("max %d %s",theta["angle_"+id+"_max"],id)
-        if on_off == True:
-            	pwl, pwr = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
-            	
-    	else:
-            pwl, pwr = [0, 0]
-            
-            # send stimulator update
-            stimMsg.pulse_width = [pwl, pwr]
-            pub['control'].publish(stimMsg)
-            
 
-            # send angle update
-            angleMsg.data = angle[-1]
-            pub['angle'].publish(angleMsg)
-            
-            # send speed update
-            speedMsg.data = speed[-1]
-            pub['speed'].publish(speedMsg)
-            
-            # store control signal for plotting
-            pw_left.append(pwl)
-            pw_right.append(pwr)
+     #    if on_off == True:
+     #        	pwl, pwr = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
+    	# else:
+     #        pwl, pwr = [0, 0]
+
+
+        # parameters update
+        bool_left, bool_right = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
+        dyn_params = rospy.get_param('/ema_fes_cycling/')
+        stimMsg.pulse_current = [bool_left*dyn_params['current_left'], bool_right*dyn_params['current_right']]
+
+
+
+        # send stimulator update
+        # stimMsg.pulse_width = [pwl, pwr]
+        pub['control'].publish(stimMsg)
+        
+
+        # send angle update
+        angleMsg.data = angle[-1]
+        pub['angle'].publish(angleMsg)
+        
+        # send speed update
+        speedMsg.data = speed[-1]
+        pub['speed'].publish(speedMsg)
+        
+        # store control signal for plotting
+        # pw_left.append(pwl)
+        # pw_right.append(pwr)
 
         # wait for next control loop
         rate.sleep()
