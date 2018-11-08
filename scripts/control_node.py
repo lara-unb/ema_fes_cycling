@@ -32,9 +32,6 @@ time = [0,0]
 pw_left = [0,0]
 pw_right = [0,0]
 
-Got the IMU working
-Modified in get_param for some objects, changed in quaternion decomposition and added current to dynamic server
-
 def pedal_callback(data):
     # get timestamp
     time.append(data.header.stamp)
