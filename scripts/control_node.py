@@ -32,18 +32,34 @@ time = [0,0]
 pw_left = [0,0]
 pw_right = [0,0]
 
+Got the IMU working
+Modified in get_param for some objects, changed in quaternion decomposition and added current to dynamic server
+
 def pedal_callback(data):
     # get timestamp
     time.append(data.header.stamp)
 
     # get angle position
     qx,qy,qz,qw = data.orientation.x,data.orientation.y,data.orientation.z,data.orientation.w
-    euler = transformations.euler_from_quaternion([qx, qy, qz, qw], axes='syxz')
-    if euler[0] >= 0:
-        angle.append(euler[0]*(180/pi))
+    euler = transformations.euler_from_quaternion([qx, qy, qz, qw], axes='rzyx')
+
+    x = euler[2]
+    y = euler[1]
+
+    # correct issues with more than one axis rotating
+    if y >= 0:
+        y = (y/pi) * 180
+        if abs(x) > (pi*0.5):
+            y = 180-y            
     else:
-        angle.append(360+euler[0]*(180/pi))
-        
+        y = (y/pi) * 180
+        if abs(x) > (pi*0.5):
+            y = 180 - y
+        else:
+            y = 360 + y
+
+    angle.append(y)
+
     # get angular speed
     speed.append(data.angular_velocity.y*(180/pi))
 
@@ -131,7 +147,7 @@ def main():
 
         # parameters update
         bool_left, bool_right = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
-        dyn_params = rospy.get_param('/ema_fes_cycling/')
+        dyn_params = rospy.get_param('/ema/server/')
         stimMsg.pulse_current = [bool_left*dyn_params['current_left'], bool_right*dyn_params['current_right']]
 
 
