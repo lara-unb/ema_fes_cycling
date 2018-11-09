@@ -2,6 +2,7 @@
 
 import rospy
 import ema.modules.control as control
+import dynamic_reconfigure.client as reconfig
 
 # import ros msgs
 from sensor_msgs.msg import Imu
@@ -23,6 +24,14 @@ global time
 global pw_left
 global pw_right
 
+global left_current
+global right_current
+global update_values
+
+left_current = 0
+right_current = 0
+update_values = False
+
 on_off = False
 angle = [0,0]
 speed = [0,0]
@@ -31,6 +40,27 @@ speed_err = [0,0]
 time = [0,0]
 pw_left = [0,0]
 pw_right = [0,0]
+
+def server_callback(config):
+    global left_current
+    global right_current
+    global update_values
+    update_values = True
+
+    # print('Server callback', config['current_left'], config['current_right'], left_current, right_current)
+
+    if config['current_left'] - left_current > 2:
+        left_current += 2
+    else:
+        left_current = config['current_left']
+
+
+    if config['current_right'] - right_current > 2:
+        right_current += 2
+    else:
+        right_current = config['current_right']
+
+    # print('End server callback', config['current_left'], config['current_right'], left_current, right_current)
 
 def pedal_callback(data):
     # get timestamp
@@ -96,9 +126,13 @@ def remote_callback(data):
 
 def main():
     global stimMsg
+    global update_values
 
     # init control node
     controller = control.Control(rospy.init_node('control', anonymous=False))
+
+    # communicate with the dynamic server
+    dyn_params = reconfig.Client('server', config_callback = server_callback)
 
     # get control config
     config_dict = rospy.get_param('/ema/control')
@@ -141,13 +175,14 @@ def main():
     	# else:
      #        pwl, pwr = [0, 0]
 
-
         # parameters update
+        if update_values is True:
+            params = { 'current_left' : left_current, 'current_right' : right_current }
+            dyn_params.update_configuration(params)
+            update_values = False
+
         bool_left, bool_right = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
-        dyn_params = rospy.get_param('/ema/server/')
-        stimMsg.pulse_current = [bool_left*dyn_params['current_left'], bool_right*dyn_params['current_right']]
-
-
+        stimMsg.pulse_current = [bool_left*left_current, bool_right*right_current]
 
         # send stimulator update
         # stimMsg.pulse_width = [pwl, pwr]
