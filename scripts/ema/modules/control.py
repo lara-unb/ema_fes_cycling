@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
-theta = {
-    'left': {'min': 300, 'max': 40},
-    'right': {'min': 120, 'max': 220},
-    'shift': 35
-}
+# theta = {
+#     'left': {'min': 300, 'max': 40},
+#     'right': {'min': 120, 'max': 220},
+#     'shift': 35
+# }
 
 
 
-# import rospy
+import rospy
 
 class Control:
 
@@ -17,39 +17,38 @@ class Control:
         
     def fx(self, id, angle, speed, speed_ref):
         
-    	# theta = rospy.get_param('/ema_fes_cycling/')    	
-    	# rospy.loginfo("min %d %s",theta["angle_"+id+"_min"],id)
-        # rospy.loginfo("max %d %s",theta["angle_"+id+"_max"],id)
+    	theta = rospy.get_param('/ema/server/')
         dth = (speed/speed_ref)*theta['shift']
-	
 
-        # theta_min = theta["angle_"+id+"_min"] - dth
-        # theta_max = theta["angle_"+id+"_max"] - dth
-
-        # # check if angle in range (theta_min, theta_max)
-        # if theta_min <= angle and angle <= theta_max:
-        #     return 1
-        # elif theta["angle_"+id+"_min"] > ["angle_"+id+"_max"]:
-        #     if angle <= theta_min and angle <= theta_max:
-        #         if theta_min <= angle + 360 and angle <= theta_max:
-        #             return 1
-        #     elif angle >= theta_min and angle >= theta_max:
-        #         if theta_min <= angle and angle <= theta_max + 360:
-        #             return 1
-        
-        theta_min = theta[id]['min'] - dth
-        theta_max = theta[id]['max'] - dth
+        theta_min = theta["angle_"+id+"_min"] - dth
+        theta_max = theta["angle_"+id+"_max"] - dth
 
         # check if angle in range (theta_min, theta_max)
         if theta_min <= angle and angle <= theta_max:
             return 1
-        elif theta[id]['min'] > theta[id]['max']:
+        elif theta["angle_"+id+"_min"] > theta["angle_"+id+"_max"]:
             if angle <= theta_min and angle <= theta_max:
                 if theta_min <= angle + 360 and angle <= theta_max:
                     return 1
             elif angle >= theta_min and angle >= theta_max:
                 if theta_min <= angle and angle <= theta_max + 360:
                     return 1
+   
+        # dth = (speed/speed_ref)*theta['shift']
+
+        # theta_min = theta[id]['min'] - dth
+        # theta_max = theta[id]['max'] - dth
+
+        # # check if angle in range (theta_min, theta_max)
+        # if theta_min <= angle and angle <= theta_max:
+        #     return 1
+        # elif theta[id]['min'] > theta[id]['max']:
+        #     if angle <= theta_min and angle <= theta_max:
+        #         if theta_min <= angle + 360 and angle <= theta_max:
+        #             return 1
+        #     elif angle >= theta_min and angle >= theta_max:
+        #         if theta_min <= angle and angle <= theta_max + 360:
+        #             return 1
 
         # return 0 otherwise
         return 0
@@ -79,7 +78,6 @@ class Control:
         return signal
             
     def calculate(self, angle, speed, speed_ref, speed_err):
-        current_max = 80
         
         fx_left = self.fx('left', angle, speed, speed_ref)
         fx_right = self.fx('right', angle, speed, speed_ref)
