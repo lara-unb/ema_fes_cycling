@@ -8,6 +8,7 @@ import dynamic_reconfigure.client as reconfig
 from sensor_msgs.msg import Imu
 from std_msgs.msg import Float64
 from std_msgs.msg import Int8
+from std_msgs.msg import Int32MultiArray
 from ema_common_msgs.msg import Stimulator
 
 # import utilities
@@ -94,7 +95,7 @@ def pedal_callback(data):
     speed_err.append(speed_ref - speed[-1])
 
     # print latest
-    #print time[-1], angle[-1], speed[-1], speed_err[-1]
+    # print time[-1], angle[-1], speed[-1], speed_err[-1]
 
 def remote_callback(data):
     global stimMsg
@@ -147,6 +148,7 @@ def main():
     pub['control'] = rospy.Publisher('stimulator/ccl_update', Stimulator, queue_size=10)
     pub['angle'] = rospy.Publisher('control/angle', Float64, queue_size=10)
     pub['speed'] = rospy.Publisher('control/speed', Float64, queue_size=10)
+    pub['signal'] = rospy.Publisher('control/stimsignal', Int32MultiArray, queue_size=10)
     
     # define loop rate (in hz)
     rate = rospy.Rate(50)
@@ -156,6 +158,7 @@ def main():
     stimMsg.channel = [1, 2]
     stimMsg.mode = ['single', 'single']
     stimMsg.pulse_width = [500, 500]
+    stimMsg.pulse_current = [0,0]
     
     # build basic angle message
     angleMsg = Float64()
@@ -163,17 +166,14 @@ def main():
     # build basic speed message
     speedMsg = Float64()
 
+    # build basic stimulator signal message for plotting purposes
+    signalMsg = Int32MultiArray()
+    signalMsg.data = []
+
+    progressive = [0,0]
+
     # node loop
     while not rospy.is_shutdown():
-        # calculate control signal
-        # theta = rospy.get_param('/ema_fes_cycling/')      
-        # rospy.loginfo("min %d %s",theta["angle_"+id+"_min"],id)
-        # rospy.loginfo("max %d %s",theta["angle_"+id+"_max"],id)
-
-     #    if on_off == True:
-     #        	pwl, pwr = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
-    	# else:
-     #        pwl, pwr = [0, 0]
 
         # parameters update
         if update_values is True:
@@ -181,14 +181,39 @@ def main():
             dyn_params.update_configuration(params)
             update_values = False
 
+        # calculate control signal
         bool_left, bool_right = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
-        stimMsg.pulse_current = [bool_left*left_current, bool_right*right_current]
+
+        # conditions for current progressive increment
+        if bool_left:
+            if 0 <= progressive[0] <= 1:
+                progressive[0] += 0.05
+                if progressive[0] > 1:
+                    progressive[0] = 1
+        else:
+            if 0 <= progressive[0] <= 1:
+                progressive[0] -= 0.05
+                if progressive[0] < 0:
+                    progressive[0] = 0
+
+        if bool_right:
+            if 0 <= progressive[1] <= 1:
+                progressive[1] += 0.05
+                if progressive[1] > 1:
+                    progressive[1] = 1
+        else:
+            if 0 <= progressive[1] <= 1:
+                progressive[1] -= 0.05
+                if progressive[1] < 0:
+                    progressive[1] = 0
+        # print(progressive)
+
+        stimMsg.pulse_current = [progressive[0]*left_current, progressive[1]*right_current]
+        # print(stimMsg.pulse_current)
 
         # send stimulator update
-        # stimMsg.pulse_width = [pwl, pwr]
         pub['control'].publish(stimMsg)
         
-
         # send angle update
         angleMsg.data = angle[-1]
         pub['angle'].publish(angleMsg)
@@ -196,10 +221,10 @@ def main():
         # send speed update
         speedMsg.data = speed[-1]
         pub['speed'].publish(speedMsg)
-        
-        # store control signal for plotting
-        # pw_left.append(pwl)
-        # pw_right.append(pwr)
+
+        # send signal update
+        signalMsg.data = [progressive[0]*left_current, progressive[1]*right_current]
+        pub['signal'].publish(signalMsg)
 
         # wait for next control loop
         rate.sleep()
