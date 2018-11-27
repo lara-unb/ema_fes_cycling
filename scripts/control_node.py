@@ -187,23 +187,23 @@ def main():
         # conditions for current progressive increment
         if bool_left:
             if 0 <= progressive[0] <= 1:
-                progressive[0] += 0.05
+                progressive[0] += 0.1
                 if progressive[0] > 1:
                     progressive[0] = 1
         else:
             if 0 <= progressive[0] <= 1:
-                progressive[0] -= 0.05
+                progressive[0] -= 0.1
                 if progressive[0] < 0:
                     progressive[0] = 0
 
         if bool_right:
             if 0 <= progressive[1] <= 1:
-                progressive[1] += 0.05
+                progressive[1] += 0.1
                 if progressive[1] > 1:
                     progressive[1] = 1
         else:
             if 0 <= progressive[1] <= 1:
-                progressive[1] -= 0.05
+                progressive[1] -= 0.1
                 if progressive[1] < 0:
                     progressive[1] = 0
         # print(progressive)
@@ -219,7 +219,10 @@ def main():
         pub['angle'].publish(angleMsg)
         
         # send speed update
-        speedMsg.data = speed[-1]
+        current_speed = (angle[-1] - angle[-2])*50
+        if current_speed < -1000:
+            current_speed = 0
+        speedMsg.data = current_speed
         pub['speed'].publish(speedMsg)
 
         # send signal update
