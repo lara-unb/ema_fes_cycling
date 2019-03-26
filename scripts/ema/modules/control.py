@@ -10,15 +10,15 @@ class Control:
     def fx(self, id, angle, speed, speed_ref):
         
     	theta = rospy.get_param('/ema/server/')
-        dth = (speed/speed_ref)*theta['shift']
+        dth = (speed/speed_ref)*theta['Shift']
 
-        theta_min = theta["angle_"+id+"_min"] - dth
-        theta_max = theta["angle_"+id+"_max"] - dth
+        theta_min = theta["Angle_"+id+"_Min"] - dth
+        theta_max = theta["Angle_"+id+"_Max"] - dth
 
         # check if angle in range (theta_min, theta_max)
         if theta_min <= angle and angle <= theta_max:
             return 1
-        elif theta["angle_"+id+"_min"] > theta["angle_"+id+"_max"]:
+        elif theta["Angle_"+id+"_Min"] > theta["Angle_"+id+"_Max"]:
             if angle <= theta_min and angle <= theta_max:
                 if theta_min <= angle + 360 and angle <= theta_max:
                     return 1
@@ -54,8 +54,8 @@ class Control:
             
     def calculate(self, angle, speed, speed_ref, speed_err):
         
-        fx_left = self.fx('left', angle, speed, speed_ref)
-        fx_right = self.fx('right', angle, speed, speed_ref)
+        fx_left = self.fx('Left', angle, speed, speed_ref)
+        fx_right = self.fx('Right', angle, speed, speed_ref)
         
         # g = self.g(speed_err)
         g = 1

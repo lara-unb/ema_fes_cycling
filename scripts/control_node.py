@@ -22,16 +22,12 @@ global speed
 global speed_ref
 global speed_err
 global time
-global pw_left
-global pw_right
 
 global left_current
 global right_current
-global update_values
 
 left_current = 0
 right_current = 0
-update_values = False
 
 on_off = False
 angle = [0,0]
@@ -39,29 +35,15 @@ speed = [0,0]
 speed_ref = 300
 speed_err = [0,0]
 time = [0,0]
-pw_left = [0,0]
-pw_right = [0,0]
 
 def server_callback(config):
     global left_current
     global right_current
-    global update_values
-    update_values = True
 
-    # print('Server callback', config['current_left'], config['current_right'], left_current, right_current)
-
-    if config['current_left'] - left_current > 2:
-        left_current += 2
-    else:
-        left_current = config['current_left']
-
-
-    if config['current_right'] - right_current > 2:
-        right_current += 2
-    else:
-        right_current = config['current_right']
-
-    # print('End server callback', config['current_left'], config['current_right'], left_current, right_current)
+    # assign updated server parameters to global vars 
+    # refer to the server node for constraints
+    left_current = config['Current_Left']
+    right_current = config['Current_Right']
 
 def pedal_callback(data):
     # get timestamp
@@ -127,7 +109,6 @@ def remote_callback(data):
 
 def main():
     global stimMsg
-    global update_values
 
     # init control node
     controller = control.Control(rospy.init_node('control', anonymous=False))
@@ -174,12 +155,6 @@ def main():
 
     # node loop
     while not rospy.is_shutdown():
-
-        # parameters update
-        if update_values is True:
-            params = { 'current_left' : left_current, 'current_right' : right_current }
-            dyn_params.update_configuration(params)
-            update_values = False
 
         # calculate control signal
         bool_left, bool_right = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
