@@ -23,18 +23,27 @@ global speed_ref
 global speed_err
 global time
 
-global left_current
-global right_current
-
-left_current = 0
-right_current = 0
-
 on_off = False
 angle = [0,0]
 speed = [0,0]
 speed_ref = 300
 speed_err = [0,0]
 time = [0,0]
+
+
+global stim_current
+global stim_pulse
+
+stim_current = {
+    'quad':    {'left': 0, 'right': 0},
+    'hams':    {'left': 0, 'right': 0},
+    'glut':    {'left': 0, 'right': 0}
+}
+stim_pulse = {
+    'quad':    {'left': 500, 'right': 500},
+    'hams':    {'left': 500, 'right': 500},
+    'glut':    {'left': 500, 'right': 500}
+}
 
 # Apply a progressive change to the stimulation current
 def current_ramp(bool_left, bool_right):
@@ -68,13 +77,19 @@ def current_ramp(bool_left, bool_right):
     return progressive
 
 def server_callback(config):
-    global left_current
-    global right_current
+    global stim_current
+    prefix = {'quad':'Q_', 'hams':'H_', 'glut':'G_'}
 
     # assign updated server parameters to global vars 
     # refer to the server node for constraints
-    left_current = config['Current_Left']
-    right_current = config['Current_Right']
+    for m, p in prefix.items():
+
+        if config[p+'Enable']:
+            stim_current[m]['left'] = config[p + 'Current_Left']
+            stim_current[m]['right'] = config[p + 'Current_Right']
+        else:
+            stim_current[m]['left'] = 0
+            stim_current[m]['right'] = 0
 
 def pedal_callback(data):
     # get timestamp
@@ -140,6 +155,8 @@ def remote_callback(data):
 
 def main():
     global stimMsg
+    global stim_current
+    global stim_pulse
 
     # communicate with the dynamic server
     dyn_params = reconfig.Client('server', config_callback = server_callback)
@@ -162,16 +179,6 @@ def main():
     pub['speed'] = rospy.Publisher('control/speed', Float64, queue_size=10)
     pub['signal'] = rospy.Publisher('control/stimsignal', Int32MultiArray, queue_size=10)
     
-    # define loop rate (in hz)
-    rate = rospy.Rate(50)
-    
-    # build basic stimulator message
-    stimMsg = Stimulator()
-    stimMsg.channel = [1, 2]
-    stimMsg.mode = ['single', 'single']
-    stimMsg.pulse_width = [500, 500]
-    stimMsg.pulse_current = [0,0]
-    
     # build basic angle message
     angleMsg = Float64()
     
@@ -181,6 +188,16 @@ def main():
     # build basic stimulator signal message for plotting purposes
     signalMsg = Int32MultiArray()
     # signalMsg.data = []
+
+    # build basic stimulator message
+    stimMsg = Stimulator()
+    stimMsg.channel = [1,2,3,4,5,6]
+    stimMsg.mode = 6*['single']
+    stimMsg.pulse_width = 6*[500]
+    stimMsg.pulse_current = 6*[0]
+
+    # define loop rate (in hz)
+    rate = rospy.Rate(50)
 
     # node loop
     while not rospy.is_shutdown():

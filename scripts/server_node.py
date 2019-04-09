@@ -43,10 +43,12 @@ def callback(config, level):
 
         ########### CHANNEL CHECK ###########
         #####################################
-        if config[p + 'Enable']:
+        if config[p+'Enable']:
             config['groups']['groups'][m]['state'] = True
         else:
             config['groups']['groups'][m]['state'] = False
+            config[p+'Current_Left'] = 2
+            config[p+'Current_Right'] = 2
 
         ########### CURRENT CHECK ###########
         #####################################
