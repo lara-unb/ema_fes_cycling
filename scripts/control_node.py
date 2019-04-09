@@ -36,6 +36,37 @@ speed_ref = 300
 speed_err = [0,0]
 time = [0,0]
 
+# Apply a progressive change to the stimulation current
+def current_ramp(bool_left, bool_right):
+    global left_current
+    global right_current
+    progressive = [0,0]
+
+    # conditions for current progressive increment
+    if bool_left:
+        if 0 <= progressive[0] <= 1:
+            progressive[0] += 0.1
+            if progressive[0] > 1:
+                progressive[0] = 1
+    else:
+        if 0 <= progressive[0] <= 1:
+            progressive[0] -= 0.1
+            if progressive[0] < 0:
+                progressive[0] = 0
+
+    if bool_right:
+        if 0 <= progressive[1] <= 1:
+            progressive[1] += 0.1
+            if progressive[1] > 1:
+                progressive[1] = 1
+    else:
+        if 0 <= progressive[1] <= 1:
+            progressive[1] -= 0.1
+            if progressive[1] < 0:
+                progressive[1] = 0
+    # print(progressive)
+    return progressive
+
 def server_callback(config):
     global left_current
     global right_current
@@ -110,14 +141,14 @@ def remote_callback(data):
 def main():
     global stimMsg
 
-    # init control node
-    controller = control.Control(rospy.init_node('control', anonymous=False))
-
     # communicate with the dynamic server
     dyn_params = reconfig.Client('server', config_callback = server_callback)
-
+    
+    # init control node
+    rospy.init_node('control', anonymous=False)
+    
     # get control config
-    config_dict = rospy.get_param('/ema/control')
+    controller = control.Control(rospy.get_param('/ema/control'))
 
     # list subscribed topics
     sub = {}
@@ -149,41 +180,17 @@ def main():
 
     # build basic stimulator signal message for plotting purposes
     signalMsg = Int32MultiArray()
-    signalMsg.data = []
-
-    progressive = [0,0]
+    # signalMsg.data = []
 
     # node loop
     while not rospy.is_shutdown():
 
-        # calculate control signal
+        # calculate control signal based on sensor angle
         bool_left, bool_right = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
 
-        # conditions for current progressive increment
-        if bool_left:
-            if 0 <= progressive[0] <= 1:
-                progressive[0] += 0.1
-                if progressive[0] > 1:
-                    progressive[0] = 1
-        else:
-            if 0 <= progressive[0] <= 1:
-                progressive[0] -= 0.1
-                if progressive[0] < 0:
-                    progressive[0] = 0
+        left_current, right_current = current_ramp(bool_left, bool_right)
 
-        if bool_right:
-            if 0 <= progressive[1] <= 1:
-                progressive[1] += 0.1
-                if progressive[1] > 1:
-                    progressive[1] = 1
-        else:
-            if 0 <= progressive[1] <= 1:
-                progressive[1] -= 0.1
-                if progressive[1] < 0:
-                    progressive[1] = 0
-        # print(progressive)
-
-        stimMsg.pulse_current = [progressive[0]*left_current, progressive[1]*right_current]
+        stimMsg.pulse_current = [left_current, right_current]
         # print(stimMsg.pulse_current)
 
         # send stimulator update
@@ -201,7 +208,7 @@ def main():
         pub['speed'].publish(speedMsg)
 
         # send signal update
-        signalMsg.data = [progressive[0]*left_current, progressive[1]*right_current]
+        signalMsg.data = [left_current, right_current]
         pub['signal'].publish(signalMsg)
 
         # wait for next control loop

@@ -6,29 +6,31 @@ class Control:
 
     def __init__(self, config_dict):
     	self.config_dict = config_dict
-        
+    
+    # to stimulate or not based on sensor's angle 
     def fx(self, id, angle, speed, speed_ref):
         
-    	theta = rospy.get_param('/ema/server/')
-        dth = (speed/speed_ref)*theta['Shift']
+    	param = rospy.get_param('/ema/server/')
+        dth = (speed/speed_ref)*param['Shift']
 
-        theta_min = theta["Angle_"+id+"_Min"] - dth
-        theta_max = theta["Angle_"+id+"_Max"] - dth
+        param_min = param["Angle_"+id+"_Min"] - dth
+        param_max = param["Angle_"+id+"_Max"] - dth
 
-        # check if angle in range (theta_min, theta_max)
-        if theta_min <= angle and angle <= theta_max:
+        # check if angle in range (param_min, param_max)
+        if param_min <= angle and angle <= param_max:
             return 1
-        elif theta["Angle_"+id+"_Min"] > theta["Angle_"+id+"_Max"]:
-            if angle <= theta_min and angle <= theta_max:
-                if theta_min <= angle + 360 and angle <= theta_max:
+        elif param["Angle_"+id+"_Min"] > param["Angle_"+id+"_Max"]:
+            if angle <= param_min and angle <= param_max:
+                if param_min <= angle + 360 and angle <= param_max:
                     return 1
-            elif angle >= theta_min and angle >= theta_max:
-                if theta_min <= angle and angle <= theta_max + 360:
+            elif angle >= param_min and angle >= param_max:
+                if param_min <= angle and angle <= param_max + 360:
                     return 1
 
         # return 0 otherwise
         return 0
 
+    # control coefficient routine
     def g(self, error):
 
         Kp = 1/float(5000)
@@ -51,7 +53,8 @@ class Control:
             error[-1] = 0
         
         return signal
-            
+    
+    # control applied to stimulation signal
     def calculate(self, angle, speed, speed_ref, speed_err):
         
         fx_left = self.fx('Left', angle, speed, speed_ref)
