@@ -2,33 +2,40 @@
 
 import rospy
 
+muscle_dict = {
+    'quad': 'Quadriceps_CH1/2',
+    'hams': 'Hamstrings_CH3/4',
+    'glut': 'Gluteal_CH5/6'
+}
+
 class Control:
 
     def __init__(self, config_dict):
     	self.config_dict = config_dict
     
     # to stimulate or not based on sensor's angle 
-    def fx(self, id, angle, speed, speed_ref):
+    def fx(self, m, side, angle, speed, speed_ref):
         
-    	# param = rospy.get_param('/ema/server/')
-     #    dth = (speed/speed_ref)*param['Shift']
+        muscle = muscle_dict[m][0]
+    	param = rospy.get_param('/ema/server/')
+        dth = (speed/speed_ref)*param['Shift']
 
-     #    param_min = param["Angle_"+id+"_Min"] - dth
-     #    param_max = param["Angle_"+id+"_Max"] - dth
+        begin = param[muscle+"Angle_"+side+"_Min"] - dth
+        end = param[muscle+"Angle_"+side+"_Max"] - dth
 
-     #    # check if angle in range (param_min, param_max)
-     #    if param_min <= angle and angle <= param_max:
-     #        return 1
-     #    elif param["Angle_"+id+"_Min"] > param["Angle_"+id+"_Max"]:
-     #        if angle <= param_min and angle <= param_max:
-     #            if param_min <= angle + 360 and angle <= param_max:
-     #                return 1
-     #        elif angle >= param_min and angle >= param_max:
-     #            if param_min <= angle and angle <= param_max + 360:
-     #                return 1
+        # check if angle in range (begin, end)
+        if begin <= angle and angle <= end:
+            return 1
+        elif param[muscle+"Angle_"+side+"_Min"] > param[muscle+"Angle_"+side+"_Max"]:
+            if angle <= begin and angle <= end:
+                if begin <= angle + 360 and angle <= end:
+                    return 1
+            elif angle >= begin and angle >= end:
+                if begin <= angle and angle <= end + 360:
+                    return 1
 
-     #    # return 0 otherwise
-     #    return 0
+        # return 0 otherwise
+        return 0
 
     # control coefficient routine
     def g(self, error):
@@ -55,10 +62,10 @@ class Control:
         return signal
     
     # control applied to stimulation signal
-    def calculate(self, angle, speed, speed_ref, speed_err):
+    def calculate(self, muscle, angle, speed, speed_ref, speed_err):
         
-        fx_left = self.fx('Left', angle, speed, speed_ref)
-        fx_right = self.fx('Right', angle, speed, speed_ref)
+        fx_left = self.fx(muscle, 'Left', angle, speed, speed_ref)
+        fx_right = self.fx(muscle, 'Right', angle, speed, speed_ref)
         
         # g = self.g(speed_err)
         g = 1

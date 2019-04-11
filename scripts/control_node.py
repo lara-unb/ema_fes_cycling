@@ -35,20 +35,26 @@ global stim_current
 global stim_pulse
 
 stim_current = {
-    'quad':    {'left': 0, 'right': 0},
-    'hams':    {'left': 0, 'right': 0},
-    'glut':    {'left': 0, 'right': 0}
+    'quad': {'left': 0, 'right': 0},
+    'hams': {'left': 0, 'right': 0},
+    'glut': {'left': 0, 'right': 0}
 }
+
 stim_pulse = {
-    'quad':    {'left': 500, 'right': 500},
-    'hams':    {'left': 500, 'right': 500},
-    'glut':    {'left': 500, 'right': 500}
+    'quad': {'left': 0, 'right': 0},
+    'hams': {'left': 0, 'right': 0},
+    'glut': {'left': 0, 'right': 0}
+}
+
+muscle_dict = {
+    'quad': 'Quadriceps_CH1/2',
+    'hams': 'Hamstrings_CH3/4',
+    'glut': 'Gluteal_CH5/6'
 }
 
 # Apply a progressive change to the stimulation current
-def current_ramp(bool_left, bool_right):
-    global left_current
-    global right_current
+def current_ramp():
+    global stim_current
     progressive = [0,0]
 
     # conditions for current progressive increment
@@ -78,18 +84,22 @@ def current_ramp(bool_left, bool_right):
 
 def server_callback(config):
     global stim_current
-    prefix = {'quad':'Q_', 'hams':'H_', 'glut':'G_'}
+    global stim_pulse
 
     # assign updated server parameters to global vars 
     # refer to the server node for constraints
-    for m, p in prefix.items():
+    for m, p in muscle_dict.items():
 
-        if config[p+'Enable']:
-            stim_current[m]['left'] = config[p + 'Current_Left']
-            stim_current[m]['right'] = config[p + 'Current_Right']
+        if config[p[0]+'_'+'Enable']:
+            stim_current[m]['left']     = config[p[0]+'_'+'Current_Left']
+            stim_current[m]['right']    = config[p[0]+'_'+'Current_Right']
+            stim_pulse[m]['left']       = config[p[0]+'_'+'Pulse_Width_Left']
+            stim_pulse[m]['right']      = config[p[0]+'_'+'Pulse_Width_Right']
         else:
-            stim_current[m]['left'] = 0
+            stim_current[m]['left']  = 0
             stim_current[m]['right'] = 0
+            stim_pulse[m]['left']    = 0
+            stim_pulse[m]['right']   = 0
 
 def pedal_callback(data):
     # get timestamp
@@ -158,11 +168,24 @@ def main():
     global stim_current
     global stim_pulse
 
-    # communicate with the dynamic server
-    dyn_params = reconfig.Client('server', config_callback = server_callback)
-    
     # init control node
     rospy.init_node('control', anonymous=False)
+
+    # build basic stimulator message
+    stimMsg = Stimulator()
+    stimMsg.channel = list(range(1,9)) # all the 8 channels
+    stimMsg.mode = 8*['single'] # no doublets/triplets
+    stimMsg.pulse_width = 8*[0] # initialize w/ zeros
+    stimMsg.pulse_current = 8*[0] # initialize w/ zeros
+
+    # build basic angle/speed/signal message
+    angleMsg = Float64()
+    speedMsg = Float64()
+    signalMsg = Int32MultiArray() # visual stimulator signal
+    # signalMsg.data = []
+
+    # communicate with the dynamic server
+    dyn_params = reconfig.Client('server', config_callback = server_callback)
     
     # get control config
     controller = control.Control(rospy.get_param('/ema/control'))
@@ -178,32 +201,16 @@ def main():
     pub['angle'] = rospy.Publisher('control/angle', Float64, queue_size=10)
     pub['speed'] = rospy.Publisher('control/speed', Float64, queue_size=10)
     pub['signal'] = rospy.Publisher('control/stimsignal', Int32MultiArray, queue_size=10)
-    
-    # build basic angle message
-    angleMsg = Float64()
-    
-    # build basic speed message
-    speedMsg = Float64()
 
-    # build basic stimulator signal message for plotting purposes
-    signalMsg = Int32MultiArray()
-    # signalMsg.data = []
-
-    # build basic stimulator message
-    stimMsg = Stimulator()
-    stimMsg.channel = [1,2,3,4,5,6]
-    stimMsg.mode = 6*['single']
-    stimMsg.pulse_width = 6*[500]
-    stimMsg.pulse_current = 6*[0]
-
-    # define loop rate (in hz)
+    # define node loop rate (in hz)
     rate = rospy.Rate(50)
 
     # node loop
     while not rospy.is_shutdown():
 
         # calculate control signal based on sensor angle
-        bool_left, bool_right = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
+        for muscle, leg in stim_current:
+            leg['left'], leg['right'] = controller.calculate(muscle, angle[-1], speed[-1], speed_ref, speed_err)
 
         left_current, right_current = current_ramp(bool_left, bool_right)
 
