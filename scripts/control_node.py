@@ -23,13 +23,22 @@ global speed_ref
 global speed_err
 global time
 
+global left_current
+global right_current
+global left_pw
+global right_pw
+
+left_current = 0
+right_current = 0
+left_pw = 0
+right_pw = 0
+
 on_off = False
 angle = [0,0]
 speed = [0,0]
 speed_ref = 300
 speed_err = [0,0]
 time = [0,0]
-
 
 global stim_current
 global stim_pulse
@@ -83,8 +92,20 @@ def current_ramp():
     return progressive
 
 def server_callback(config):
+    global left_current
+    global right_current
+    global left_pw
+    global right_pw
+
     global stim_current
     global stim_pulse
+
+    # assign updated server parameters to global vars 
+    # refer to the server node for constraints
+    left_current = config['Q_Current_Left']
+    right_current = config['Q_Current_Right']
+    left_pw = config['Q_Pulse_Width_Left']
+    right_pw =  config['Q_Pulse_Width_Right'] 
 
     # assign updated server parameters to global vars 
     # refer to the server node for constraints
@@ -168,15 +189,20 @@ def main():
     global stim_current
     global stim_pulse
 
+    global left_current
+    global right_current
+    global left_pw
+    global right_pw
+
     # init control node
     rospy.init_node('control', anonymous=False)
 
     # build basic stimulator message
     stimMsg = Stimulator()
-    stimMsg.channel = list(range(1,9)) # all the 8 channels
-    stimMsg.mode = 8*['single'] # no doublets/triplets
-    stimMsg.pulse_width = 8*[0] # initialize w/ zeros
-    stimMsg.pulse_current = 8*[0] # initialize w/ zeros
+    stimMsg.channel = list(range(1,2+1)) # all the 8 channels
+    stimMsg.mode = 2*['single'] # no doublets/triplets
+    stimMsg.pulse_width = 2*[500] # initialize w/ zeros
+    stimMsg.pulse_current = 2*[0] # initialize w/ zeros
 
     # build basic angle/speed/signal message
     angleMsg = Float64()
@@ -205,16 +231,39 @@ def main():
     # define node loop rate (in hz)
     rate = rospy.Rate(50)
 
+    progressive = [0,0]
+
     # node loop
     while not rospy.is_shutdown():
 
-        # calculate control signal based on sensor angle
-        for muscle, leg in stim_current:
-            leg['left'], leg['right'] = controller.calculate(muscle, angle[-1], speed[-1], speed_ref, speed_err)
+        # calculate control signal
+        bool_left, bool_right = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
 
-        left_current, right_current = current_ramp(bool_left, bool_right)
+        # conditions for current progressive increment
+        if bool_left:
+            if 0 <= progressive[0] <= 1:
+                progressive[0] += 0.1
+                if progressive[0] > 1:
+                    progressive[0] = 1
+        else:
+            if 0 <= progressive[0] <= 1:
+                progressive[0] -= 0.1
+                if progressive[0] < 0:
+                    progressive[0] = 0
 
-        stimMsg.pulse_current = [left_current, right_current]
+        if bool_right:
+            if 0 <= progressive[1] <= 1:
+                progressive[1] += 0.1
+                if progressive[1] > 1:
+                    progressive[1] = 1
+        else:
+            if 0 <= progressive[1] <= 1:
+                progressive[1] -= 0.1
+                if progressive[1] < 0:
+                    progressive[1] = 0
+
+        stimMsg.pulse_current = [progressive[0]*left_current, progressive[1]*right_current]
+        stimMsg.pulse_width = [left_pw, right_pw]
         # print(stimMsg.pulse_current)
 
         # send stimulator update
@@ -232,7 +281,7 @@ def main():
         pub['speed'].publish(speedMsg)
 
         # send signal update
-        signalMsg.data = [left_current, right_current]
+        signalMsg.data = [progressive[0]*left_current, progressive[1]*right_current]
         pub['signal'].publish(signalMsg)
 
         # wait for next control loop

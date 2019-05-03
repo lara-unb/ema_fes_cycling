@@ -87,7 +87,7 @@ def callback(config, level):
         diffR = config[p[0]+'_'+'Current_Right'] - prev_config[p]['Current_Right']
 
         # prevents the user from abruptly increasing the current
-        elif diffR:
+        if diffR:
             if diffR > 2:
                 config[p[0]+'_'+'Current_Right'] = prev_config[p]['Current_Right'] + 2
                 prev_config[p]['Current_Right'] = config[p[0]+'_'+'Current_Right']
@@ -98,6 +98,33 @@ def callback(config, level):
                 config[p[0]+'_'+'Current_Left'] = config[p[0]+'_'+'Current_Right']
                 prev_config[p]['Current_Left']  = config[p[0]+'_'+'Current_Left']
 
+            return config # assumes only one change per callback
+
+
+        # check for changes in pulse width
+        diffL = config[p[0]+'_'+'Pulse_Width_Left']  - prev_config[p]['Pulse_Width_Left']
+
+        # prevents the user from abruptly increasing the current
+        if diffL:
+            prev_config[p]['Pulse_Width_Left'] = config[p[0]+'_'+'Pulse_Width_Left']
+            # modify left and right at the same time    
+            if config[p[0]+'_'+'Link_Current']:
+                config[p[0]+'_'+'Pulse_Width_Right'] = config[p[0]+'_'+'Pulse_Width_Left']
+                prev_config[p]['Pulse_Width_Right']  = config[p[0]+'_'+'Pulse_Width_Right']
+            
+            return config # assumes only one change per callback
+
+        # check for changes in pulse width
+        diffR = config[p[0]+'_'+'Pulse_Width_Right'] - prev_config[p]['Pulse_Width_Right']
+
+        # prevents the user from abruptly increasing the current
+        if diffR:
+            prev_config[p]['Pulse_Width_Right'] = config[p[0]+'_'+'Pulse_Width_Right']
+            # modify left and right at the same time    
+            if config[p[0]+'_'+'Link_Current']:
+                config[p[0]+'_'+'Pulse_Width_Left'] = config[p[0]+'_'+'Pulse_Width_Right']
+                prev_config[p]['Pulse_Width_Left']  = config[p[0]+'_'+'Pulse_Width_Left']
+            
             return config # assumes only one change per callback
 
         ############ ANGLE CHECK ############
@@ -114,15 +141,26 @@ def callback(config, level):
             # check for changes in angle
             diffLmax = config[p[0]+'_'+'Angle_Left_Max']  - prev_config[p]['Angle_Left_Max']
 
-            if diffLmin:
-                config[p[0]+'_'+'Angle_Right_Min'] += diffLmin # left n right legs linked
-                prev_config[p]['Angle_Right_Min'] = config[p[0]+'_'+'Angle_Right_Min']
-                prev_config[p]['Angle_Left_Min']  = config[p[0]+'_'+'Angle_Left_Min']
-                
+            if diffLmax:
+                config[p[0]+'_'+'Angle_Right_Max'] += diffLmax # left n right legs linked
+                prev_config[p]['Angle_Right_Max'] = config[p[0]+'_'+'Angle_Right_Max']
+                prev_config[p]['Angle_Left_Max']  = config[p[0]+'_'+'Angle_Left_Max']
+
+            # check for changes in angle
             diffRmin = config[p[0]+'_'+'Angle_Right_Min'] - prev_config[p]['Angle_Right_Min']
+
+            if diffRmin:
+                config[p[0]+'_'+'Angle_Left_Min'] += diffRmin # left n right legs linked
+                prev_config[p]['Angle_Left_Min'] = config[p[0]+'_'+'Angle_Left_Min']
+                prev_config[p]['Angle_Right_Min']  = config[p[0]+'_'+'Angle_Right_Min']
+
+            # check for changes in angle
             diffRmax = config[p[0]+'_'+'Angle_Right_Max'] - prev_config[p]['Angle_Right_Max']
 
-
+            if diffRmax:
+                config[p[0]+'_'+'Angle_Left_Max'] += diffRmax # left n right legs linked
+                prev_config[p]['Angle_Left_Max'] = config[p[0]+'_'+'Angle_Left_Max']
+                prev_config[p]['Angle_Right_Max']  = config[p[0]+'_'+'Angle_Right_Max']
 
     return config
 

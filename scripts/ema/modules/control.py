@@ -14,24 +14,23 @@ class Control:
     	self.config_dict = config_dict
     
     # to stimulate or not based on sensor's angle 
-    def fx(self, m, side, angle, speed, speed_ref):
+    def fx(self, m, id, angle, speed, speed_ref):
         
-        muscle = muscle_dict[m][0]
-    	param = rospy.get_param('/ema/server/')
-        dth = (speed/speed_ref)*param['Shift']
+        theta = rospy.get_param('/ema/server/')
+        dth = (speed/speed_ref)*theta['Shift']
 
-        begin = param[muscle+"Angle_"+side+"_Min"] - dth
-        end = param[muscle+"Angle_"+side+"_Max"] - dth
+        theta_min = theta["Q_Angle_"+id+"_Min"] - dth
+        theta_max = theta["Q_Angle_"+id+"_Max"] - dth
 
-        # check if angle in range (begin, end)
-        if begin <= angle and angle <= end:
+        # check if angle in range (theta_min, theta_max)
+        if theta_min <= angle and angle <= theta_max:
             return 1
-        elif param[muscle+"Angle_"+side+"_Min"] > param[muscle+"Angle_"+side+"_Max"]:
-            if angle <= begin and angle <= end:
-                if begin <= angle + 360 and angle <= end:
+        elif theta["Q_Angle_"+id+"_Min"] > theta["Q_Angle_"+id+"_Max"]:
+            if angle <= theta_min and angle <= theta_max:
+                if theta_min <= angle + 360 and angle <= theta_max:
                     return 1
-            elif angle >= begin and angle >= end:
-                if begin <= angle and angle <= end + 360:
+            elif angle >= theta_min and angle >= theta_max:
+                if theta_min <= angle and angle <= theta_max + 360:
                     return 1
 
         # return 0 otherwise
@@ -62,8 +61,8 @@ class Control:
         return signal
     
     # control applied to stimulation signal
-    def calculate(self, muscle, angle, speed, speed_ref, speed_err):
-        
+    def calculate(self, angle, speed, speed_ref, speed_err):
+        muscle = 'Q'
         fx_left = self.fx(muscle, 'Left', angle, speed, speed_ref)
         fx_right = self.fx(muscle, 'Right', angle, speed, speed_ref)
         

@@ -6,8 +6,8 @@
     <rosparam command="load" file="$(find ema_fes_cycling)/config/control.yaml" ns="control" />
 
     <!-- launch nodes -->
-    <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="screen" respawn="true" respawn_delay="5"/>
-    <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="screen" respawn="true" respawn_delay="5"/>
+    <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/>
+    <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/>
     <node name="control" pkg="ema_fes_cycling" type="control_node.py" output="screen" respawn="true" respawn_delay="5"/>
     <node name="server" pkg="ema_fes_cycling" type="server_node.py" output="screen" respawn="true" respawn_delay="5"/>
   </group>
