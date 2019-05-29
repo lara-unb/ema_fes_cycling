@@ -67,8 +67,7 @@ def callback(config, level):
         ########### CURRENT CHECK ###########
         #####################################
         # check for changes in current
-        diffL = config[p[0]+'_'+'Current_Left']  - prev_config[p]['Current_Left']
-
+        diffL = config[p[0]+'_'+'Current_Left'] - prev_config[p]['Current_Left']
         # prevents the user from abruptly increasing the current
         if diffL:            
             if diffL > 2:
@@ -85,7 +84,6 @@ def callback(config, level):
 
         # check for changes in current
         diffR = config[p[0]+'_'+'Current_Right'] - prev_config[p]['Current_Right']
-
         # prevents the user from abruptly increasing the current
         if diffR:
             if diffR > 2:
@@ -100,10 +98,10 @@ def callback(config, level):
 
             return config # assumes only one change per callback
 
-
+        ######### PULSE WIDTH CHECK #########
+        #####################################
         # check for changes in pulse width
-        diffL = config[p[0]+'_'+'Pulse_Width_Left']  - prev_config[p]['Pulse_Width_Left']
-
+        diffL = config[p[0]+'_'+'Pulse_Width_Left'] - prev_config[p]['Pulse_Width_Left']
         # prevents the user from abruptly increasing the current
         if diffL:
             prev_config[p]['Pulse_Width_Left'] = config[p[0]+'_'+'Pulse_Width_Left']
@@ -116,7 +114,6 @@ def callback(config, level):
 
         # check for changes in pulse width
         diffR = config[p[0]+'_'+'Pulse_Width_Right'] - prev_config[p]['Pulse_Width_Right']
-
         # prevents the user from abruptly increasing the current
         if diffR:
             prev_config[p]['Pulse_Width_Right'] = config[p[0]+'_'+'Pulse_Width_Right']
@@ -131,37 +128,53 @@ def callback(config, level):
         #####################################
         if config[p[0]+'_'+'Link_Angle']:
             # check for changes in angle
-            diffLmin = config[p[0]+'_'+'Angle_Left_Min']  - prev_config[p]['Angle_Left_Min']
-
+            diffLmin = config[p[0]+'_'+'Angle_Left_Min'] - prev_config[p]['Angle_Left_Min']
             if diffLmin:
-                config[p[0]+'_'+'Angle_Right_Min'] += diffLmin # left n right legs linked
-                prev_config[p]['Angle_Right_Min'] = config[p[0]+'_'+'Angle_Right_Min']
-                prev_config[p]['Angle_Left_Min']  = config[p[0]+'_'+'Angle_Left_Min']
+                if 0<=(config[p[0]+'_'+'Angle_Right_Min'] + diffLmin)<=360:
+                    config[p[0]+'_'+'Angle_Right_Min'] += diffLmin # left n right legs linked
+                    prev_config[p]['Angle_Right_Min'] = config[p[0]+'_'+'Angle_Right_Min']
+                    prev_config[p]['Angle_Left_Min']  = config[p[0]+'_'+'Angle_Left_Min']
+                else: # one change makes the other exceed its range
+                    config[p[0]+'_'+'Angle_Left_Min'] = prev_config[p]['Angle_Left_Min']
+
+                return config # assumes only one change per callback
 
             # check for changes in angle
-            diffLmax = config[p[0]+'_'+'Angle_Left_Max']  - prev_config[p]['Angle_Left_Max']
-
+            diffLmax = config[p[0]+'_'+'Angle_Left_Max'] - prev_config[p]['Angle_Left_Max']
             if diffLmax:
-                config[p[0]+'_'+'Angle_Right_Max'] += diffLmax # left n right legs linked
-                prev_config[p]['Angle_Right_Max'] = config[p[0]+'_'+'Angle_Right_Max']
-                prev_config[p]['Angle_Left_Max']  = config[p[0]+'_'+'Angle_Left_Max']
+                if 0<=(config[p[0]+'_'+'Angle_Right_Max'] + diffLmax)<=360:
+                    config[p[0]+'_'+'Angle_Right_Max'] += diffLmax # left n right legs linked
+                    prev_config[p]['Angle_Right_Max'] = config[p[0]+'_'+'Angle_Right_Max']
+                    prev_config[p]['Angle_Left_Max']  = config[p[0]+'_'+'Angle_Left_Max']
+                else: # one change makes the other exceed its range
+                    config[p[0]+'_'+'Angle_Left_Max'] = prev_config[p]['Angle_Left_Max']
+
+                return config # assumes only one change per callback
 
             # check for changes in angle
             diffRmin = config[p[0]+'_'+'Angle_Right_Min'] - prev_config[p]['Angle_Right_Min']
-
             if diffRmin:
-                config[p[0]+'_'+'Angle_Left_Min'] += diffRmin # left n right legs linked
-                prev_config[p]['Angle_Left_Min'] = config[p[0]+'_'+'Angle_Left_Min']
-                prev_config[p]['Angle_Right_Min']  = config[p[0]+'_'+'Angle_Right_Min']
+                if 0<=(config[p[0]+'_'+'Angle_Left_Min'] + diffRmin)<=360:
+                    config[p[0]+'_'+'Angle_Left_Min'] += diffRmin # left n right legs linked
+                    prev_config[p]['Angle_Left_Min'] = config[p[0]+'_'+'Angle_Left_Min']
+                    prev_config[p]['Angle_Right_Min']  = config[p[0]+'_'+'Angle_Right_Min']
+                else: # one change makes the other exceed its range
+                    config[p[0]+'_'+'Angle_Right_Min'] = prev_config[p]['Angle_Right_Min']
+
+                return config # assumes only one change per callback
 
             # check for changes in angle
             diffRmax = config[p[0]+'_'+'Angle_Right_Max'] - prev_config[p]['Angle_Right_Max']
-
             if diffRmax:
-                config[p[0]+'_'+'Angle_Left_Max'] += diffRmax # left n right legs linked
-                prev_config[p]['Angle_Left_Max'] = config[p[0]+'_'+'Angle_Left_Max']
-                prev_config[p]['Angle_Right_Max']  = config[p[0]+'_'+'Angle_Right_Max']
+                if 0<=(config[p[0]+'_'+'Angle_Left_Max'] + diffRmax)<=360:
+                    config[p[0]+'_'+'Angle_Left_Max'] += diffRmax # left n right legs linked
+                    prev_config[p]['Angle_Left_Max'] = config[p[0]+'_'+'Angle_Left_Max']
+                    prev_config[p]['Angle_Right_Max']  = config[p[0]+'_'+'Angle_Right_Max']
+                else: # one change makes the other exceed its range
+                    config[p[0]+'_'+'Angle_Right_Max'] = prev_config[p]['Angle_Right_Max']
 
+                return config # assumes only one change per callback
+                
     return config
 
 if __name__ == "__main__":
