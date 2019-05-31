@@ -22,16 +22,8 @@ global speed
 global speed_ref
 global speed_err
 global time
-
-global left_current
-global right_current
-global left_pw
-global right_pw
-
-left_current = 0
-right_current = 0
-left_pw = 0
-right_pw = 0
+global stim_current
+global stim_pw
 
 on_off = False
 angle = [0,0]
@@ -40,26 +32,24 @@ speed_ref = 300
 speed_err = [0,0]
 time = [0,0]
 
-global stim_current
-global stim_pulse
-
 stim_current = {
-    'quad': {'left': 0, 'right': 0},
-    'hams': {'left': 0, 'right': 0},
-    'glut': {'left': 0, 'right': 0}
+    'Quad': {'Left': 0, 'Right': 0},
+    'Hams': {'Left': 0, 'Right': 0},
+    'Glut': {'Left': 0, 'Right': 0}
 }
 
-stim_pulse = {
-    'quad': {'left': 0, 'right': 0},
-    'hams': {'left': 0, 'right': 0},
-    'glut': {'left': 0, 'right': 0}
+stim_pw = {
+    'Quad': {'Left': 0, 'Right': 0},
+    'Hams': {'Left': 0, 'Right': 0},
+    'Glut': {'Left': 0, 'Right': 0}
 }
 
-muscle_dict = {
-    'quad': 'Quadriceps_CH1/2',
-    'hams': 'Hamstrings_CH3/4',
-    'glut': 'Gluteal_CH5/6'
-}
+# CH1 - Left Quad, CH2 - Right Quad
+# CH3 - Left Hams, CH4 - Right Hams
+# CH5 - Left Glut, CH6 - Right Glut
+stim_order = ['Quad_Left','Quad_Right',
+              'Hams_Left','Hams_Right',
+              'Glut_Left','Glut_Right']
 
 # Apply a progressive change to the stimulation current
 def current_ramp():
@@ -92,35 +82,21 @@ def current_ramp():
     return progressive
 
 def server_callback(config):
-    global left_current
-    global right_current
-    global left_pw
-    global right_pw
-
     global stim_current
-    global stim_pulse
+    global stim_pw
 
     # assign updated server parameters to global vars 
     # refer to the server node for constraints
-    left_current = config['Q_Current_Left']
-    right_current = config['Q_Current_Right']
-    left_pw = config['Q_Pulse_Width_Left']
-    right_pw =  config['Q_Pulse_Width_Right'] 
+    for x in stim_order:
+        muscle = x[:4] # Quad, Hams or Glut
+        side = x[5:] # Left or Right
 
-    # assign updated server parameters to global vars 
-    # refer to the server node for constraints
-    for m, p in muscle_dict.items():
-
-        if config[p[0]+'_'+'Enable']:
-            stim_current[m]['left']     = config[p[0]+'_'+'Current_Left']
-            stim_current[m]['right']    = config[p[0]+'_'+'Current_Right']
-            stim_pulse[m]['left']       = config[p[0]+'_'+'Pulse_Width_Left']
-            stim_pulse[m]['right']      = config[p[0]+'_'+'Pulse_Width_Right']
+        if config[muscle[0]+'_Enable']:
+            stim_current[muscle][side] = config[muscle[0]+'_Current_'+side]
+            stim_pw[muscle][side] = config[muscle[0]+'_Pulse_Width_'+side]
         else:
-            stim_current[m]['left']  = 0
-            stim_current[m]['right'] = 0
-            stim_pulse[m]['left']    = 0
-            stim_pulse[m]['right']   = 0
+            stim_current[muscle][side] = 0
+            stim_pw[muscle][side] = 0
 
 def pedal_callback(data):
     # get timestamp
@@ -187,28 +163,23 @@ def remote_callback(data):
 def main():
     global stimMsg
     global stim_current
-    global stim_pulse
-
-    global left_current
-    global right_current
-    global left_pw
-    global right_pw
+    global stim_pw
 
     # init control node
     rospy.init_node('control', anonymous=False)
 
     # build basic stimulator message
     stimMsg = Stimulator()
-    stimMsg.channel = list(range(1,2+1)) # all the 8 channels
-    stimMsg.mode = 2*['single'] # no doublets/triplets
-    stimMsg.pulse_width = 2*[500] # initialize w/ zeros
-    stimMsg.pulse_current = 2*[0] # initialize w/ zeros
+    stimMsg.channel = list(range(1,6+1)) # all the 6 channels
+    stimMsg.mode = 6*['single'] # no doublets/triplets
+    stimMsg.pulse_width = 6*[0] # initialize w/ zeros
+    stimMsg.pulse_current = 6*[0]
 
     # build basic angle/speed/signal message
     angleMsg = Float64()
     speedMsg = Float64()
     signalMsg = Int32MultiArray() # visual stimulator signal
-    # signalMsg.data = []
+    signalMsg.data = 7*[0] # [index] is the actual channel number
 
     # communicate with the dynamic server
     dyn_params = reconfig.Client('server', config_callback = server_callback)
@@ -225,64 +196,40 @@ def main():
     pub = {}
     pub['control'] = rospy.Publisher('stimulator/ccl_update', Stimulator, queue_size=10)
     pub['angle'] = rospy.Publisher('control/angle', Float64, queue_size=10)
-    pub['speed'] = rospy.Publisher('control/speed', Float64, queue_size=10)
     pub['signal'] = rospy.Publisher('control/stimsignal', Int32MultiArray, queue_size=10)
+    pub['speed'] = rospy.Publisher('control/speed', Float64, queue_size=10)
 
     # define node loop rate (in hz)
     rate = rospy.Rate(50)
 
-    progressive = [0,0]
-
     # node loop
     while not rospy.is_shutdown():
-
         # calculate control signal
-        bool_left, bool_right = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
-
-        # conditions for current progressive increment
-        if bool_left:
-            if 0 <= progressive[0] <= 1:
-                progressive[0] += 0.1
-                if progressive[0] > 1:
-                    progressive[0] = 1
-        else:
-            if 0 <= progressive[0] <= 1:
-                progressive[0] -= 0.1
-                if progressive[0] < 0:
-                    progressive[0] = 0
-
-        if bool_right:
-            if 0 <= progressive[1] <= 1:
-                progressive[1] += 0.1
-                if progressive[1] > 1:
-                    progressive[1] = 1
-        else:
-            if 0 <= progressive[1] <= 1:
-                progressive[1] -= 0.1
-                if progressive[1] < 0:
-                    progressive[1] = 0
-
-        stimMsg.pulse_current = [progressive[0]*left_current, progressive[1]*right_current]
-        stimMsg.pulse_width = [left_pw, right_pw]
-        # print(stimMsg.pulse_current)
-
-        # send stimulator update
-        pub['control'].publish(stimMsg)
+        stimfactors = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
         
-        # send angle update
+        # update current and pw values
+        for i, x in enumerate(stim_order):
+            muscle = x[:4] # Quad, Hams or Glut
+            side = x[5:] # Left or Right
+            stimMsg.pulse_current[i] = round(stimfactors[i]*stim_current[muscle][side])
+            stimMsg.pulse_width[i] = stim_pw[muscle][side]
+            signalMsg.data[i+1] = stimMsg.pulse_current[i] # [index] is the actual channel number
+
         angleMsg.data = angle[-1]
-        pub['angle'].publish(angleMsg)
-        
-        # send speed update
+
         current_speed = (angle[-1] - angle[-2])*50
         if current_speed < -1000:
             current_speed = 0
         speedMsg.data = current_speed
-        pub['speed'].publish(speedMsg)
 
+        # send stimulator update
+        pub['control'].publish(stimMsg)
+        # send angle update
+        pub['angle'].publish(angleMsg)
         # send signal update
-        signalMsg.data = [progressive[0]*left_current, progressive[1]*right_current]
         pub['signal'].publish(signalMsg)
+        # send speed update
+        pub['speed'].publish(speedMsg)
 
         # wait for next control loop
         rate.sleep()

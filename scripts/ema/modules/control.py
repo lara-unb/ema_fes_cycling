@@ -2,11 +2,12 @@
 
 import rospy
 
-muscle_dict = {
-    'quad': 'Quadriceps_CH1/2',
-    'hams': 'Hamstrings_CH3/4',
-    'glut': 'Gluteal_CH5/6'
-}
+# CH1 - Left Quad, CH2 - Right Quad
+# CH3 - Left Hams, CH4 - Right Hams
+# CH5 - Left Glut, CH6 - Right Glut
+stim_order = ['Quad_Left','Quad_Right',
+              'Hams_Left','Hams_Right',
+              'Glut_Left','Glut_Right']
 
 class Control:
 
@@ -14,18 +15,18 @@ class Control:
     	self.config_dict = config_dict
     
     # to stimulate or not based on sensor's angle 
-    def fx(self, m, id, angle, speed, speed_ref):
+    def fx(self, m, side, angle, speed, speed_ref):
         
-        theta = rospy.get_param('/ema/server/')
-        dth = (speed/speed_ref)*theta['Shift']
+        param_dict = rospy.get_param('/ema/server/')
+        dth = (speed/speed_ref)*param_dict['Shift']
 
-        theta_min = theta["Q_Angle_"+id+"_Min"] - dth
-        theta_max = theta["Q_Angle_"+id+"_Max"] - dth
+        theta_min = param_dict[m+"_Angle_"+side+"_Min"] - dth
+        theta_max = param_dict[m+"_Angle_"+side+"_Max"] - dth
 
         # check if angle in range (theta_min, theta_max)
         if theta_min <= angle and angle <= theta_max:
             return 1
-        elif theta["Q_Angle_"+id+"_Min"] > theta["Q_Angle_"+id+"_Max"]:
+        elif param_dict[m+"_Angle_"+side+"_Min"] > param_dict[m+"_Angle_"+side+"_Max"]:
             if angle <= theta_min and angle <= theta_max:
                 if theta_min <= angle + 360 and angle <= theta_max:
                     return 1
@@ -62,14 +63,9 @@ class Control:
     
     # control applied to stimulation signal
     def calculate(self, angle, speed, speed_ref, speed_err):
-        muscle = 'Q'
-        fx_left = self.fx(muscle, 'Left', angle, speed, speed_ref)
-        fx_right = self.fx(muscle, 'Right', angle, speed, speed_ref)
-        
-        # g = self.g(speed_err)
-        g = 1
-        
-        bool_left = fx_left*g
-        bool_right = fx_right*g
+        factor = 6*[0]
 
-        return bool_left, bool_right
+        for i, x in enumerate(stim_order):
+            factor[i] = self.fx(x[0],x[5:], angle, speed, speed_ref)
+
+        return factor
