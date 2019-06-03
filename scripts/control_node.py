@@ -44,42 +44,9 @@ stim_pw = {
     'Glut': {'Left': 0, 'Right': 0}
 }
 
-# CH1 - Left Quad, CH2 - Right Quad
-# CH3 - Left Hams, CH4 - Right Hams
-# CH5 - Left Glut, CH6 - Right Glut
-stim_order = ['Quad_Left','Quad_Right',
-              'Hams_Left','Hams_Right',
-              'Glut_Left','Glut_Right']
-
-# Apply a progressive change to the stimulation current
-def current_ramp():
-    global stim_current
-    progressive = [0,0]
-
-    # conditions for current progressive increment
-    if bool_left:
-        if 0 <= progressive[0] <= 1:
-            progressive[0] += 0.1
-            if progressive[0] > 1:
-                progressive[0] = 1
-    else:
-        if 0 <= progressive[0] <= 1:
-            progressive[0] -= 0.1
-            if progressive[0] < 0:
-                progressive[0] = 0
-
-    if bool_right:
-        if 0 <= progressive[1] <= 1:
-            progressive[1] += 0.1
-            if progressive[1] > 1:
-                progressive[1] = 1
-    else:
-        if 0 <= progressive[1] <= 1:
-            progressive[1] -= 0.1
-            if progressive[1] < 0:
-                progressive[1] = 0
-    # print(progressive)
-    return progressive
+stim_order = ['Quad_Left','Quad_Right', # CH1 & CH2
+              'Hams_Left','Hams_Right', # CH3 & CH4
+              'Glut_Left','Glut_Right'] # CH5 & CH6
 
 def server_callback(config):
     global stim_current
@@ -203,10 +170,10 @@ def main():
     rate = rospy.Rate(50)
 
     # node loop
-    while not rospy.is_shutdown():
+    while not rospy.is_shutdown():      
         # calculate control signal
-        stimfactors = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
-        
+        stimfactors = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)  
+
         # update current and pw values
         for i, x in enumerate(stim_order):
             muscle = x[:4] # Quad, Hams or Glut

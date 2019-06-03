@@ -13,26 +13,43 @@ class Control:
 
     def __init__(self, config_dict):
     	self.config_dict = config_dict
-    
+
     # to stimulate or not based on sensor's angle 
-    def fx(self, m, side, angle, speed, speed_ref):
-        
+    def fx(self, muscle, angle, speed, speed_ref):
+        m = muscle[0] # Q, H or G
+        side = muscle[5:] # Left/Right
+        ramp_degrees = 10.0
         param_dict = rospy.get_param('/ema/server/')
         dth = (speed/speed_ref)*param_dict['Shift']
 
         theta_min = param_dict[m+"_Angle_"+side+"_Min"] - dth
         theta_max = param_dict[m+"_Angle_"+side+"_Max"] - dth
 
-        # check if angle in range (theta_min, theta_max)
+        # check if angle in range (theta_min, theta_max) 
         if theta_min <= angle and angle <= theta_max:
-            return 1
+            if (angle-theta_min) <= ramp_degrees:
+                return (angle-theta_min)/ramp_degrees
+            elif (theta_max-angle) <= ramp_degrees:
+                return (theta_max-angle)/ramp_degrees
+            else:
+                return 1
         elif param_dict[m+"_Angle_"+side+"_Min"] > param_dict[m+"_Angle_"+side+"_Max"]:
             if angle <= theta_min and angle <= theta_max:
                 if theta_min <= angle + 360 and angle <= theta_max:
-                    return 1
+                    if (angle+360-theta_min) <= ramp_degrees:
+                        return (angle+360-theta_min)/ramp_degrees
+                    elif (theta_max-angle) <= ramp_degrees:
+                        return (theta_max-angle)/ramp_degrees
+                    else:
+                        return 1
             elif angle >= theta_min and angle >= theta_max:
                 if theta_min <= angle and angle <= theta_max + 360:
-                    return 1
+                    if (theta_max+360-angle) <= ramp_degrees:
+                        return (theta_max+360-angle)/ramp_degrees
+                    elif (angle-theta_min) <= ramp_degrees:
+                        return (angle-theta_min)/ramp_degrees
+                    else:
+                        return 1
 
         # return 0 otherwise
         return 0
@@ -66,6 +83,6 @@ class Control:
         factor = 6*[0]
 
         for i, x in enumerate(stim_order):
-            factor[i] = self.fx(x[0],x[5:], angle, speed, speed_ref)
+            factor[i] = self.fx(x, angle, speed, speed_ref)
 
         return factor
