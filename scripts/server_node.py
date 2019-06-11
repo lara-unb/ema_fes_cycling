@@ -14,10 +14,10 @@ prev_config = {
     	'Current_Right': 2,
         'Pulse_Width_Left': 0,
         'Pulse_Width_Right': 0,
-    	'Angle_Left_Min': 300,
-    	'Angle_Left_Max': 40,
-    	'Angle_Right_Min': 120,
-    	'Angle_Right_Max': 220
+    	'Angle_Left_Min': 280,
+    	'Angle_Left_Max': 20,
+    	'Angle_Right_Min': 100,
+    	'Angle_Right_Max': 200
     },
     'Hamstrings_CH3/4': {
         'Current_Left': 2,
