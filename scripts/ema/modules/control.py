@@ -86,3 +86,22 @@ class Control:
             factor[i] = self.fx(x, angle, speed, speed_ref)
 
         return factor
+    
+    # control applied to stimulation signal
+    def automatic(self, stim_dict, increment, cadence, min_cadence, limit):
+
+        if (cadence < min_cadence) and (increment<limit):
+            step = 2
+
+            if increment+step > limit:
+                step = abs(limit-increment+step)
+
+            increment = min(increment+step, limit)
+
+            for x in stim_order:
+                muscle = x[:4] # Quad, Hams or Glut
+                side = x[5:] # Left or Right
+
+                stim_dict[muscle][side] = stim_dict[muscle][side] + step
+
+        return stim_dict, increment

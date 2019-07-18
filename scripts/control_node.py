@@ -29,14 +29,14 @@ global n_cycles
 global cadence_cycle
 global mean_cadence
 global current_speed
-global add_max_current
-global add_current
-global control_on
-global min_vel
+global auto_on
+global auto_max_current
+global auto_minvel
+global auto_add_current
 global n_cycles
+global new_cycle
 
 on_off = False
-control_on = False
 angle = [0,0]
 speed = [0,0]
 speed_ref = 300
@@ -46,10 +46,12 @@ n_cycles = 0
 cadence_cycle = [0,0]
 mean_cadence = 0
 current_speed = 0
-add_max_current = 0
-add_current = 0
-min_vel = 0
+auto_on = False
+auto_max_current = 0
+auto_add_current = 0
+auto_minvel = 0
 n_cycles = 0
+new_cycle = False
 
 
 stim_current = {
@@ -71,10 +73,14 @@ stim_order = ['Quad_Left','Quad_Right', # CH1 & CH2
 def server_callback(config):
     global stim_current
     global stim_pw
-    global add_max_current
-    global control_on
-    global add_current
-    global min_vel
+    global auto_on
+    global auto_max_current
+    global auto_minvel
+    global auto_add_current
+
+    auto_on = config['AutoC_Enable']
+    auto_max_current = config['AutoC_Shift']
+    auto_minvel = config['AutoC_Velocity']
 
     # assign updated server parameters to global vars 
     # refer to the server node for constraints
@@ -89,20 +95,17 @@ def server_callback(config):
             stim_current[muscle][side] = 0
             stim_pw[muscle][side] = 0
 
-    add_max_current = config['Add_current']
-    control_on = config['Simple_control']
-    min_vel = config['Min_vel']
-
 
 def pedal_callback(data):
     global n_cycles
     global cadence_cycle
     global mean_cadence
     global current_speed
-    global add_current
-    global add_max_current
-    global control_on
-    global min_vel
+    global auto_on
+    global auto_max_current
+    global auto_minvel
+    global auto_add_current
+    global new_cycle
     # get timestamp
     time.append(data.header.stamp)
 
@@ -151,22 +154,14 @@ def pedal_callback(data):
 
     if angle[-2] > 355:
         if angle[-1] < 5:
+            new_cycle = True
             n_cycles = n_cycles + 1
             mean_cadence = np.mean(cadence_cycle)
             cadence_cycle = []
             km_rodados = (n_cycles*3.14159*1.5*66)/100000  #1.5: volta da coroa em relacao ao pneu/ 66cm = 26pol: tamanho do pneu/ 100000: cm->km/2*pi*D/2: comprimento do pneu
             print n_cycles, mean_cadence, km_rodados
 
-            if control_on:
-                if mean_cadence < min_vel:
-                    add_current = add_current + 2
-
-                    if add_current > add_max_current:
-                        add_current = add_max_current
-            else:
-                add_current = 0
-
-            # print add_current
+            # print auto_add_current
 
 def remote_callback(data):
     global stimMsg
@@ -202,9 +197,12 @@ def main():
     global stim_pw
     global mean_cadence
     global current_speed
-    global add_max_current
-    global add_current
+    global auto_on
+    global auto_max_current
+    global auto_minvel
+    global auto_add_current
     global n_cycles
+    global new_cycle
 
     # init control node
     rospy.init_node('control', anonymous=False)
@@ -252,6 +250,13 @@ def main():
         # calculate control signal
         stimfactors = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)  
 
+        if new_cycle:
+            new_cycle = False
+            if auto_on:
+                stim_current, auto_add_current = controller.automatic(stim_current, auto_add_current, mean_cadence, auto_minvel, auto_max_current)
+                print auto_add_current
+            change = True
+
         # update current and pw values
         for i, x in enumerate(stim_order):
             muscle = x[:4] # Quad, Hams or Glut
@@ -259,22 +264,26 @@ def main():
 
             # if stim_current[muscle][side] > 0:
             #
-            #     stim_current[muscle][side] = stim_current[muscle][side] + add_current
+            #     stim_current[muscle][side] = stim_current[muscle][side] + auto_add_current
             #
             #     if stim_current[muscle][side] > 80:
             #         stim_current[muscle][side] = 80
+
+            if auto_on and change:
+                dyn_params.update_configuration({muscle[0]+'_Current_'+side:stim_current[muscle][side]})
 
             stimMsg.pulse_current[i] = round(stimfactors[i]*stim_current[muscle][side])
             stimMsg.pulse_width[i] = stim_pw[muscle][side]
             signalMsg.data[i+1] = stimMsg.pulse_current[i]# [index] is the actual channel number
 
+        change = False
         angleMsg.data = angle[-1]
 
         speedMsg.data = current_speed
         cycle_speedMsg.data = mean_cadence
         n_cyclesMsg.data = n_cycles
 
-        print signalMsg.data
+        # print signalMsg.data
 
         # send stimulator update
         pub['control'].publish(stimMsg)
@@ -289,7 +298,7 @@ def main():
         # send n_cycles update
         pub['n_cycles'].publish(n_cyclesMsg)
 
-        # print add_max_current
+        # print auto_max_current
 
         # wait for next control loop
         rate.sleep()
