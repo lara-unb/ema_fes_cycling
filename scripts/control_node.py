@@ -30,6 +30,7 @@ global cadence_cycle
 global mean_cadence
 global current_speed
 global auto_on
+global mark_assistance
 global auto_max_current
 global auto_minvel
 global auto_add_current
@@ -47,6 +48,7 @@ cadence_cycle = [0,0]
 mean_cadence = 0
 current_speed = 0
 auto_on = False
+mark_assistance = False
 auto_max_current = 0
 auto_add_current = 0
 auto_minvel = 0
@@ -79,6 +81,7 @@ def server_callback(config):
     global auto_add_current
 
     auto_on = config['AutoC_Enable']
+    mark_assistance = config['Mark_assistance']
     auto_max_current = config['AutoC_Shift']
     auto_minvel = config['AutoC_Velocity']
 
@@ -102,6 +105,7 @@ def pedal_callback(data):
     global mean_cadence
     global current_speed
     global auto_on
+    global mark_assistance
     global auto_max_current
     global auto_minvel
     global auto_add_current
@@ -198,6 +202,7 @@ def main():
     global mean_cadence
     global current_speed
     global auto_on
+    global mark_assistance
     global auto_max_current
     global auto_minvel
     global auto_add_current
