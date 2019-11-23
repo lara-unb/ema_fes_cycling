@@ -1,35 +1,62 @@
 #!/usr/bin/env python
-theta = {
-    'left': {'min': 300, 'max': 40},
-    'right': {'min': 120, 'max': 220},
-    'shift': 35
-}
+
+import rospy
+
+# CH1 - Left Quad, CH2 - Right Quad
+# CH3 - Left Hams, CH4 - Right Hams
+# CH5 - Left Glut, CH6 - Right Glut
+stim_order = ['Quad_Left','Quad_Right',
+              'Hams_Left','Hams_Right',
+              'Glut_Left','Glut_Right']
 
 class Control:
+
     def __init__(self, config_dict):
-        self.config_dict = config_dict
-        
-    def fx(self, id, angle, speed, speed_ref):
-        dth = (speed/speed_ref)*theta['shift']
-        
-        theta_min = theta[id]['min'] - dth
-        theta_max = theta[id]['max'] - dth
-        
-        # check if angle in range (theta_min, theta_max)
+    	self.config_dict = config_dict
+
+    # to stimulate or not based on sensor's angle 
+    def fx(self, muscle, angle, speed, speed_ref):
+        m = muscle[0] # Q, H or G
+        side = muscle[5:] # Left/Right
+        ramp_degrees = 10.0
+        param_dict = rospy.get_param('/ema/server/')
+        dth = (speed/speed_ref)*param_dict['Shift']
+
+        theta_min = param_dict[m+"_Angle_"+side+"_Min"] - dth
+        theta_max = param_dict[m+"_Angle_"+side+"_Max"] - dth
+
+        # check if angle in range (theta_min, theta_max) 
         if theta_min <= angle and angle <= theta_max:
-            return 1
-        elif theta[id]['min'] > theta[id]['max']:
+            if (angle-theta_min) <= ramp_degrees:
+                return (angle-theta_min)/ramp_degrees
+            elif (theta_max-angle) <= ramp_degrees:
+                return (theta_max-angle)/ramp_degrees
+            else:
+                return 1
+        elif param_dict[m+"_Angle_"+side+"_Min"] > param_dict[m+"_Angle_"+side+"_Max"]:
             if angle <= theta_min and angle <= theta_max:
                 if theta_min <= angle + 360 and angle <= theta_max:
-                    return 1
+                    if (angle+360-theta_min) <= ramp_degrees:
+                        return (angle+360-theta_min)/ramp_degrees
+                    elif (theta_max-angle) <= ramp_degrees:
+                        return (theta_max-angle)/ramp_degrees
+                    else:
+                        return 1
             elif angle >= theta_min and angle >= theta_max:
                 if theta_min <= angle and angle <= theta_max + 360:
-                    return 1
-                    
+                    if (theta_max+360-angle) <= ramp_degrees:
+                        return (theta_max+360-angle)/ramp_degrees
+                    elif (angle-theta_min) <= ramp_degrees:
+                        return (angle-theta_min)/ramp_degrees
+                    else:
+                        return 1
+
         # return 0 otherwise
         return 0
-    
+
+    # control coefficient routine
     def g(self, error):
+
         Kp = 1/float(5000)
         Ki = 1/float(100000)
         
@@ -50,19 +77,31 @@ class Control:
             error[-1] = 0
         
         return signal
-            
+    
+    # control applied to stimulation signal
     def calculate(self, angle, speed, speed_ref, speed_err):
-        pw_max = 500
-        
-        fx_left = self.fx('left', angle, speed, speed_ref)
-        fx_right = self.fx('right', angle, speed, speed_ref)
-        
-        g = self.g(speed_err)
-        
-        pw_left = fx_left*g*pw_max
-        pw_right = fx_right*g*pw_max
-        
-        # print g, pw_left, pw_right
-        # print [round(x) for x in speed_err[-10:]]
-        
-        return pw_left, pw_right
+        factor = 6*[0]
+
+        for i, x in enumerate(stim_order):
+            factor[i] = self.fx(x, angle, speed, speed_ref)
+
+        return factor
+    
+    # control applied to stimulation signal
+    def automatic(self, stim_dict, increment, cadence, min_cadence, limit):
+
+        if (cadence < min_cadence) and (increment<limit):
+            step = 2
+
+            if increment+step > limit:
+                step = abs(limit-increment+step)
+
+            increment = min(increment+step, limit)
+
+            for x in stim_order:
+                muscle = x[:4] # Quad, Hams or Glut
+                side = x[5:] # Left or Right
+
+                stim_dict[muscle][side] = stim_dict[muscle][side] + step
+
+        return stim_dict, increment

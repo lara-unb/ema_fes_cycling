@@ -1,0 +1,97 @@
+## IMU config
+#
+# autocalibrate:      tare and calibrate all imus when initializing node
+# dev_names:          string identifier to find configs for each device (NOTE: list dongle devices first)
+# dev_type:           YEI device type (only DNG and WL supported for now)
+# imu_mode:           wireless or wired (only needed for WL devices)
+# broadcast:          switch on broadcast mode, to get data from all connected IMUs
+# streaming:          switch on streaming mode (faster), all following parameters in us
+# streaming_delay:    amount of time the sensor will wait before outputting the first packet of streaming data
+# streaming_duration: length of the streaming session (NOTE: 'unlimited' is 0xFFFFFFFF, see manual)
+# streaming_interval: how often data will be output (0 = every filter loop, other values must be > 1000)
+# wired_port:         port address for device when wired
+# streaming_slots:	  defines what information each device is streaming
+# wireless_dng:       name of dongle associated to this WL device (must have configured dongle wireless table)
+# wireless_id:        logical id of WL device in associated dongle's wireless table
+
+autocalibrate: true
+
+## 1 Wired streaming test ##
+dev_names: ['pedal']
+dev_type: {'pedal': 'WL'}
+imu_mode: {'pedal': 'wired'}
+broadcast: false
+streaming: true
+treaming_interval: 0
+streaming_duration: 'unlimited'
+streaming_delay: 0
+streaming_slots: {'pedal': ['getTaredOrientationAsQuaternion', 'getNormalizedGyroRate', 'getButtonState']}
+wired_port: {'pedal': '/dev/ttyACM0'}
+
+## 2 Wired streaming test ##
+# dev_names: ['pedal', 'remote']
+# dev_type: {'pedal': 'WL', 'remote': 'WL'}
+# imu_mode: {'pedal': 'wired', 'remote': 'wired'}
+# broadcast: false
+# streaming: true
+# streaming_interval: 0
+# streaming_duration: 'unlimited'
+# streaming_delay: 0
+# streaming_slots: {'pedal': ['getTaredOrientationAsQuaternion', 'getNormalizedGyroRate', 'getButtonState'], 'remote': ['getTaredOrientationAsQuaternion', 'getNormalizedGyroRate', 'getButtonState']}
+# wired_port: {'pedal': '/dev/ttyACM1', 'remote': '/dev/ttyACM2'}
+
+## 1 Wireless streaming test ##
+#dev_names: ['pc', 'pedal']
+#dev_type: {'pc': 'DNG', 'pedal': 'WL'}
+#imu_mode: {'pedal': 'wireless'}
+#broadcast: false
+#streaming: true
+#streaming_interval: 0
+#streaming_duration: 'unlimited'
+#streaming_delay: 0
+#streaming_slots: {'pedal': ['getTaredOrientationAsQuaternion', 'getNormalizedGyroRate', 'getButtonState']}
+#wired_port: {'pc': '/dev/ttyACM0'}
+#wireless_dng: {'pedal': 'pc'}
+#wireless_id: {'pedal': 3}
+
+## 2 Wireless streaming test ##
+# dev_names: ['pc', 'pedal', 'remote']
+# dev_type: {'pc': 'DNG', 'pedal': 'WL', 'remote': 'WL'}
+# imu_mode: {'pedal': 'wireless', 'remote': 'wireless'}
+# broadcast: false
+# streaming: true
+# streaming_interval: 0
+# streaming_duration: 'unlimited'
+# streaming_delay: 0
+# streaming_slots: {'pedal': ['getTaredOrientationAsQuaternion', 'getNormalizedGyroRate', 'getButtonState'], 'remote': ['getTaredOrientationAsQuaternion', 'getNormalizedGyroRate', 'getButtonState']}
+# wired_port: {'pc': '/dev/ttyACM0'}
+# wireless_dng: {'pedal': 'pc', 'remote': 'pc'}
+# wireless_id: {'pedal': 1, 'remote': 7}
+
+## 3 Wireless streaming test ##
+# dev_names: ['pc', 'pedal', 'remote1', 'remote2']
+# dev_type: {'pc': 'DNG', 'pedal': 'WL', 'remote1': 'WL', 'remote2': 'WL'}
+# imu_mode: {'pedal': 'wireless', 'remote1': 'wireless', 'remote2': 'wireless'}
+# broadcast: false
+# streaming: true
+# streaming_interval: 0
+# streaming_duration: 'unlimited'
+# streaming_delay: 0
+# streaming_slots: {'pedal': ['getTaredOrientationAsQuaternion', 'getNormalizedGyroRate', 'getButtonState'], 'remote1': ['getTaredOrientationAsQuaternion', 'getNormalizedGyroRate', 'getButtonState'], 'remote2': ['getTaredOrientationAsQuaternion', 'getNormalizedGyroRate', 'getButtonState']}
+# wired_port: {'pc': '/dev/ttyACM2'}
+# wireless_dng: {'pedal': 'pc', 'remote1': 'pc', 'remote2': 'pc'}
+# wireless_id: {'pedal': 4, 'remote1': 5, 'remote2': 1}
+
+## 4 Wireless streaming test ##
+# dev_names: ['pc', '1', '3', '7', '8']
+# dev_type: {'pc': 'DNG', '1': 'WL', '3': 'WL', '7': 'WL', '8': 'WL'}
+# imu_mode: {'1': 'wireless', '3': 'wireless', '7': 'wireless', '8': 'wireless'}
+# broadcast: false
+# streaming: true
+# streaming_interval: 0
+# streaming_duration: 'unlimited'
+# streaming_delay: 0
+# streaming_slots: {'1': ['getTaredOrientationAsQuaternion'], '3': ['getTaredOrientationAsQuaternion'], '7': ['getTaredOrientationAsQuaternion'], '8': ['getTaredOrientationAsQuaternion']}
+# wired_port: {'pc': '/dev/ttyACM0'}
+# wireless_dng: {'1': 'pc', '3': 'pc', '7': 'pc', '8': 'pc'}
+# wireless_id: {'1': 1, '3': 3, '7': 7, '8': 5}

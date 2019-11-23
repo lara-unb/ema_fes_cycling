@@ -1,0 +1,25 @@
+## Force config
+#
+# dev_names:          string identifier to find configs for each device (NOTE: list dongle devices first)
+# dev_type:           device type (DNG or WL)
+# wired_port:         port address for device when wired
+# wireless_dng:       name of dongle associated to this WL device (must have configured dongle wireless table)
+# wireless_id:        string id of WL device in associated dongle's wireless table
+# calibration:		  weight increment for each ADC measurement increment
+
+## Config 1: wireless trike pedals ##
+dev_names: ['pc', 'left_pedal', 'right_pedal']
+dev_type: {'pc': 'DNG', 'left_pedal': 'WL', 'right_pedal': 'WL'}
+wired_port: {'pc': '/dev/ttyUSB0'}
+wireless_dng: {'left_pedal': 'pc', 'right_pedal': 'pc'}
+wireless_id: {'left_pedal': 'L', 'right_pedal': 'R'}
+#calibration: {'left_pedal': 0.099986, 'right_pedal': 0.058477}
+calibration: {'left_pedal': 0.1, 'right_pedal': 0.1}
+
+## Config 1: wireless trike pedals ##
+# dev_names: ['pc', 'left_pedal']
+# dev_type: {'pc': 'DNG', 'left_pedal': 'WL'}
+# wired_port: {'pc': '/dev/ttyUSB0'}
+# wireless_dng: {'left_pedal': 'pc'}
+# wireless_id: {'left_pedal': 'L'}
+# calibration: {'left_pedal': 0.00542532}

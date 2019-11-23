@@ -27,7 +27,7 @@
   </group>
   
   <!-- launch utils -->
-  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ema_trike)/config/rviz/imu.rviz" output="log" respawn="true" respawn_delay="5"/>
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ema_fes_cycling)/config/rviz/imu.rviz" output="log" respawn="true" respawn_delay="5"/>
   <node name="rqt_graph" pkg="rqt_graph" type="rqt_graph" output="log" respawn="true" respawn_delay="5"/>
   <node name="rqt_plot" pkg="rqt_plot" type="rqt_plot" output="log" respawn="true" respawn_delay="5"/>
 </launch>
