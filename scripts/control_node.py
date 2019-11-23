@@ -3,7 +3,6 @@
 import rospy
 import ema.modules.control as control
 import dynamic_reconfigure.client as reconfig
-import time as stamps
 
 # import ros msgs
 from sensor_msgs.msg import Imu
@@ -12,7 +11,6 @@ from std_msgs.msg import Int8
 from std_msgs.msg import Int32MultiArray
 from ema_common_msgs.msg import Stimulator
 
-# import utilities
 ##from math import pi
 from tf import transformations
 
@@ -250,12 +248,9 @@ def main():
 
     # node loop
     while not rospy.is_shutdown():
-        start = stamps.time()
         # calculate control signal
-        stimfactors = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)  
-        end = stamps.time()
-        print((end-start))
-
+        stimfactors = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
+        
         # if new_cycle:
         #     new_cycle = False
         #     if auto_on:
