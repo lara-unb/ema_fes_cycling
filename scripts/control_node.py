@@ -52,7 +52,7 @@ stim_current = {
 }
 
 stim_pw = {
-    'Quad': {'Left': 0, 'Right': 0},
+    'Quad': {'Left': 500, 'Right': 500},
     'Hams': {'Left': 0, 'Right': 0},
     'Glut': {'Left': 0, 'Right': 0}
 }
