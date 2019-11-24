@@ -19,8 +19,8 @@ class Control:
         m = muscle[0] # Q, H or G
         side = muscle[5:] # Left/Right
         ramp_degrees = 10.0
-        param_dict = rospy.get_param('/ema/server/')
-        dth = (speed/speed_ref)*param_dict['Shift']
+        param_dict = self.config_dict[muscle[0:3]]
+        dth = (speed/speed_ref)*self.config_dict['Shift']
 
         theta_min = param_dict[m+"_Angle_"+side+"_Min"] - dth
         theta_max = param_dict[m+"_Angle_"+side+"_Max"] - dth

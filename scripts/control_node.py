@@ -2,7 +2,7 @@
 
 import rospy
 import ema.modules.control as control
-import dynamic_reconfigure.client as reconfig
+#import dynamic_reconfigure.client as reconfig
 
 # import ros msgs
 from sensor_msgs.msg import Imu
@@ -224,7 +224,7 @@ def main():
     signalMsg.data = 7*[0] # [index] is the actual channel number
 
     # communicate with the dynamic server
-    dyn_params = reconfig.Client('server', config_callback = server_callback)
+    #dyn_params = reconfig.Client('server', config_callback = server_callback)
     
     # get control config
     controller = control.Control(rospy.get_param('/ema/control'))
