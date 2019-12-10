@@ -1,4 +1,30 @@
-filter_size: 20
-gastrocnemius_max: 500
-femoral_max: 500
-speed_ref: 300
+## These are not being used ##
+#
+#filter_size: 20
+#gastrocnemius_max: 500
+#femoral_max: 500
+#speed_ref: 300
+
+## Replacing the dynamic reconfigure server #
+# Shift: 35
+
+# Quad: {
+#     'Q_Angle_Left_Min': 280,
+#     'Q_Angle_Left_Max': 20,
+#     'Q_Angle_Right_Min': 100,
+#     'Q_Angle_Right_Max': 200
+# }
+
+# Hams: {
+#     'H_Angle_Left_Min': 30,
+#     'H_Angle_Left_Max': 105,
+#     'H_Angle_Right_Min': 210,
+#     'H_Angle_Right_Max': 285
+# }
+
+# Glut: {
+#     'G_Angle_Left_Min': 70,
+#     'G_Angle_Left_Max': 170,
+#     'G_Angle_Right_Min': 250,
+#     'G_Angle_Right_Max': 350
+# }
