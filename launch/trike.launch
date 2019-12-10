@@ -10,6 +10,7 @@
 	<node name="button" pkg="ema_fes_cycling" type="button.py" output="screen" respawn="true" respawn_delay="5"/>
     <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/>
     <node name="control" pkg="ema_fes_cycling" type="control_node.py" output="screen" respawn="true" respawn_delay="5"/>
+    <!-- server node is not being used, parameters are hard coded in the control yaml file -->
     <!-- <node name="server" pkg="ema_fes_cycling" type="server_node.py" output="screen" respawn="true" respawn_delay="5"/> -->
   </group>
 </launch>

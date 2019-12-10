@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import rospy
-
 from dynamic_reconfigure.server import Server
 from ema_fes_cycling.cfg import DynamicParamsConfig
 
@@ -41,15 +40,14 @@ prev_config = {
     }
 }
 
+# muscle and group mapping
 muscle_dict = {
-    'quad': 'Quadriceps_CH1/2',
-    'hams': 'Hamstrings_CH3/4',
-    'glut': 'Gluteal_CH5/6'
+    'Quad': 'Quadriceps_CH1/2',
+    'Hams': 'Hamstrings_CH3/4',
+    'Glut': 'Gluteal_CH5/6'
 }
 
 def callback(config, level):
-    global prev_config
-
     for m, p in muscle_dict.items():
 
         ########### CHANNEL CHECK ###########

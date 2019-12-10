@@ -2,25 +2,28 @@
 
 import rospy
 
-# CH1 - Left Quad, CH2 - Right Quad
-# CH3 - Left Hams, CH4 - Right Hams
-# CH5 - Left Glut, CH6 - Right Glut
-stim_order = ['Quad_Left','Quad_Right',
-              'Hams_Left','Hams_Right',
-              'Glut_Left','Glut_Right']
+# muscle and stim channel mapping
+stim_order = ['Quad_Left','Quad_Right', # CH1 & CH2
+              'Hams_Left','Hams_Right', # CH3 & CH4
+              'Glut_Left','Glut_Right'] # CH5 & CH6
 
 class Control:
 
     def __init__(self, config_dict):
     	self.config_dict = config_dict
 
-    # to stimulate or not based on sensor's angle 
+###############################################
+# To stimulate or not based on sensor's angle 
+###############################################
+
     def fx(self, muscle, angle, speed, speed_ref):
         m = muscle[0] # Q, H or G
         side = muscle[5:] # Left/Right
         ramp_degrees = 10.0
         param_dict = self.config_dict[muscle[0:4]]
         dth = (speed/speed_ref)*self.config_dict['Shift']
+        # param_dict = rospy.get_param('/ema/server/')
+        # dth = (speed/speed_ref)*param_dict['Shift']
 
         theta_min = param_dict[m+"_Angle_"+side+"_Min"] - dth
         theta_max = param_dict[m+"_Angle_"+side+"_Max"] - dth
@@ -51,10 +54,12 @@ class Control:
                     else:
                         return 1
 
-        # return 0 otherwise
         return 0
 
-    # control coefficient routine
+###############################################
+# Control coefficient routine
+###############################################
+    
     def g(self, error):
 
         Kp = 1/float(5000)
@@ -78,7 +83,10 @@ class Control:
         
         return signal
     
-    # control applied to stimulation signal
+###############################################
+# Control applied to stimulation signal
+###############################################
+    
     def calculate(self, angle, speed, speed_ref, speed_err):
         factor = 6*[0]
 
@@ -87,9 +95,11 @@ class Control:
 
         return factor
     
-    # control applied to stimulation signal
+###############################################
+# Control applied to current amplitude
+###############################################
+    
     def automatic(self, stim_dict, increment, cadence, min_cadence, limit):
-
         if (cadence < min_cadence) and (increment<limit):
             step = 2
 
