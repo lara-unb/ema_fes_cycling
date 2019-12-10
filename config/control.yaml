@@ -1,9 +1,9 @@
 ## These are not being used ##
 #
-#filter_size: 20
-#gastrocnemius_max: 500
-#femoral_max: 500
-#speed_ref: 300
+filter_size: 20
+gastrocnemius_max: 500
+femoral_max: 500
+speed_ref: 300
 
 ## Replacing the dynamic reconfigure server #
 # Shift: 35

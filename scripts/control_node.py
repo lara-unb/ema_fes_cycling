@@ -71,6 +71,12 @@ stim_order = ['Quad_Left','Quad_Right', # CH1 & CH2
               'Glut_Left','Glut_Right'] # CH5 & CH6
 
 def server_callback(config):
+    global stim_current
+    global stim_pw
+    global auto_on
+    global auto_max_current
+    global auto_minvel
+
     auto_on = config['AutoC_Enable']
     auto_max_current = config['AutoC_Shift']
     auto_minvel = config['AutoC_Velocity']
@@ -90,6 +96,10 @@ def server_callback(config):
 
 
 def pedal_callback(data):
+    global angle
+    global speed
+    global speed_err
+    global time
     # pi = 3.14159
     
     # get timestamp
@@ -124,6 +134,9 @@ def pedal_callback(data):
 
 
 # def button_callback(data):
+#     global on_off
+#     global stim_current
+
 #     if data == Int8(1):
 #         if on_off == False:
 #             on_off = True
@@ -163,6 +176,14 @@ def pedal_callback(data):
 
 
 def main():
+    global cycles # number of pedal turns
+    global new_cycle # a new pedal turn happened
+    global cycle_speed # list of current cycle speeds
+    global mean_cadence # mean rpm speed of last cycle
+    global distance_km # distance travelled in km
+    global stim_current # stim current amplitude for each channel
+    # global auto_add_current # automatic current adjustment - add value
+
     # init control node
     rospy.init_node('control', anonymous=False)
 
