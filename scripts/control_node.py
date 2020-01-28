@@ -8,6 +8,7 @@ import ema.modules.control as control
 from sensor_msgs.msg import Imu
 from std_msgs.msg import Float64
 from std_msgs.msg import Int8
+from std_msgs.msg import UInt16
 from std_msgs.msg import Int32MultiArray
 from ema_common_msgs.msg import Stimulator
 
@@ -30,6 +31,7 @@ global mean_cadence # mean rpm speed of last cycle
 global distance_km # distance travelled in km
 global stim_current # stim current amplitude for each channel
 global stim_pw # stim pulse width for each channel
+global display_pub # display current data
 # global auto_on # automatic current adjustment - on/off
 # global auto_max_current # automatic current adjustment - limit
 # global auto_minvel # automatic current adjustment - trigger speed
@@ -136,6 +138,7 @@ def pedal_callback(data):
 def button_callback(data):
     global on_off
     global stim_current
+    global display_pub
 
     if data == Int8(1):
         if on_off == False:
@@ -147,6 +150,7 @@ def button_callback(data):
 
             if stim_current[muscle][side] < 100:
                 stim_current[muscle][side] += 2
+                display_pub.publish(stim_current[muscle][side])
             rospy.loginfo(muscle + '_' + side + " current is now %d", stim_current[muscle][side])
     elif data == Int8(2):
         if on_off == True:
@@ -157,6 +161,7 @@ def button_callback(data):
 
                 if stim_current[muscle][side] > 2:
                     stim_current[muscle][side] -= 2
+                    display_pub.publish(stim_current[muscle][side])
                     rospy.loginfo(muscle + '_' + side + " current is now %d", stim_current[muscle][side])
                 else:
                     rospy.loginfo("Turned off " + muscle + '_' + side)
@@ -172,6 +177,7 @@ def button_callback(data):
 
             if stim_current[muscle][side] >= 3:
                 stim_current[muscle][side] = 2
+                display_pub.publish(stim_current[muscle][side])
 
         rospy.loginfo("Turned off controller")
     
@@ -183,6 +189,7 @@ def main():
     global mean_cadence # mean rpm speed of last cycle
     global distance_km # distance travelled in km
     global stim_current # stim current amplitude for each channel
+    global display_pub # display current data
     # global auto_add_current # automatic current adjustment - add value
     
     # init control node
@@ -222,7 +229,10 @@ def main():
     pub['speed'] = rospy.Publisher('control/speed', Float64, queue_size=10)
     pub['cadence'] = rospy.Publisher('control/cadence', Float64, queue_size=10)
     pub['distance'] = rospy.Publisher('control/distance', Float64, queue_size=10)
-
+    
+    # display publisher 
+    display_pub = rospy.Publisher('display/current', UInt16, queue_size=10)
+    
     # define loop rate (in hz)
     rate = rospy.Rate(50)
 
