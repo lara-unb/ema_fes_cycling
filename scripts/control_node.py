@@ -2,7 +2,6 @@
 
 import rospy
 import ema.modules.control as control
-import dynamic_reconfigure.client as reconfig
 
 # import ros msgs
 from sensor_msgs.msg import Imu
@@ -13,6 +12,12 @@ from ema_common_msgs.msg import Stimulator
 
 # import utilities
 from tf import transformations
+
+# add when embedded
+from std_msgs.msg import UInt16
+
+# remove when embedded
+import dynamic_reconfigure.client as reconfig
 from math import pi
 import numpy as np
 
@@ -53,22 +58,25 @@ distance_km = 0
 
 # initial current amplitude
 stim_current = {
-    'Quad': {'Left': 0, 'Right': 0},
-    'Hams': {'Left': 0, 'Right': 0},
-    'Glut': {'Left': 0, 'Right': 0}
+    'Ch12': {'Odd': 0, 'Even': 0},
+    'Ch34': {'Odd': 0, 'Even': 0},
+    'Ch56': {'Odd': 0, 'Even': 0},
+    'Ch78': {'Odd': 0, 'Even': 0}
 }
 
 # initial pulse width
 stim_pw = {
-    'Quad': {'Left': 0, 'Right': 0},
-    'Hams': {'Left': 0, 'Right': 0},
-    'Glut': {'Left': 0, 'Right': 0}
+    'Ch12': {'Odd': 500, 'Even': 500},
+    'Ch34': {'Odd': 500, 'Even': 500},
+    'Ch56': {'Odd': 500, 'Even': 500},
+    'Ch78': {'Odd': 500, 'Even': 500}
 }
 
-# muscle and stim channel mapping
-stim_order = ['Quad_Left','Quad_Right', # CH1 & CH2
-              'Hams_Left','Hams_Right', # CH3 & CH4
-              'Glut_Left','Glut_Right'] # CH5 & CH6
+# stim channel mapping
+stim_order = ['Ch12_Odd','Ch12_Even', # CH1 & CH2
+              'Ch34_Odd','Ch34_Even', # CH3 & CH4
+              'Ch56_Odd','Ch56_Even', # CH5 & CH6
+              'Ch78_Odd','Ch78_Even'] # CH5 & CH6
 
 def server_callback(config):
     global stim_current
@@ -84,15 +92,15 @@ def server_callback(config):
     # assign updated server parameters to global vars 
     # refer to the server node for constraints
     for x in stim_order:
-        muscle = x[:4] # Quad, Hams or Glut
-        side = x[5:] # Left or Right
+        channel = x[:4] # Ch12, Ch34, Ch56, Ch78
+        side = x[5:] # Odd or Even
 
-        if config[muscle[0]+'_Enable']:
-            stim_current[muscle][side] = config[muscle[0]+'_Current_'+side]
-            stim_pw[muscle][side] = config[muscle[0]+'_Pulse_Width_'+side]
+        if config[channel[0]+'_Enable']:
+            stim_current[channel][side] = config[channel[0]+'_Current_'+side]
+            stim_pw[channel][side] = config[channel[0]+'_Pulse_Width_'+side]
         else:
-            stim_current[muscle][side] = 0
-            stim_pw[muscle][side] = 0
+            stim_current[channel][side] = 0
+            stim_pw[channel][side] = 0
 
 
 def pedal_callback(data):
@@ -142,35 +150,35 @@ def pedal_callback(data):
 #             on_off = True
         
 #         for x in stim_order:
-#             muscle = x[:4] # Quad, Hams or Glut
-#             side = x[5:] # Left or Right
+#             channel = x[:4] # Ch12, Ch34, Ch56, Ch78
+#             side = x[5:] # Odd or Even
 
-#             if stim_current[muscle][side] < 100:
-#                 stim_current[muscle][side] += 2
-#             rospy.loginfo(muscle + '_' + side + " current is now %d", stim_current[muscle][side])
+#             if stim_current[channel][side] < 100:
+#                 stim_current[channel][side] += 2
+#             rospy.loginfo(channel + '_' + side + " current is now %d", stim_current[channel][side])
 #     elif data == Int8(2):
 #         if on_off == True:
 
 #             for x in stim_order:
-#                 muscle = x[:4] # Quad, Hams or Glut
-#                 side = x[5:] # Left or Right
+#                 channel = x[:4] # Ch12, Ch34, Ch56, Ch78
+#                 side = x[5:] # Odd or Even
 
-#                 if stim_current[muscle][side] > 2:
-#                     stim_current[muscle][side] -= 2
-#                     rospy.loginfo(muscle + '_' + side + " current is now %d", stim_current[muscle][side])
+#                 if stim_current[channel][side] > 2:
+#                     stim_current[channel][side] -= 2
+#                     rospy.loginfo(channel + '_' + side + " current is now %d", stim_current[channel][side])
 #                 else:
-#                     rospy.loginfo("Turned off " + muscle + '_' + side)
+#                     rospy.loginfo("Turned off " + channel + '_' + side)
 #         else:
 #             pass
 #     elif data == Int8(3):
 #         on_off = False
 
 #         for x in stim_order:
-#             muscle = x[:4] # Quad, Hams or Glut
-#             side = x[5:] # Left or Right
+#             channel = x[:4] # Ch12, Ch34, Ch56, Ch78
+#             side = x[5:] # Odd or Even
 
-#             if stim_current[muscle][side] >= 3:
-#                 stim_current[muscle][side] = 2
+#             if stim_current[channel][side] >= 3:
+#                 stim_current[channel][side] = 2
 
 #         rospy.loginfo("Turned off controller")
 
@@ -248,15 +256,15 @@ def main():
 
         # update current and pw values
         for i, x in enumerate(stim_order):
-            muscle = x[:4] # Quad, Hams or Glut
-            side = x[5:] # Left or Right
+            channel = x[:4] # Ch12, Ch34, Ch56, Ch78
+            side = x[5:] # Odd or Even
 
-            stimMsg.pulse_current[i] = round(stimfactors[i]*stim_current[muscle][side])
-            stimMsg.pulse_width[i] = stim_pw[muscle][side]
+            stimMsg.pulse_current[i] = round(stimfactors[i]*stim_current[channel][side])
+            stimMsg.pulse_width[i] = stim_pw[channel][side]
             signalMsg.data[i+1] = stimMsg.pulse_current[i]# [index] is the actual channel number
 
             # if new_cycle and auto_on:
-            #     dyn_params.update_configuration({muscle[0]+'_Current_'+side:stim_current[muscle][side]})
+            #     dyn_params.update_configuration({channel[0]+'_Current_'+side:stim_current[channel][side]})
 
         angleMsg.data = angle[-1]
         speedMsg.data = speed[-1]

@@ -2,10 +2,11 @@
 
 import rospy
 
-# muscle and stim channel mapping
-stim_order = ['Quad_Left','Quad_Right', # CH1 & CH2
-              'Hams_Left','Hams_Right', # CH3 & CH4
-              'Glut_Left','Glut_Right'] # CH5 & CH6
+# stim channel mapping
+stim_order = ['Ch12_Odd','Ch12_Even', # CH1 & CH2
+              'Ch34_Odd','Ch34_Even', # CH3 & CH4
+              'Ch56_Odd','Ch56_Even', # CH5 & CH6
+              'Ch78_Odd','Ch78_Even'] # CH5 & CH6
 
 class Control:
 
@@ -16,13 +17,13 @@ class Control:
 # To stimulate or not based on sensor's angle 
 ###############################################
 
-    def fx(self, muscle, angle, speed, speed_ref):
-        m = muscle[0] # Q, H or G
-        side = muscle[5:] # Left/Right
+    def fx(self, channel, angle, speed, speed_ref):
+        m = channel[:4] # Ch12, Ch34, Ch56, Ch78
+        side = channel[5:] # Odd or Even
         ramp_degrees = 10.0
         param_dict = rospy.get_param('/ema/server/')
-        dth = (speed/speed_ref)*param_dict['Shift']
-        # param_dict = self.config_dict[muscle[0:4]]
+        # param_dict = self.config_dict[channel[0:4]]
+        # dth = (speed/speed_ref)*param_dict['Shift']
         # dth = (speed/speed_ref)*self.config_dict['Shift']
 
         theta_min = param_dict[m+"_Angle_"+side+"_Min"] - dth
@@ -109,9 +110,9 @@ class Control:
             increment = min(increment+step, limit)
 
             for x in stim_order:
-                muscle = x[:4] # Quad, Hams or Glut
-                side = x[5:] # Left or Right
+                channel = x[:4] # Ch12, Ch34, Ch56, Ch78
+                side = x[5:] # Odd or Even
 
-                stim_dict[muscle][side] = stim_dict[muscle][side] + step
+                stim_dict[channel][side] = stim_dict[channel][side] + step
 
         return stim_dict, increment
