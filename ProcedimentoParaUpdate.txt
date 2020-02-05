@@ -1,0 +1,17 @@
+Procedimento para atualizar o código embarcado com base no principal
+
+Principal: branch "orange"
+Embarcado: branch "raspema"
+
+
+Descomentar "control.yalm"
+
+Em "control_node.py":
+	- Adicionar/Remover imports
+	- Descomentar a função "button_callback",
+
+Em "control.py":
+	- Alterne para "param_dict = self.config_dict[channel[0:4]]"
+
+Em "trike.launch":
+	- Comentar "<node name="server" ..."
