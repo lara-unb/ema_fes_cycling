@@ -9,29 +9,29 @@ speed_ref: 300
 # Shift: 35
 
 # Ch12: {
-#   'Ch12_Angle_Odd_Min': 280,
-#   'Ch12_Angle_Odd_Max': 20,
-#   'Ch12_Angle_Even_Min': 100,
-#   'Ch12_Angle_Even_Max': 200
+#   'Ch1_Angle_Min': 280,
+#   'Ch1_Angle_Max': 20,
+#   'Ch2_Angle_Min': 100,
+#   'Ch2_Angle_Max': 200
 # }
 
 # Ch34: {
-#     'Ch34_Angle_Odd_Min': 30,
-#     'Ch34_Angle_Odd_Max': 105,
-#     'Ch34_Angle_Even_Min': 210,
-#     'Ch34_Angle_Even_Max': 285
+#     'Ch3_Angle_Min': 30,
+#     'Ch3_Angle_Max': 105,
+#     'Ch4_Angle_Min': 210,
+#     'Ch4_Angle_Max': 285
 # }
 
 # Ch56: {
-#     'Ch56_Angle_Odd_Min': 70,
-#     'Ch56_Angle_Odd_Max': 170,
-#     'Ch56_Angle_Even_Min': 250,
-#     'Ch56_Angle_Even_Max': 350
+#     'Ch5_Angle_Min': 70,
+#     'Ch5_Angle_Max': 170,
+#     'Ch6_Angle_Min': 250,
+#     'Ch6_Angle_Max': 350
 # }
 
 # Ch78: {
-#     'Ch78_Angle_Odd_Min': 0,
-#     'Ch78_Angle_Odd_Max': 0,
-#     'Ch78_Angle_Even_Min': 0,
-#     'Ch78_Angle_Even_Max': 0
+#     'Ch7_Angle_Min': 0,
+#     'Ch7_Angle_Max': 0,
+#     'Ch8_Angle_Min': 0,
+#     'Ch8_Angle_Max': 0
 # }

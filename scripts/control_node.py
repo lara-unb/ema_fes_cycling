@@ -58,25 +58,27 @@ distance_km = 0
 
 # initial current amplitude
 stim_current = {
-    'Ch12': {'Odd': 0, 'Even': 0},
-    'Ch34': {'Odd': 0, 'Even': 0},
-    'Ch56': {'Odd': 0, 'Even': 0},
-    'Ch78': {'Odd': 0, 'Even': 0}
+    'Ch1': 0,'Ch2': 0,
+    'Ch3': 0,'Ch4': 0,
+    'Ch5': 0,'Ch6': 0,
+    'Ch7': 0,'Ch8': 0
 }
 
 # initial pulse width
-stim_pw = {
-    'Ch12': {'Odd': 500, 'Even': 500},
-    'Ch34': {'Odd': 500, 'Even': 500},
-    'Ch56': {'Odd': 500, 'Even': 500},
-    'Ch78': {'Odd': 500, 'Even': 500}
+stim_pw = { 
+    'Ch1': 500,'Ch2': 500,
+    'Ch3': 500,'Ch4': 500,
+    'Ch5': 500,'Ch6': 500,
+    'Ch7': 500,'Ch8': 500
 }
 
 # stim channel mapping
-stim_order = ['Ch12_Odd','Ch12_Even', # CH1 & CH2
-              'Ch34_Odd','Ch34_Even', # CH3 & CH4
-              'Ch56_Odd','Ch56_Even', # CH5 & CH6
-              'Ch78_Odd','Ch78_Even'] # CH5 & CH6
+stim_order = [
+    'Ch1','Ch2',
+    'Ch3','Ch4',
+    'Ch5','Ch6',
+    'Ch7','Ch8'
+]
 
 def server_callback(config):
     global stim_current
@@ -91,16 +93,9 @@ def server_callback(config):
 
     # assign updated server parameters to global vars 
     # refer to the server node for constraints
-    for x in stim_order:
-        channel = x[:4] # Ch12, Ch34, Ch56, Ch78
-        side = x[5:] # Odd or Even
-
-        if config[channel+'_Enable']:
-            stim_current[channel][side] = config[channel+'_Current_'+side]
-            stim_pw[channel][side] = config[channel+'_Pulse_Width_'+side]
-        else:
-            stim_current[channel][side] = 0
-            stim_pw[channel][side] = 0
+    for ch in stim_order:
+        stim_current[ch] = config[ch+'_Current']
+        stim_pw[ch] = config[ch+'_Pulse_Width']
 
 
 def pedal_callback(data):
@@ -149,36 +144,27 @@ def pedal_callback(data):
 #         if on_off == False:
 #             on_off = True
         
-#         for x in stim_order:
-#             channel = x[:4] # Ch12, Ch34, Ch56, Ch78
-#             side = x[5:] # Odd or Even
-
-#             if stim_current[channel][side] < 100:
-#                 stim_current[channel][side] += 2
-#             rospy.loginfo(channel + '_' + side + " current is now %d", stim_current[channel][side])
+#         for ch in stim_order:
+#             if stim_current[ch] < 100:
+#                 stim_current[ch] += 2
+#             rospy.loginfo(ch + " current is now %d", stim_current[ch])
 #     elif data == Int8(2):
 #         if on_off == True:
 
-#             for x in stim_order:
-#                 channel = x[:4] # Ch12, Ch34, Ch56, Ch78
-#                 side = x[5:] # Odd or Even
-
-#                 if stim_current[channel][side] > 2:
-#                     stim_current[channel][side] -= 2
-#                     rospy.loginfo(channel + '_' + side + " current is now %d", stim_current[channel][side])
+#             for ch in stim_order:
+#                 if stim_current[ch] > 2:
+#                     stim_current[ch] -= 2
+#                     rospy.loginfo(ch + " current is now %d", stim_current[ch])
 #                 else:
-#                     rospy.loginfo("Turned off " + channel + '_' + side)
+#                     rospy.loginfo("Turned off " + ch)
 #         else:
 #             pass
 #     elif data == Int8(3):
 #         on_off = False
 
-#         for x in stim_order:
-#             channel = x[:4] # Ch12, Ch34, Ch56, Ch78
-#             side = x[5:] # Odd or Even
-
-#             if stim_current[channel][side] >= 3:
-#                 stim_current[channel][side] = 2
+#         for ch in stim_order:
+#             if stim_current[ch] >= 3:
+#                 stim_current[ch] = 2
 
 #         rospy.loginfo("Turned off controller")
 
@@ -258,16 +244,13 @@ def main():
         stimfactors = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)  
 
         # update current and pw values
-        for i, x in enumerate(stim_order):
-            channel = x[:4] # Ch12, Ch34, Ch56, Ch78
-            side = x[5:] # Odd or Even
-
-            stimMsg.pulse_current[i] = round(stimfactors[i]*stim_current[channel][side])
-            stimMsg.pulse_width[i] = stim_pw[channel][side]
+        for i, ch in enumerate(stim_order):
+            stimMsg.pulse_current[i] = round(stimfactors[i]*stim_current[ch])
+            stimMsg.pulse_width[i] = stim_pw[ch]
             signalMsg.data[i+1] = stimMsg.pulse_current[i]# [index] is the actual channel number
 
             # if new_cycle and auto_on:
-            #     dyn_params.update_configuration({channel[0]+'_Current_'+side:stim_current[channel][side]})
+            #     dyn_params.update_configuration({ch+'_Current':stim_current[ch]})
 
         angleMsg.data = angle[-1]
         speedMsg.data = speed[-1]

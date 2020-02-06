@@ -6,8 +6,6 @@
 # Ch34: commonly used with hamstrings, refers to stimulator channels 3 and 4
 # Ch56: commonly used with gluteal, refers to stimulator channels 5 and 6
 # Ch78: commonly not used, refers to stimulator channels 7 and 8
-# Odd:  commonly used with left side, refers to the odd channel number (1,3,5,7)
-# Even: commonly used with right side, refers to the even channel number (2,4,6,8)
 
 import rospy
 from dynamic_reconfigure.server import Server
@@ -18,176 +16,130 @@ global prev_config
 # used to compare past values
 prev_config = {
     'Ch12': {
-    	'Current_Odd':0,
-    	'Current_Even':0,
-        'Pulse_Width_Odd': 500,
-        'Pulse_Width_Even': 500,
-    	'Angle_Odd_Min': 280,
-    	'Angle_Odd_Max': 0,
-    	'Angle_Even_Min': 100,
-    	'Angle_Even_Max': 180
+    	'Ch1_Current':0,
+    	'Ch2_Current':0,
+        'Ch1_Pulse_Width': 500,
+        'Ch2_Pulse_Width': 500,
+    	'Ch1_Angle_Min': 280,
+    	'Ch1_Angle_Max': 0,
+    	'Ch2_Angle_Min': 100,
+    	'Ch2_Angle_Max': 180
     },
     'Ch34': {
-        'Current_Odd':0,
-        'Current_Even':0,
-        'Pulse_Width_Odd': 500,
-        'Pulse_Width_Even': 500,
-        'Angle_Odd_Min': 30,
-        'Angle_Odd_Max': 105,
-        'Angle_Even_Min': 210,
-        'Angle_Even_Max': 285
+        'Ch3_Current':0,
+        'Ch4_Current':0,
+        'Ch3_Pulse_Width': 500,
+        'Ch4_Pulse_Width': 500,
+        'Ch3_Angle_Min': 30,
+        'Ch3_Angle_Max': 105,
+        'Ch4_Angle_Min': 210,
+        'Ch4_Angle_Max': 285
     },
     'Ch56': {
-        'Current_Odd':0,
-        'Current_Even':0,
-        'Pulse_Width_Odd': 500,
-        'Pulse_Width_Even': 500,
-        'Angle_Odd_Min': 70,
-        'Angle_Odd_Max': 170,
-        'Angle_Even_Min': 250,
-        'Angle_Even_Max': 350
+        'Ch5_Current':0,
+        'Ch6_Current':0,
+        'Ch5_Pulse_Width': 500,
+        'Ch6_Pulse_Width': 500,
+        'Ch5_Angle_Min': 70,
+        'Ch5_Angle_Max': 170,
+        'Ch6_Angle_Min': 250,
+        'Ch6_Angle_Max': 350
     },
     'Ch78': {
-        'Current_Odd':0,
-        'Current_Even':0,
-        'Pulse_Width_Odd': 500,
-        'Pulse_Width_Even': 500,
-        'Angle_Odd_Min': 0,
-        'Angle_Odd_Max': 0,
-        'Angle_Even_Min': 0,
-        'Angle_Even_Max': 0
+        'Ch7_Current':0,
+        'Ch8_Current':0,
+        'Ch7_Pulse_Width': 500,
+        'Ch8_Pulse_Width': 500,
+        'Ch7_Angle_Min': 0,
+        'Ch7_Angle_Max': 0,
+        'Ch8_Angle_Min': 0,
+        'Ch8_Angle_Max': 0
     }
 }
 
 # stim channel mapping
-channel_list = ['Ch12','Ch34','Ch56','Ch78']
+channel_groups = ['Ch12','Ch34','Ch56','Ch78']
 
 def callback(config, level):
-    for p in channel_list:
+    for p in channel_groups:
+        odd = p[2]
+        even = p[3]
 
         ########### CHANNEL CHECK ###########
         #####################################
         # config['groups']['groups']['MyGroup']['state'] = False # for types 'hide' and 'collapse'
-        if config[p+'_'+'Enable']:
-            config['groups']['groups'][p]['state'] = True
-        else:
+        if not config[p+'_'+'Enable']:
             config['groups']['groups'][p]['state'] = False
-            config[p+'_'+'Current_Odd'] = 0
-            config[p+'_'+'Current_Even'] = 0
+            config['Ch'+odd+'_Current'] = 0
+            config['Ch'+even+'_Current'] = 0
 
-            continue # muscle group deactivated
+            continue # channel group deactivated
 
-        ########### CURRENT CHECK ###########
-        #####################################
-        # check for changes in current
-        diffL = config[p+'_'+'Current_Odd'] - prev_config[p]['Current_Odd']
-        # prevents the user from abruptly increasing the current
-        if diffL:            
-            if diffL > 2:
-                config[p+'_'+'Current_Odd'] = prev_config[p]['Current_Odd'] + 2
-                prev_config[p]['Current_Odd'] = config[p+'_'+'Current_Odd']
-            else:
-                prev_config[p]['Current_Odd'] = config[p+'_'+'Current_Odd']
-            # modify left and right at the same time    
-            if config[p+'_'+'Link_Current']:
-                config[p+'_'+'Current_Even'] = config[p+'_'+'Current_Odd']
-                prev_config[p]['Current_Even']  = config[p+'_'+'Current_Even']
-            
-            return config # assumes only one change per callback
+        else:
+            config['groups']['groups'][p]['state'] = True
 
-        # check for changes in current
-        diffR = config[p+'_'+'Current_Even'] - prev_config[p]['Current_Even']
-        # prevents the user from abruptly increasing the current
-        if diffR:
-            if diffR > 2:
-                config[p+'_'+'Current_Even'] = prev_config[p]['Current_Even'] + 2
-                prev_config[p]['Current_Even'] = config[p+'_'+'Current_Even']
-            else:
-                prev_config[p]['Current_Even'] = config[p+'_'+'Current_Even']
-            # modify left and right at the same time    
-            if config[p+'_'+'Link_Current']:
-                config[p+'_'+'Current_Odd'] = config[p+'_'+'Current_Even']
-                prev_config[p]['Current_Odd']  = config[p+'_'+'Current_Odd']
+            for n in (odd,even):
+                m = str((int(n)-1)+(2*(int(n)%2))) # if n=odd, m=even; if n=even, m=odd
 
-            return config # assumes only one change per callback
+                ########### CURRENT CHECK ###########
+                #####################################
+                # check for changes in current
+                diff = config['Ch'+n+'_Current'] - prev_config[p]['Ch'+n+'_Current']
+                # prevents the user from abruptly increasing the current
+                if diff:            
+                    if diff > 2:
+                        config['Ch'+n+'_Current'] = prev_config[p]['Ch'+n+'_Current'] + 2
+                        prev_config[p]['Ch'+n+'_Current'] = config['Ch'+n+'_Current']
+                    else:
+                        prev_config[p]['Ch'+n+'_Current'] = config['Ch'+n+'_Current']
+                    # modify left and right at the same time    
+                    if config[p+'_Link_Current']: 
+                        config['Ch'+m+'_Current'] = config['Ch'+n+'_Current']
+                        prev_config[p]['Ch'+m+'_Current']  = config['Ch'+m+'_Current']
+                    
+                    return config # assumes only one change per callback
 
-        ######### PULSE WIDTH CHECK #########
-        #####################################
-        # check for changes in pulse width
-        diffL = config[p+'_'+'Pulse_Width_Odd'] - prev_config[p]['Pulse_Width_Odd']
-        # prevents the user from abruptly increasing the current
-        if diffL:
-            prev_config[p]['Pulse_Width_Odd'] = config[p+'_'+'Pulse_Width_Odd']
-            # modify left and right at the same time    
-            if config[p+'_'+'Link_Current']:
-                config[p+'_'+'Pulse_Width_Even'] = config[p+'_'+'Pulse_Width_Odd']
-                prev_config[p]['Pulse_Width_Even']  = config[p+'_'+'Pulse_Width_Even']
-            
-            return config # assumes only one change per callback
+                ######### PULSE WIDTH CHECK #########
+                #####################################
+                # check for changes in pulse width
+                diff = config['Ch'+n+'_Pulse_Width'] - prev_config[p]['Ch'+n+'_Pulse_Width']
+                # prevents the user from abruptly increasing the current
+                if diff:
+                    prev_config[p]['Ch'+n+'_Pulse_Width'] = config['Ch'+n+'_Pulse_Width']
+                    # modify left and right at the same time    
+                    if config[p+'_'+'Link_Current']:
+                        config['Ch'+m+'_Pulse_Width'] = config['Ch'+n+'_Pulse_Width']
+                        prev_config[p]['Ch'+m+'_Pulse_Width'] = config['Ch'+m+'_Pulse_Width']
+                    
+                    return config # assumes only one change per callback
 
-        # check for changes in pulse width
-        diffR = config[p+'_'+'Pulse_Width_Even'] - prev_config[p]['Pulse_Width_Even']
-        # prevents the user from abruptly increasing the current
-        if diffR:
-            prev_config[p]['Pulse_Width_Even'] = config[p+'_'+'Pulse_Width_Even']
-            # modify left and right at the same time    
-            if config[p+'_'+'Link_Current']:
-                config[p+'_'+'Pulse_Width_Odd'] = config[p+'_'+'Pulse_Width_Even']
-                prev_config[p]['Pulse_Width_Odd']  = config[p+'_'+'Pulse_Width_Odd']
-            
-            return config # assumes only one change per callback
+                ############ ANGLE CHECK ############
+                #####################################
+                if config[p+'_'+'Link_Angle']:
+                    # check for changes in angle
+                    diffmin = config['Ch'+n+'_Angle_Min'] - prev_config[p]['Ch'+n+'_Angle_Min']
+                    if diffmin:
+                        if 0<=(config['Ch'+m+'_Angle_Min'] + diffmin)<=360:
+                            config['Ch'+m+'_Angle_Min'] += diffmin # left n right legs linked
+                            prev_config[p]['Ch'+m+'_Angle_Min'] = config['Ch'+m+'_Angle_Min']
+                            prev_config[p]['Ch'+n+'_Angle_Min']  = config['Ch'+n+'_Angle_Min']
+                        else: # one change makes the other exceed its range
+                            config['Ch'+n+'_Angle_Min'] = prev_config[p]['Ch'+n+'_Angle_Min']
 
-        ############ ANGLE CHECK ############
-        #####################################
-        if config[p+'_'+'Link_Angle']:
-            # check for changes in angle
-            diffLmin = config[p+'_'+'Angle_Odd_Min'] - prev_config[p]['Angle_Odd_Min']
-            if diffLmin:
-                if 0<=(config[p+'_'+'Angle_Even_Min'] + diffLmin)<=360:
-                    config[p+'_'+'Angle_Even_Min'] += diffLmin # left n right legs linked
-                    prev_config[p]['Angle_Even_Min'] = config[p+'_'+'Angle_Even_Min']
-                    prev_config[p]['Angle_Odd_Min']  = config[p+'_'+'Angle_Odd_Min']
-                else: # one change makes the other exceed its range
-                    config[p+'_'+'Angle_Odd_Min'] = prev_config[p]['Angle_Odd_Min']
+                        return config # assumes only one change per callback
 
-                return config # assumes only one change per callback
+                    # check for changes in angle
+                    diffmax = config['Ch'+n+'_Angle_Max'] - prev_config[p]['Ch'+n+'_Angle_Max']
+                    if diffmax:
+                        if 0<=(config['Ch'+m+'_Angle_Max'] + diffmax)<=360:
+                            config['Ch'+m+'_Angle_Max'] += diffmax # left n right legs linked
+                            prev_config[p]['Ch'+m+'_Angle_Max'] = config['Ch'+m+'_Angle_Max']
+                            prev_config[p]['Ch'+n+'_Angle_Max']  = config['Ch'+n+'_Angle_Max']
+                        else: # one change makes the other exceed its range
+                            config['Ch'+n+'_Angle_Max'] = prev_config[p]['Ch'+n+'_Angle_Max']
 
-            # check for changes in angle
-            diffLmax = config[p+'_'+'Angle_Odd_Max'] - prev_config[p]['Angle_Odd_Max']
-            if diffLmax:
-                if 0<=(config[p+'_'+'Angle_Even_Max'] + diffLmax)<=360:
-                    config[p+'_'+'Angle_Even_Max'] += diffLmax # left n right legs linked
-                    prev_config[p]['Angle_Even_Max'] = config[p+'_'+'Angle_Even_Max']
-                    prev_config[p]['Angle_Odd_Max']  = config[p+'_'+'Angle_Odd_Max']
-                else: # one change makes the other exceed its range
-                    config[p+'_'+'Angle_Odd_Max'] = prev_config[p]['Angle_Odd_Max']
-
-                return config # assumes only one change per callback
-
-            # check for changes in angle
-            diffRmin = config[p+'_'+'Angle_Even_Min'] - prev_config[p]['Angle_Even_Min']
-            if diffRmin:
-                if 0<=(config[p+'_'+'Angle_Odd_Min'] + diffRmin)<=360:
-                    config[p+'_'+'Angle_Odd_Min'] += diffRmin # left n right legs linked
-                    prev_config[p]['Angle_Odd_Min'] = config[p+'_'+'Angle_Odd_Min']
-                    prev_config[p]['Angle_Even_Min']  = config[p+'_'+'Angle_Even_Min']
-                else: # one change makes the other exceed its range
-                    config[p+'_'+'Angle_Even_Min'] = prev_config[p]['Angle_Even_Min']
-
-                return config # assumes only one change per callback
-
-            # check for changes in angle
-            diffRmax = config[p+'_'+'Angle_Even_Max'] - prev_config[p]['Angle_Even_Max']
-            if diffRmax:
-                if 0<=(config[p+'_'+'Angle_Odd_Max'] + diffRmax)<=360:
-                    config[p+'_'+'Angle_Odd_Max'] += diffRmax # left n right legs linked
-                    prev_config[p]['Angle_Odd_Max'] = config[p+'_'+'Angle_Odd_Max']
-                    prev_config[p]['Angle_Even_Max']  = config[p+'_'+'Angle_Even_Max']
-                else: # one change makes the other exceed its range
-                    config[p+'_'+'Angle_Even_Max'] = prev_config[p]['Angle_Even_Max']
-
-                return config # assumes only one change per callback
-                
+                        return config # assumes only one change per callback
+                    
     return config
 
 if __name__ == "__main__":
