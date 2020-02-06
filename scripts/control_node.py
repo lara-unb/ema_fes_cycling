@@ -95,9 +95,9 @@ def server_callback(config):
         channel = x[:4] # Ch12, Ch34, Ch56, Ch78
         side = x[5:] # Odd or Even
 
-        if config[channel[0]+'_Enable']:
-            stim_current[channel][side] = config[channel[0]+'_Current_'+side]
-            stim_pw[channel][side] = config[channel[0]+'_Pulse_Width_'+side]
+        if config[channel+'_Enable']:
+            stim_current[channel][side] = config[channel+'_Current_'+side]
+            stim_pw[channel][side] = config[channel+'_Pulse_Width_'+side]
         else:
             stim_current[channel][side] = 0
             stim_pw[channel][side] = 0
@@ -197,10 +197,10 @@ def main():
 
     # build basic stimulator message
     stimMsg = Stimulator()
-    stimMsg.channel = list(range(1,6+1)) # all the 6 channels
-    stimMsg.mode = 6*['single'] # no doublets/triplets
-    stimMsg.pulse_width = 6*[0] # initialize w/ zeros
-    stimMsg.pulse_current = 6*[0]
+    stimMsg.channel = list(range(1,8+1)) # all the 6 channels
+    stimMsg.mode = 8*['single'] # no doublets/triplets
+    stimMsg.pulse_width = 8*[0] # initialize w/ zeros
+    stimMsg.pulse_current = 8*[0]
 
     # build basic angle/speed/signal message
     angleMsg = Float64()
@@ -208,7 +208,7 @@ def main():
     cadenceMsg = Float64()
     distanceMsg = Float64()
     signalMsg = Int32MultiArray() # visual stimulator signal
-    signalMsg.data = 7*[0] # [index] is the actual channel number
+    signalMsg.data = 9*[0] # [index] is the actual channel number
 
     # communicate with the dynamic server
     dyn_params = reconfig.Client('server', config_callback = server_callback)
@@ -237,16 +237,19 @@ def main():
     while not rospy.is_shutdown():
         # check for a new pedal turn
         if angle[-2]-angle[-1] > 350:
-            new_cycle = True
-            cycles += 1 # count turns
-            mean_cadence = sum(cycle_speed)/len(cycle_speed) # simple mean
-            cycle_speed = [] # reset list for new cycle
-            distance_km = (cycles*3.14159*1.5*66)/100000  #1.5: volta da coroa em relacao ao pneu, 66cm(26pol): diametro do pneu, 100000: cm->km
-            # print cycles, mean_cadence, distance_km
+            try: # ignores ZeroDivisionError
+                new_cycle = True
+                cycles += 1 # count turns
+                mean_cadence = sum(cycle_speed)/len(cycle_speed) # simple mean
+                cycle_speed = [] # reset list for new cycle
+                distance_km = (cycles*3.14159*1.5*66)/100000  #1.5: volta da coroa em relacao ao pneu, 66cm(26pol): diametro do pneu, 100000: cm->km
+                # print cycles, mean_cadence, distance_km
 
-            # if auto_on:
-            #    stim_current, auto_add_current = controller.automatic(stim_current, auto_add_current, mean_cadence, auto_minvel, auto_max_current)
-            #    print auto_add_current
+                # if auto_on:
+                #    stim_current, auto_add_current = controller.automatic(stim_current, auto_add_current, mean_cadence, auto_minvel, auto_max_current)
+                #    print auto_add_current
+            except:
+                pass
         else:
             new_cycle = False
             cycle_speed.append(speed[-1])

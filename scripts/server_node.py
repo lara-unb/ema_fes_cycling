@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+#
 # Dont change group names! they're used by other pieces of code (eg. "Ch12" should remain the same)
 #
 # Ch12: commonly used with quadriceps, refers to stimulator channels 1 and 2
@@ -6,8 +8,6 @@
 # Ch78: commonly not used, refers to stimulator channels 7 and 8
 # Odd:  commonly used with left side, refers to the odd channel number (1,3,5,7)
 # Even: commonly used with right side, refers to the even channel number (2,4,6,8)
-
-#!/usr/bin/env python
 
 import rospy
 from dynamic_reconfigure.server import Server
@@ -23,9 +23,9 @@ prev_config = {
         'Pulse_Width_Odd': 500,
         'Pulse_Width_Even': 500,
     	'Angle_Odd_Min': 280,
-    	'Angle_Odd_Max': 20,
+    	'Angle_Odd_Max': 0,
     	'Angle_Even_Min': 100,
-    	'Angle_Even_Max': 200
+    	'Angle_Even_Max': 180
     },
     'Ch34': {
         'Current_Odd':0,

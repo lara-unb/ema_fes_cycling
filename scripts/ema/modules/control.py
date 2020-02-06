@@ -25,6 +25,7 @@ class Control:
         # param_dict = self.config_dict[channel[0:4]]
         # dth = (speed/speed_ref)*param_dict['Shift']
         # dth = (speed/speed_ref)*self.config_dict['Shift']
+        dth = 0
 
         theta_min = param_dict[m+"_Angle_"+side+"_Min"] - dth
         theta_max = param_dict[m+"_Angle_"+side+"_Max"] - dth
@@ -89,7 +90,7 @@ class Control:
 ###############################################
     
     def calculate(self, angle, speed, speed_ref, speed_err):
-        factor = 6*[0]
+        factor = 8*[0]
 
         for i, x in enumerate(stim_order):
             factor[i] = self.fx(x, angle, speed, speed_ref)
