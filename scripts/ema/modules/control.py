@@ -2,10 +2,13 @@
 
 import rospy
 
-# muscle and stim channel mapping
-stim_order = ['Quad_Left','Quad_Right', # CH1 & CH2
-              'Hams_Left','Hams_Right', # CH3 & CH4
-              'Glut_Left','Glut_Right'] # CH5 & CH6
+# stim channel mapping
+stim_order = [
+    'Ch1','Ch2',
+    'Ch3','Ch4',
+    'Ch5','Ch6',
+    'Ch7','Ch8'
+]
 
 class Control:
 
@@ -16,17 +19,16 @@ class Control:
 # To stimulate or not based on sensor's angle 
 ###############################################
 
-    def fx(self, muscle, angle, speed, speed_ref):
-        m = muscle[0] # Q, H or G
-        side = muscle[5:] # Left/Right
+    def fx(self, ch, angle, speed, speed_ref):
         ramp_degrees = 10.0
-        param_dict = self.config_dict[muscle[0:4]]
-        dth = (speed/speed_ref)*self.config_dict['Shift']
         # param_dict = rospy.get_param('/ema/server/')
         # dth = (speed/speed_ref)*param_dict['Shift']
+        param_dict = self.config_dict[ch[0:8]]
+        # dth = (speed/speed_ref)*self.config_dict['Shift']
+        dth = 0
 
-        theta_min = param_dict[m+"_Angle_"+side+"_Min"] - dth
-        theta_max = param_dict[m+"_Angle_"+side+"_Max"] - dth
+        theta_min = param_dict[ch+"_Angle_Min"] - dth
+        theta_max = param_dict[ch+"_Angle_Max"] - dth
 
         # check if angle in range (theta_min, theta_max) 
         if theta_min <= angle and angle <= theta_max:
@@ -36,7 +38,7 @@ class Control:
                 return (theta_max-angle)/ramp_degrees
             else:
                 return 1
-        elif param_dict[m+"_Angle_"+side+"_Min"] > param_dict[m+"_Angle_"+side+"_Max"]:
+        elif param_dict[ch+"_Angle_Min"] > param_dict[ch+"_Angle_Max"]:
             if angle <= theta_min and angle <= theta_max:
                 if theta_min <= angle + 360 and angle <= theta_max:
                     if (angle+360-theta_min) <= ramp_degrees:
@@ -59,7 +61,7 @@ class Control:
 ###############################################
 # Control coefficient routine
 ###############################################
-    
+
     def g(self, error):
 
         Kp = 1/float(5000)
@@ -88,10 +90,10 @@ class Control:
 ###############################################
     
     def calculate(self, angle, speed, speed_ref, speed_err):
-        factor = 6*[0]
+        factor = 8*[0]
 
-        for i, x in enumerate(stim_order):
-            factor[i] = self.fx(x, angle, speed, speed_ref)
+        for i, ch in enumerate(stim_order):
+            factor[i] = self.fx(ch, angle, speed, speed_ref)
 
         return factor
     
@@ -108,10 +110,7 @@ class Control:
 
             increment = min(increment+step, limit)
 
-            for x in stim_order:
-                muscle = x[:4] # Quad, Hams or Glut
-                side = x[5:] # Left or Right
-
-                stim_dict[muscle][side] = stim_dict[muscle][side] + step
+            for ch in stim_order:
+                stim_dict[ch] = stim_dict[ch] + step
 
         return stim_dict, increment

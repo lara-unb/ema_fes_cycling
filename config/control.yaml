@@ -1,30 +1,49 @@
 ## These are not being used ##
 #
-#filter_size: 20
-#gastrocnemius_max: 500
-#femoral_max: 500
-#speed_ref: 300
+# filter_size: 20
+# gastrocnemius_max: 500
+# femoral_max: 500
+# speed_ref: 300
 
-# Replacing the dynamic reconfigure server #
+## Replacing the dynamic reconfigure server #
 Shift: 35
 
-Quad: {
-    'Q_Angle_Left_Min': 280,
-    'Q_Angle_Left_Max': 20,
-    'Q_Angle_Right_Min': 100,
-    'Q_Angle_Right_Max': 200
+Ch1: {
+  'Ch1_Angle_Min': 280,
+  'Ch1_Angle_Max': 20
 }
 
-Hams: {
-    'H_Angle_Left_Min': 30,
-    'H_Angle_Left_Max': 105,
-    'H_Angle_Right_Min': 210,
-    'H_Angle_Right_Max': 285
+Ch2: {
+  'Ch2_Angle_Min': 100,
+  'Ch2_Angle_Max': 200
 }
 
-Glut: {
-    'G_Angle_Left_Min': 70,
-    'G_Angle_Left_Max': 170,
-    'G_Angle_Right_Min': 250,
-    'G_Angle_Right_Max': 350
+Ch3: {
+  'Ch3_Angle_Min': 30,
+  'Ch3_Angle_Max': 105
+}
+
+Ch4: {
+  'Ch4_Angle_Min': 210,
+  'Ch4_Angle_Max': 285
+}
+
+Ch5: {
+  'Ch5_Angle_Min': 70,
+  'Ch5_Angle_Max': 170
+}
+
+Ch6: {
+  'Ch6_Angle_Min': 250,
+  'Ch6_Angle_Max': 350
+}
+
+Ch7: {
+  'Ch7_Angle_Min': 280,
+  'Ch7_Angle_Max': 20
+}
+
+Ch8: {
+  'Ch8_Angle_Min': 100,
+  'Ch8_Angle_Max': 200
 }

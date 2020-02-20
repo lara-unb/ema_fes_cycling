@@ -14,7 +14,7 @@ def main():
     rospy.init_node('button', anonymous=False)
 
     button1=11
-    button2=12
+    button2=13
     GPIO.setmode(GPIO.BOARD)
     GPIO.setup(button1, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(button2, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
