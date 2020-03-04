@@ -114,3 +114,24 @@ class Control:
                 stim_dict[ch] = stim_dict[ch] + step
 
         return stim_dict, increment
+
+###############################################
+# Returns the proportion dictionary
+###############################################
+    
+    def multipliers(self):
+        return self.config_dict['stim_proportion']
+
+###############################################
+# Initializes the current amplitude
+###############################################
+
+    def initialize(self, current_dict):
+
+        ini = self.config_dict['initial_current']
+        proportion = self.config_dict['stim_proportion']
+
+        for ch in stim_order:
+            current_dict[ch] = round(ini*proportion[ch])
+
+        return ini, current_dict

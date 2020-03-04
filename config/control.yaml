@@ -6,7 +6,19 @@
 # speed_ref: 300
 
 ## Replacing the dynamic reconfigure server #
-Shift: 35
+#
+# max initial current amplitude
+initial_current: 30
+
+# current amplitude relation/multiplier
+stim_proportion: {
+    'Ch1': 1.00, 'Ch2': 1.00,
+    'Ch3': 0.00, 'Ch4': 0.00,
+    'Ch5': 0.00, 'Ch6': 0.00,
+    'Ch7': 0.00, 'Ch8': 0.00
+}
+
+shift: 0
 
 Ch1: {
   'Ch1_Angle_Min': 280,
@@ -47,3 +59,31 @@ Ch8: {
   'Ch8_Angle_Min': 100,
   'Ch8_Angle_Max': 200
 }
+
+# Ch12: {
+#   'Ch1_Angle_Min': 280,
+#   'Ch1_Angle_Max': 20,
+#   'Ch2_Angle_Min': 100,
+#   'Ch2_Angle_Max': 200
+# }
+
+# Ch34: {
+#     'Ch3_Angle_Min': 30,
+#     'Ch3_Angle_Max': 105,
+#     'Ch4_Angle_Min': 210,
+#     'Ch4_Angle_Max': 285
+# }
+
+# Ch56: {
+#     'Ch5_Angle_Min': 70,
+#     'Ch5_Angle_Max': 170,
+#     'Ch6_Angle_Min': 250,
+#     'Ch6_Angle_Max': 350
+# }
+
+# Ch78: {
+#     'Ch7_Angle_Min': 280,
+#     'Ch7_Angle_Max': 20,
+#     'Ch8_Angle_Min': 100,
+#     'Ch8_Angle_Max': 200
+# }

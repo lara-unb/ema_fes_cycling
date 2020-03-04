@@ -8,7 +8,9 @@ Descomentar "control.yalm"
 
 Em "control_node.py":
 	- Adicionar/Remover imports
-	- Descomentar a função "button_callback",
+	- Descomentar a função "button_callback"
+    - Descomentar "main_current, stim_current = controller.initialize(stim_current)"
+    - Descomentar "proportion = controller.multipliers()"
 
 Em "control.py":
 	- Alterne para "param_dict = self.config_dict[channel[0:4]]"

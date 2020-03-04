@@ -32,6 +32,7 @@ global distance_km # distance travelled in km
 global stim_current # stim current amplitude for each channel
 global stim_pw # stim pulse width for each channel
 global display_pub # display current data
+global main_current # reference current at the moment 
 # global auto_on # automatic current adjustment - on/off
 # global auto_max_current # automatic current adjustment - limit
 # global auto_minvel # automatic current adjustment - trigger speed
@@ -48,6 +49,7 @@ new_cycle = False
 cycle_speed = [0,0]
 mean_cadence = 0
 distance_km = 0
+main_current = 0
 # auto_on = False
 # auto_max_current = 0
 # auto_minvel = 0
@@ -137,86 +139,34 @@ def button_callback(data):
     global on_off
     global stim_current
     global display_pub
+    global main_current
 
-    max_quad_current = 110
-    max_hams_current = 60
+    current_limit = 110 # max current among all channels
     
     if data == Int8(1):
         if on_off == False:
             on_off = True
 
-        # Quadriceps stimulation (Ch1, Ch2, Ch7, Ch8)
-        if stim_current[stim_order[0]] < max_quad_current:
-            stim_current[stim_order[0]] += 2 # Ch1
-            stim_current[stim_order[1]] += 2 # Ch2
-            stim_current[stim_order[6]] += 2 # Ch7
-            stim_current[stim_order[7]] += 2 # Ch8
+        if (main_current+2) <= current_limit:
+            main_current += 2
 
-        # Hams stimulation (Ch3, Ch4)
-        if stim_current[stim_order[2]] < max_hams_current:
-            if stim_current[stim_order[2]] >= 50:
-                stim_current[stim_order[2]] += 2 # Ch3
-                stim_current[stim_order[3]] += 2 # Ch4
-            else:
-                stim_current[stim_order[2]] += 1 # Ch3
-                stim_current[stim_order[3]] += 1 # Ch4
-
-        # Print all channels currents 
-        for ch in stim_order:
-            rospy.loginfo(ch + " current is now %d", stim_current[ch])
-
-        # Display current - Ch1 (Quad)
-        display_pub.publish(stim_current[stim_order[0]])
-
-        # for ch in stim_order:
-        #     if stim_current[ch] < max_stim_current:
-        #         stim_current[ch] += 2
-        #         display_pub.publish(stim_current[ch])
-        #     rospy.loginfo(ch + " current is now %d", stim_current[ch])
-
+        # display main current
+        display_pub.publish(main_current)
 
     elif data == Int8(2):
         if on_off == True:
+            main_current -= 2
 
-            # Substract current based on previous logic
-            if stim_current[stim_order[0]] > 2:
-                stim_current[stim_order[0]] -= 2
-                stim_current[stim_order[1]] -= 2
-                stim_current[stim_order[6]] -= 2
-                stim_current[stim_order[7]] -= 2
-            if stim_current[stim_order[2]] > 1:
-                if stim_current[stim_order[2]] >= 50:
-                    stim_current[stim_order[2]] -= 2
-                    stim_current[stim_order[3]] -= 2
-                else:
-                    stim_current[stim_order[2]] -= 1
-                    stim_current[stim_order[3]] -= 1
-            for ch in stim_order:
-                rospy.loginfo(ch + " current is now %d", stim_current[ch])
-
+            if main_current < 0:
+                main_current = 0
+                on_off = False
 
             # Display current - Ch1 (Quad)
-            display_pub.publish(stim_current[stim_order[0]])
+            display_pub.publish(main_current)
 
-            # for ch in stim_order:
-            #     if stim_current[ch] > 2:
-            #         stim_current[ch] -= 2
-            #         display_pub.publish(stim_current[ch])
-            #         rospy.loginfo(ch + " current is now %d", stim_current[ch])
-            #     else:
-            #         rospy.loginfo("Turned off " + ch)
-        else:
-            pass
     elif data == Int8(3):
         on_off = False
-
-        # Set all stim_current to 0
-        for ch in stim_order:
-            if stim_current[ch] >= 1:
-                stim_current[ch] = 0
-                display_pub.publish(stim_current[ch])
-
-        rospy.loginfo("Turned off controller")
+        main_current = 0
 
 
 def main():
@@ -227,6 +177,7 @@ def main():
     global distance_km # distance travelled in km
     global stim_current # stim current amplitude for each channel
     global display_pub # display current data
+    global main_current # reference current at the moment 
     # global auto_add_current # automatic current adjustment - add value
 
     # init control node
@@ -253,6 +204,9 @@ def main():
     # get control config
     controller = control.Control(rospy.get_param('/ema/control'))
 
+    # init current amplitude
+    main_current, stim_current = controller.initialize(stim_current)
+
     # list subscribed topics
     sub = {}
     sub['pedal'] = rospy.Subscriber('imu/pedal', Imu, callback = pedal_callback)
@@ -266,7 +220,6 @@ def main():
     pub['speed'] = rospy.Publisher('control/speed', Float64, queue_size=10)
     pub['cadence'] = rospy.Publisher('control/cadence', Float64, queue_size=10)
     pub['distance'] = rospy.Publisher('control/distance', Float64, queue_size=10)
-
 
     # display publisher 
     display_pub = rospy.Publisher('display/current', UInt16, queue_size=10)
@@ -297,9 +250,13 @@ def main():
 
         # calculate control signal
         stimfactors = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)  
+        
+        # get the proportion for each channel
+        proportion = controller.multipliers()
 
         # update current and pw values
         for i, ch in enumerate(stim_order):
+            stim_current[ch] = round(main_current*proportion[ch])
             stimMsg.pulse_current[i] = round(stimfactors[i]*stim_current[ch])
             stimMsg.pulse_width[i] = stim_pw[ch]
             signalMsg.data[i+1] = stimMsg.pulse_current[i]# [index] is the actual channel number
