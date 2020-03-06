@@ -6,16 +6,13 @@ import ema.modules.control as control
 # import ros msgs
 from sensor_msgs.msg import Imu
 from std_msgs.msg import Float64
-from std_msgs.msg import Int8
+from std_msgs.msg import UInt8
 from std_msgs.msg import Int32MultiArray
 from ema_common_msgs.msg import Stimulator
 
 # import utilities
 from tf import transformations
 from math import pi
-
-# add when embedded
-from std_msgs.msg import UInt16
 
 # global variables
 global on_off # system on/off
@@ -31,7 +28,7 @@ global mean_cadence # mean rpm speed of last cycle
 global distance_km # distance travelled in km
 global stim_current # stim current amplitude for each channel
 global stim_pw # stim pulse width for each channel
-global display_pub # display current data
+global button_event # true when a button is pressed
 global main_current # reference current at the moment 
 # global auto_on # automatic current adjustment - on/off
 # global auto_max_current # automatic current adjustment - limit
@@ -49,6 +46,7 @@ new_cycle = False
 cycle_speed = [0,0]
 mean_cadence = 0
 distance_km = 0
+button_event = False
 main_current = 0
 # auto_on = False
 # auto_max_current = 0
@@ -96,7 +94,6 @@ stim_order = [
 #         stim_current[ch] = config[ch+'_Current']
 #         stim_pw[ch] = config[ch+'_Pulse_Width']
 
-
 def pedal_callback(data):
     global angle
     global speed
@@ -134,40 +131,30 @@ def pedal_callback(data):
     # get error
     speed_err.append(speed_ref - speed[-1])
 
-
 def button_callback(data):
     global on_off
-    global stim_current
-    global display_pub
+    global button_event
     global main_current
-
-    current_limit = 110 # max current among all channels
     
-    if data == Int8(1):
+    # raise a button_event flag
+    button_event = True
+    
+    if data == UInt8(1): # turn on, increase
         if on_off == False:
             on_off = True
-
-        if (main_current+2) <= current_limit:
             main_current += 2
 
-        # display main current
-        display_pub.publish(main_current)
-
-    elif data == Int8(2):
+    elif data == UInt8(2): # decrease
         if on_off == True:
             main_current -= 2
 
             if main_current < 0:
-                main_current = 0
                 on_off = False
+                main_current = 0
 
-            # Display current - Ch1 (Quad)
-            display_pub.publish(main_current)
-
-    elif data == Int8(3):
+    elif data == UInt8(3): # zero
         on_off = False
         main_current = 0
-
 
 def main():
     global cycles # number of pedal turns
@@ -176,7 +163,7 @@ def main():
     global mean_cadence # mean rpm speed of last cycle
     global distance_km # distance travelled in km
     global stim_current # stim current amplitude for each channel
-    global display_pub # display current data
+    global button_event # true when a button is pressed
     global main_current # reference current at the moment 
     # global auto_add_current # automatic current adjustment - add value
 
@@ -185,16 +172,17 @@ def main():
 
     # build basic stimulator message
     stimMsg = Stimulator()
-    stimMsg.channel = list(range(1,8+1)) # all the 6 channels
+    stimMsg.channel = list(range(1,8+1)) # all the 8 channels
     stimMsg.mode = 8*['single'] # no doublets/triplets
     stimMsg.pulse_width = 8*[0] # initialize w/ zeros
     stimMsg.pulse_current = 8*[0]
 
-    # build basic angle/speed/signal message
+    # build general messages
     angleMsg = Float64()
     speedMsg = Float64()
     cadenceMsg = Float64()
     distanceMsg = Float64()
+    displayMsg = UInt8()
     signalMsg = Int32MultiArray() # visual stimulator signal
     signalMsg.data = 9*[0] # [index] is the actual channel number
 
@@ -210,7 +198,7 @@ def main():
     # list subscribed topics
     sub = {}
     sub['pedal'] = rospy.Subscriber('imu/pedal', Imu, callback = pedal_callback)
-    sub['button'] = rospy.Subscriber('button/value', Int8, callback = button_callback)
+    sub['button'] = rospy.Subscriber('button/action', UInt8, callback = button_callback)
     
     # list published topics
     pub = {}
@@ -220,9 +208,7 @@ def main():
     pub['speed'] = rospy.Publisher('control/speed', Float64, queue_size=10)
     pub['cadence'] = rospy.Publisher('control/cadence', Float64, queue_size=10)
     pub['distance'] = rospy.Publisher('control/distance', Float64, queue_size=10)
-
-    # display publisher 
-    display_pub = rospy.Publisher('display/current', UInt16, queue_size=10)
+    pub['intensity'] = rospy.Publisher('display/update', UInt8, queue_size=10)
     
     # define loop rate (in hz)
     rate = rospy.Rate(50)
@@ -254,6 +240,10 @@ def main():
         # get the proportion for each channel
         proportion = controller.multipliers()
 
+        # limits the stimulation intensity
+        if main_current > controller.currentLimit(): 
+            main_current = controller.currentLimit()
+
         # update current and pw values
         for i, ch in enumerate(stim_order):
             stim_current[ch] = round(main_current*proportion[ch])
@@ -269,8 +259,6 @@ def main():
         cadenceMsg.data = mean_cadence
         distanceMsg.data = distance_km
 
-        # print signalMsg.data
-
         # send stimulator update
         pub['control'].publish(stimMsg)
         # send angle update
@@ -283,6 +271,12 @@ def main():
         pub['cadence'].publish(cadenceMsg)
         # send distance update
         pub['distance'].publish(distanceMsg)
+
+        if button_event:
+            button_event = False
+            displayMsg.data = main_current
+            # send display update
+            pub['intensity'].publish(displayMsg)
 
         # wait for next loop
         rate.sleep()

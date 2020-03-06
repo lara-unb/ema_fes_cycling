@@ -103,8 +103,8 @@ En = 0b00000100 # Enable bit
 Rw = 0b00000010 # Read/Write bit
 Rs = 0b00000001 # Register select bit
 
-class lcd:
-   #initializes objects and lcd
+class Display:
+   #initializes objects and LCD
    def __init__(self):
       self.lcd_device = i2c_device(ADDRESS)
 
@@ -131,12 +131,12 @@ class lcd:
       self.lcd_device.write_cmd(data | LCD_BACKLIGHT)
       self.lcd_strobe(data)
 
-   # write a command to lcd
+   # write a command to LCD
    def lcd_write(self, cmd, mode=0):
       self.lcd_write_four_bits(mode | (cmd & 0xF0))
       self.lcd_write_four_bits(mode | ((cmd << 4) & 0xF0))
 
-   # write a character to lcd (or character rom) 0x09: backlight | RS=DR<
+   # write a character to LCD (or character rom) 0x09: backlight | RS=DR<
    # works!
    def lcd_write_char(self, charvalue, mode=1):
       self.lcd_write_four_bits(mode | (charvalue & 0xF0))
@@ -158,12 +158,12 @@ class lcd:
     for char in string:
       self.lcd_write(ord(char), Rs)
 
-   # clear lcd and set to home
+   # clear LCD and set to home
    def lcd_clear(self):
       self.lcd_write(LCD_CLEARDISPLAY)
       self.lcd_write(LCD_RETURNHOME)
 
-   # define backlight on/off (lcd.backlight(1); off= lcd.backlight(0)
+   # define backlight on/off (Display.backlight(1); off= Display.backlight(0)
    def backlight(self, state): # for state, 1 = on, 0 = off
       if state == 1:
          self.lcd_device.write_cmd(LCD_BACKLIGHT)

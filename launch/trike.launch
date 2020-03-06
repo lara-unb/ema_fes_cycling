@@ -1,17 +1,26 @@
 <launch>
   <group ns="ema">
-    <!-- load config files-->
+    <!-- declare and load launch arguments-->
+    <arg name="arg" default="pc" doc="specify which platform to use: rasp or pc"/>
+    <param name="platform" value="$(arg arg)"/>
+
+    <!-- load common config files-->
     <rosparam command="load" file="$(find yostlabs_3space_imu)/config/imu.yaml" ns="imu" />
     <rosparam command="load" file="$(find hasomed_rehastim_stimulator)/config/stim_trike.yaml" ns="stimulator" />
     <rosparam command="load" file="$(find ema_fes_cycling)/config/control.yaml" ns="control" />
 
-    <!-- launch nodes -->
+    <!-- launch common nodes -->
     <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/>
-	<node name="button" pkg="ema_fes_cycling" type="button_node.py" output="screen" respawn="true" respawn_delay="5"/>
     <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/>
     <node name="control" pkg="ema_fes_cycling" type="control_node.py" output="screen" respawn="true" respawn_delay="5"/>
-    <node name="display" pkg="ema_fes_cycling" type="display_node.py" output="screen" respawn="true" respawn_delay="5"/>
-    <!-- server node is not being used, parameters are hard coded in the control yaml file -->
+    <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args="/ema/button/action /ema/control/angle 
+        /ema/control/stimsignal /ema/stimulator/ccl_update -o ~/bagfiles/ --split --max-splits 3 --duration 5m"/>
+
+    <!-- launch pc-only nodes -->
     <!-- <node name="server" pkg="ema_fes_cycling" type="server_node.py" output="screen" respawn="true" respawn_delay="5"/> -->
+
+    <!-- launch rasp-only nodes -->
+    <node name="button" pkg="ema_fes_cycling" type="button_node.py" output="screen" respawn="true" respawn_delay="5"/>
+    <node name="display" pkg="ema_fes_cycling" type="display_node.py" output="screen" respawn="true" respawn_delay="5"/>
   </group>
 </launch>

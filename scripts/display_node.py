@@ -1,21 +1,20 @@
 #!/usr/bin/env python
 
 import rospy
-import I2C_LCD_driver
+import ema.modules.display as display
 
 # import ema common msgs
 from ema_common_msgs.msg import Stimulator
 
 # import ros msgs
-from std_msgs.msg import UInt16
+from std_msgs.msg import UInt8
 
 # define global values
 global lcdi2c
 global current
 
-
-# initialize lcd
-lcdi2c = I2C_LCD_driver.lcd()
+# initialize lcd display
+lcdi2c = display.Display()
 
 # set initial value
 current =-1
@@ -34,8 +33,10 @@ def main():
     # init display node
     rospy.init_node('display', anonymous=True)
     
-    # subscribe to current topic from control node
-    rospy.Subscriber("display/current", UInt16, callback)
+    # subscribe to main current topic from control node
+    sub = rospy.Subscriber("display/update", UInt8, callback = callback)
+
+    # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
 
 if __name__ == '__main__':

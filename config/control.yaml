@@ -1,14 +1,13 @@
-## These are not being used ##
-#
-# filter_size: 20
-# gastrocnemius_max: 500
-# femoral_max: 500
-# speed_ref: 300
-
 ## Replacing the dynamic reconfigure server #
 #
-# max initial current amplitude
+# initial current amplitude
 initial_current: 30
+
+# max current among all channels
+stim_limit: 110
+
+# speed angle shift parameter
+shift: 0
 
 # current amplitude relation/multiplier
 stim_proportion: {
@@ -18,72 +17,31 @@ stim_proportion: {
     'Ch7': 0.00, 'Ch8': 0.00
 }
 
-shift: 0
-
-Ch1: {
+# angle range for each stim channel
+Ch12: {
   'Ch1_Angle_Min': 280,
-  'Ch1_Angle_Max': 20
-}
-
-Ch2: {
+  'Ch1_Angle_Max': 20,
   'Ch2_Angle_Min': 100,
   'Ch2_Angle_Max': 200
 }
 
-Ch3: {
+Ch34: {
   'Ch3_Angle_Min': 30,
-  'Ch3_Angle_Max': 105
-}
-
-Ch4: {
+  'Ch3_Angle_Max': 105,
   'Ch4_Angle_Min': 210,
   'Ch4_Angle_Max': 285
 }
 
-Ch5: {
+Ch56: {
   'Ch5_Angle_Min': 70,
-  'Ch5_Angle_Max': 170
-}
-
-Ch6: {
+  'Ch5_Angle_Max': 170,
   'Ch6_Angle_Min': 250,
   'Ch6_Angle_Max': 350
 }
 
-Ch7: {
+Ch78: {
   'Ch7_Angle_Min': 280,
-  'Ch7_Angle_Max': 20
-}
-
-Ch8: {
+  'Ch7_Angle_Max': 20,
   'Ch8_Angle_Min': 100,
   'Ch8_Angle_Max': 200
 }
-
-# Ch12: {
-#   'Ch1_Angle_Min': 280,
-#   'Ch1_Angle_Max': 20,
-#   'Ch2_Angle_Min': 100,
-#   'Ch2_Angle_Max': 200
-# }
-
-# Ch34: {
-#     'Ch3_Angle_Min': 30,
-#     'Ch3_Angle_Max': 105,
-#     'Ch4_Angle_Min': 210,
-#     'Ch4_Angle_Max': 285
-# }
-
-# Ch56: {
-#     'Ch5_Angle_Min': 70,
-#     'Ch5_Angle_Max': 170,
-#     'Ch6_Angle_Min': 250,
-#     'Ch6_Angle_Max': 350
-# }
-
-# Ch78: {
-#     'Ch7_Angle_Min': 280,
-#     'Ch7_Angle_Max': 20,
-#     'Ch8_Angle_Min': 100,
-#     'Ch8_Angle_Max': 200
-# }

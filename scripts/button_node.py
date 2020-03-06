@@ -3,16 +3,16 @@
 import rospy
 
 # import ros msgs
-from std_msgs.msg import Int8
+from std_msgs.msg import UInt8
 
 # import utilities
 import RPi.GPIO as GPIO
-
 
 def main():
     # init button node
     rospy.init_node('button', anonymous=False)
 
+    # init I/O config
     button1=11
     button2=13
     GPIO.setmode(GPIO.BOARD)
@@ -20,7 +20,7 @@ def main():
     GPIO.setup(button2, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     
     # list published topics
-    pub = rospy.Publisher('button/value', Int8, queue_size=10)
+    pub = rospy.Publisher('button/action', UInt8, queue_size=10)
 
     # define loop rate (in hz)
     rate = rospy.Rate(4)
@@ -36,8 +36,10 @@ def main():
         if GPIO.input(button2):
             button_value=button_value|0b00000010
 
-        # send button update
-        pub.publish(Int8(button_value))
+        # at least one button pressed
+        if button_value:
+            # send button update
+            pub.publish(UInt8(button_value)) # 1, 2 or 3
 
         # wait for next loop
         rate.sleep()

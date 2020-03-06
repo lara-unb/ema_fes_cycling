@@ -21,9 +21,12 @@ class Control:
 
     def fx(self, ch, angle, speed, speed_ref):
         ramp_degrees = 10.0
+        n = int(ch[2])
+        m = (n-1)+(2*(n%2)) # if n=odd, m=even; if n=even, m=odd
+
         # param_dict = rospy.get_param('/ema/server/')
         # dth = (speed/speed_ref)*param_dict['Shift']
-        param_dict = self.config_dict[ch[0:8]]
+        param_dict = self.config_dict['Ch'+str(min(n,m))+str(max(n,m))]
         # dth = (speed/speed_ref)*self.config_dict['Shift']
         dth = 0
 
@@ -116,13 +119,6 @@ class Control:
         return stim_dict, increment
 
 ###############################################
-# Returns the proportion dictionary
-###############################################
-    
-    def multipliers(self):
-        return self.config_dict['stim_proportion']
-
-###############################################
 # Initializes the current amplitude
 ###############################################
 
@@ -135,3 +131,17 @@ class Control:
             current_dict[ch] = round(ini*proportion[ch])
 
         return ini, current_dict
+
+###############################################
+# Returns the proportion dictionary
+###############################################
+    
+    def multipliers(self):
+        return self.config_dict['stim_proportion']
+
+###############################################
+# Returns the max current among all channels
+###############################################
+    
+    def currentLimit(self):
+        return self.config_dict['stim_limit']
