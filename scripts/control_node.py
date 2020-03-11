@@ -139,12 +139,13 @@ def button_callback(data):
     # raise a button_event flag
     button_event = True
     
-    if data == UInt8(1): # turn on, increase
+    if data == UInt8(2): # turn on, increase
         if on_off == False:
             on_off = True
-            main_current += 2
+        
+        main_current += 2
 
-    elif data == UInt8(2): # decrease
+    elif data == UInt8(1): # decrease
         if on_off == True:
             main_current -= 2
 
