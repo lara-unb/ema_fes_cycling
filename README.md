@@ -8,9 +8,7 @@ application.
 
 - **launch:** includes ROS launch files
 
-- **other:** out-of-date scripts, legacy code once used for testing or miscellaneous 
-files in general
-
-- **perspective:** group the predefined GUI perspectives/layouts
-
 - **scripts:** contains ROS node files and auxiliary modules
+
+- **unused:** out-of-date scripts, legacy code once used for testing or miscellaneous 
+files in general
