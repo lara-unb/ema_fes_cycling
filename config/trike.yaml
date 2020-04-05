@@ -1,0 +1,58 @@
+#
+# The YAML file is a lightweight markup language file that supports all
+# ROS parameter types. It's used by rosparam to load static parameters to
+# the Parameter Server, which are commonly used to initialize part of a
+# system and rarely change on run-time. Sometimes the user modifies this
+# file before starting a node. This file is usually in the /config subdirectory
+# of a package. Note that when dynamic reconfiguration is implemented for
+# a package, most parameters will be dynamic, making this file barely used.
+#
+#                    _________ NOTES _________
+#
+# These can be used to replace the dynamic reconfigure server in case the
+# system runs on a limited platform or for some other reason to have static
+# instead of dynamic parameters. If that's not the case, keep them commented.
+#
+
+initial_current: 30 # initial current amplitude
+
+stim_limit: 110 # max current among all channels
+
+shift: 0 # speed angle shift parameter
+
+# current amplitude relation/multiplier
+stim_proportion: {
+    'Ch1': 1.00, 'Ch2': 1.00,
+    'Ch3': 0.00, 'Ch4': 0.00,
+    'Ch5': 0.00, 'Ch6': 0.00,
+    'Ch7': 0.00, 'Ch8': 0.00
+}
+
+# angle range for each stim channel
+Ch12: {
+    'Ch1_Angle_Min': 280,
+    'Ch1_Angle_Max': 20,
+    'Ch2_Angle_Min': 100,
+    'Ch2_Angle_Max': 200
+}
+
+Ch34: {
+    'Ch3_Angle_Min': 30,
+    'Ch3_Angle_Max': 105,
+    'Ch4_Angle_Min': 210,
+    'Ch4_Angle_Max': 285
+}
+
+Ch56: {
+    'Ch5_Angle_Min': 70,
+    'Ch5_Angle_Max': 170,
+    'Ch6_Angle_Min': 250,
+    'Ch6_Angle_Max': 350
+}
+
+Ch78: {
+    'Ch7_Angle_Min': 280,
+    'Ch7_Angle_Max': 20,
+    'Ch8_Angle_Min': 100,
+    'Ch8_Angle_Max': 200
+}

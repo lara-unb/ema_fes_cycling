@@ -14,7 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   dynamic_reconfigure
 )
 generate_dynamic_reconfigure_options(
-  cfg/DynamicParams.cfg
+  cfg/TrikeServer.cfg
 )
 
 ## System dependencies are found with CMake's conventions

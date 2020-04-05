@@ -1,7 +1,21 @@
 #!/usr/bin/env python
 
+"""
+
+Particularly, this code is the main routine for the FES cycling application.
+It receives info from other nodes and acts accordingly upon the system.
+
+The ROS node runs this code. It should make all the necessary
+communication/interaction with ROS and it shouldn't deal with minor details.
+For example, it would be used to publish a filtered sensor measurement as
+a ROS message to other ROS nodes instead of establishing the serial comm
+and treating that raw measurement. For more info, check:
+http://wiki.ros.org/Nodes
+
+"""
+
 import rospy
-import ema.modules.control as control
+import ema.modules.trike as trike
 
 # import ros msgs
 from sensor_msgs.msg import Imu
@@ -17,7 +31,7 @@ from tf import transformations
 from std_msgs.msg import UInt16
 
 # remove when embedded
-import dynamic_reconfigure.client as reconfig
+import dynamic_reconfigure.client
 from math import pi
 import numpy as np
 
@@ -87,15 +101,15 @@ def server_callback(config):
     global auto_max_current
     global auto_minvel
 
-    auto_on = config['AutoC_Enable']
-    auto_max_current = config['AutoC_Shift']
-    auto_minvel = config['AutoC_Velocity']
+    auto_on = config['AutoCEnable']
+    auto_max_current = config['AutoCShift']
+    auto_minvel = config['AutoCVelocity']
 
     # assign updated server parameters to global vars 
     # refer to the server node for constraints
     for ch in stim_order:
-        stim_current[ch] = config[ch+'_Current']
-        stim_pw[ch] = config[ch+'_Pulse_Width']
+        stim_current[ch] = config[ch+'Current']
+        stim_pw[ch] = config[ch+'PulseWidth']
 
 
 def pedal_callback(data):
@@ -179,7 +193,7 @@ def main():
     # global auto_add_current # automatic current adjustment - add value
 
     # init control node
-    rospy.init_node('control', anonymous=False)
+    rospy.init_node('trike') # overwritten by launch file name
 
     # build basic stimulator message
     stimMsg = Stimulator()
@@ -197,24 +211,25 @@ def main():
     signalMsg.data = 9*[0] # [index] is the actual channel number
 
     # communicate with the dynamic server
-    dyn_params = reconfig.Client('server', config_callback = server_callback)
+    dyn_params = dynamic_reconfigure.client.Client(
+                    'reconfig', config_callback=server_callback) # 'server node name'
     
     # get control config
-    controller = control.Control(rospy.get_param('/ema/control'))
+    controller = trike.Control(rospy.get_param('trike'))
 
     # list subscribed topics
     sub = {}
-    sub['pedal'] = rospy.Subscriber('imu/pedal', Imu, callback = pedal_callback)
+    sub['pedal'] = rospy.Subscriber('imu/pedal', Imu, callback=pedal_callback)
     # sub['button'] = rospy.Subscriber('button/value', Int8, callback = button_callback)
     
     # list published topics
     pub = {}
     pub['control'] = rospy.Publisher('stimulator/ccl_update', Stimulator, queue_size=10)
-    pub['angle'] = rospy.Publisher('control/angle', Float64, queue_size=10)
-    pub['signal'] = rospy.Publisher('control/stimsignal', Int32MultiArray, queue_size=10)
-    pub['speed'] = rospy.Publisher('control/speed', Float64, queue_size=10)
-    pub['cadence'] = rospy.Publisher('control/cadence', Float64, queue_size=10)
-    pub['distance'] = rospy.Publisher('control/distance', Float64, queue_size=10)
+    pub['angle'] = rospy.Publisher('trike/angle', Float64, queue_size=10)
+    pub['signal'] = rospy.Publisher('trike/stimsignal', Int32MultiArray, queue_size=10)
+    pub['speed'] = rospy.Publisher('trike/speed', Float64, queue_size=10)
+    pub['cadence'] = rospy.Publisher('trike/cadence', Float64, queue_size=10)
+    pub['distance'] = rospy.Publisher('trike/distance', Float64, queue_size=10)
 
     # define loop rate (in hz)
     rate = rospy.Rate(50)
@@ -228,11 +243,15 @@ def main():
                 cycles += 1 # count turns
                 mean_cadence = sum(cycle_speed)/len(cycle_speed) # simple mean
                 cycle_speed = [] # reset list for new cycle
-                distance_km = (cycles*3.14159*1.5*66)/100000  #1.5: volta da coroa em relacao ao pneu, 66cm(26pol): diametro do pneu, 100000: cm->km
+                # 1.5: volta da coroa em relacao ao pneu, 
+                # 66cm(26pol): diametro do pneu, 100000: cm->km
+                distance_km = (cycles*3.14159*1.5*66)/100000
                 # print cycles, mean_cadence, distance_km
 
                 # if auto_on:
-                #    stim_current, auto_add_current = controller.automatic(stim_current, auto_add_current, mean_cadence, auto_minvel, auto_max_current)
+                #    stim_current, auto_add_current = controller.automatic(
+                #             stim_current, auto_add_current, mean_cadence, 
+                #             auto_minvel, auto_max_current)
                 #    print auto_add_current
             except:
                 pass
@@ -247,7 +266,7 @@ def main():
         for i, ch in enumerate(stim_order):
             stimMsg.pulse_current[i] = round(stimfactors[i]*stim_current[ch])
             stimMsg.pulse_width[i] = stim_pw[ch]
-            signalMsg.data[i+1] = stimMsg.pulse_current[i]# [index] is the actual channel number
+            signalMsg.data[i+1] = stimMsg.pulse_current[i] # [index] is the actual channel number
 
             # if new_cycle and auto_on:
             #     dyn_params.update_configuration({ch+'_Current':stim_current[ch]})

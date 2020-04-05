@@ -21,14 +21,14 @@ class Control:
 
     def fx(self, ch, angle, speed, speed_ref):
         ramp_degrees = 10.0
-        param_dict = rospy.get_param('/ema/server/')
+        param_dict = rospy.get_param('/ema/reconfig/')
         # param_dict = self.config_dict[channel[0:4]]
         # dth = (speed/speed_ref)*param_dict['Shift']
         # dth = (speed/speed_ref)*self.config_dict['Shift']
         dth = 0
 
-        theta_min = param_dict[ch+"_Angle_Min"] - dth
-        theta_max = param_dict[ch+"_Angle_Max"] - dth
+        theta_min = param_dict[ch+"AngleMin"] - dth
+        theta_max = param_dict[ch+"AngleMax"] - dth
 
         # check if angle in range (theta_min, theta_max) 
         if theta_min <= angle and angle <= theta_max:
@@ -38,7 +38,7 @@ class Control:
                 return (theta_max-angle)/ramp_degrees
             else:
                 return 1
-        elif param_dict[ch+"_Angle_Min"] > param_dict[ch+"_Angle_Max"]:
+        elif param_dict[ch+"AngleMin"] > param_dict[ch+"AngleMax"]:
             if angle <= theta_min and angle <= theta_max:
                 if theta_min <= angle + 360 and angle <= theta_max:
                     if (angle+360-theta_min) <= ramp_degrees:
