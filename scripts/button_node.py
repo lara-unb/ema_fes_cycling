@@ -15,7 +15,11 @@ def main():
     # init I/O config
     button1=11
     button2=13
+
+    # set GPIO mode reference to board pin order
     GPIO.setmode(GPIO.BOARD)
+
+    # turn on GPIO pull down onboard resistors 
     GPIO.setup(button1, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(button2, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     
@@ -28,8 +32,10 @@ def main():
     # node loop
     while not rospy.is_shutdown():
 
+        # set button value to a byte 
         button_value = 0b00000000
 
+        # apply OR operation on byte if button pressed
         if GPIO.input(button1):
             button_value=button_value|0b00000001
 

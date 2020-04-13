@@ -23,6 +23,7 @@ def callback(data):
     global lcdi2c
     global current
 
+    # check current value and update display
     if data.data != current:
         lcdi2c.lcd_clear()
         lcdi2c.lcd_display_string("Corrente", 1,4)
