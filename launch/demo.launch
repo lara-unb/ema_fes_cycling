@@ -1,0 +1,13 @@
+<launch>
+  <group ns="ema">
+    <!-- load config files-->
+    <rosparam command="load" file="$(find ema_fes_cycling)/config/control.yaml" ns="control" />
+
+    <!-- launch nodes -->
+
+    <node name="imu_emulator" pkg="ema_fes_cycling" type="imu_emu.py" output="screen" respawn="true" respawn_delay="5"/>
+    <node name="control" pkg="ema_fes_cycling" type="control_node.py" output="screen" respawn="true" respawn_delay="5"/>
+    <node name="server" pkg="ema_fes_cycling" type="server_node.py" output="screen" respawn="true" respawn_delay="5"/>
+    
+  </group>
+</launch>
