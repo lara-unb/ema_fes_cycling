@@ -17,25 +17,25 @@ http://wiki.ros.org/Nodes
 import rospy
 import ema.modules.trike as trike
 
-# import ros msgs
-from sensor_msgs.msg import Imu
+# Import ROS msgs
 from std_msgs.msg import Float64
 from std_msgs.msg import Int8
 from std_msgs.msg import Int32MultiArray
+from sensor_msgs.msg import Imu
 from ema_common_msgs.msg import Stimulator
 
-# import utilities
+# Import utilities
 from tf import transformations
 
-# add when embedded
+# Add when embedded
 from std_msgs.msg import UInt16
 
-# remove when embedded
+# Remove when embedded
 import dynamic_reconfigure.client
 from math import pi
 import numpy as np
 
-# global variables
+# Global variables
 global on_off # system on/off
 global angle # list of pedal angles
 global speed # list of pedal angular speeds
