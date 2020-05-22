@@ -3,7 +3,7 @@
 
     <!-- declare and load launch arguments-->
     <!-- plataform -->
-    <arg name="platform" value="rasp" doc="specify which platform to use: rasp/pc"/>
+    <arg name="platform" value="pc" doc="specify which platform to use: rasp/pc"/>
     <param name="platform" value="$(arg platform)"/>
 
     <!-- display type or connected-->
