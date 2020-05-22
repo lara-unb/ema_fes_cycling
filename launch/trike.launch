@@ -14,8 +14,13 @@ http://wiki.ros.org/roslaunch/XML
   <group ns="ema">
 
 	<!-- declare and load launch arguments-->
+	<!-- plataform -->
 	<arg name="platform" value="pc" doc="specify which platform to use: rasp/pc"/>
 	<param name="platform" value="$(arg platform)"/>
+
+	<!-- display type or connected-->
+    <arg name="display_type" value="oled" doc="specify display type connected: lcd/oled"/>
+    <param name="display_type" value="$(arg display_type)"/>
 
 	<!-- load common config files-->
 	<rosparam command="load" file="$(find yostlabs_3space_imu)/config/imu.yaml" ns="imu"/>
@@ -38,9 +43,18 @@ http://wiki.ros.org/roslaunch/XML
 	<!-- launch rasp-exclusive nodes -->
 	<group if="$(eval platform == 'rasp')">
 		<node name="button" pkg="ema_fes_cycling" type="button_node.py" output="screen" respawn="true" respawn_delay="5"/>
-		<node name="display" pkg="ema_fes_cycling" type="display_node.py" output="screen" respawn="true" respawn_delay="5"/>
 		<node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args="/ema/button/action /ema/trike/angle 
 			/ema/trike/stimsignal /ema/stimulator/ccl_update -o $(env HOME)/bagfiles/ema_fes_cycling/ --split --max-splits 3 --duration 5m"/>
+		
+		<!-- launch exclusive lcd display node -->
+        <group if="$(eval display_type == 'lcd')">
+            <node name="display" pkg="ema_fes_cycling" type="display_lcd_node.py" output="screen" respawn="true" respawn_delay="5"/>
+        </group>
+
+        <!-- launch exclusive lcd display node -->
+        <group if="$(eval display_type == 'oled')">
+        	<node name="display" pkg="ema_fes_cycling" type="display_oled_node.py" output="screen" respawn="true" respawn_delay="5"/>
+        </group>
 	</group>
 
   </group>

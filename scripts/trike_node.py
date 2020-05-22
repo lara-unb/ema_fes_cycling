@@ -19,7 +19,7 @@ import ema.modules.trike as trike
 
 # Import ROS msgs
 from std_msgs.msg import Float64
-from std_msgs.msg import Int8
+from std_msgs.msg import UInt8
 from std_msgs.msg import Int32MultiArray
 from sensor_msgs.msg import Imu
 from ema_common_msgs.msg import Stimulator
@@ -27,15 +27,12 @@ from ema_common_msgs.msg import Stimulator
 # Import utilities
 from tf import transformations
 
-# Add when embedded
-from std_msgs.msg import UInt16
-
-# Remove when embedded
+# Other imports
 import dynamic_reconfigure.client
 from math import pi
-import numpy as np
 
 # Global variables
+global platform # platform config from launch
 global on_off # system on/off
 global angle # list of pedal angles
 global speed # list of pedal angular speeds
@@ -49,11 +46,17 @@ global mean_cadence # mean rpm speed of last cycle
 global distance_km # distance travelled in km
 global stim_current # stim current amplitude for each channel
 global stim_pw # stim pulse width for each channel
+global button_event # true when a button is pressed
+global main_current # reference current at the moment
 # global auto_on # automatic current adjustment - on/off
 # global auto_max_current # automatic current adjustment - limit
 # global auto_minvel # automatic current adjustment - trigger speed
 # global auto_add_current # automatic current adjustment - add value
 
+# Retrieve from server param (change in launch)
+platform = rospy.get_param('platform')
+
+# Set initial param values
 on_off = False
 angle = [0,0]
 speed = [0,0]
@@ -65,6 +68,8 @@ new_cycle = False
 cycle_speed = [0,0]
 mean_cadence = 0
 distance_km = 0
+button_event = False
+main_current = 0
 # auto_on = False
 # auto_max_current = 0
 # auto_minvel = 0
@@ -94,22 +99,23 @@ stim_order = [
     'Ch7','Ch8'
 ]
 
-def server_callback(config):
-    global stim_current
-    global stim_pw
-    global auto_on
-    global auto_max_current
-    global auto_minvel
+if platform == 'pc':
+    def server_callback(config):
+        global stim_current
+        global stim_pw
+        global auto_on
+        global auto_max_current
+        global auto_minvel
 
-    auto_on = config['AutoCEnable']
-    auto_max_current = config['AutoCShift']
-    auto_minvel = config['AutoCVelocity']
+        auto_on = config['AutoCEnable']
+        auto_max_current = config['AutoCShift']
+        auto_minvel = config['AutoCVelocity']
 
-    # assign updated server parameters to global vars 
-    # refer to the server node for constraints
-    for ch in stim_order:
-        stim_current[ch] = config[ch+'Current']
-        stim_pw[ch] = config[ch+'PulseWidth']
+        # assign updated server parameters to global vars 
+        # refer to the server node for constraints
+        for ch in stim_order:
+            stim_current[ch] = config[ch+'Current']
+            stim_pw[ch] = config[ch+'PulseWidth']
 
 
 def pedal_callback(data):
@@ -149,38 +155,32 @@ def pedal_callback(data):
     # get error
     speed_err.append(speed_ref - speed[-1])
 
-
-# def button_callback(data):
-#     global on_off
-#     global stim_current
-
-#     if data == Int8(1):
-#         if on_off == False:
-#             on_off = True
+if platform == 'rasp':
+    def button_callback(data):
+        global on_off
+        global button_event
+        global main_current
         
-#         for ch in stim_order:
-#             if stim_current[ch] < 100:
-#                 stim_current[ch] += 2
-#             rospy.loginfo(ch + " current is now %d", stim_current[ch])
-#     elif data == Int8(2):
-#         if on_off == True:
+        # raise a button_event flag
+        button_event = True
+        
+        if data == UInt8(2): # turn on, increase
+            if on_off == False:
+                on_off = True
+            
+            main_current += 2
 
-#             for ch in stim_order:
-#                 if stim_current[ch] > 2:
-#                     stim_current[ch] -= 2
-#                     rospy.loginfo(ch + " current is now %d", stim_current[ch])
-#                 else:
-#                     rospy.loginfo("Turned off " + ch)
-#         else:
-#             pass
-#     elif data == Int8(3):
-#         on_off = False
+        elif data == UInt8(1): # decrease
+            if on_off == True:
+                main_current -= 2
 
-#         for ch in stim_order:
-#             if stim_current[ch] >= 3:
-#                 stim_current[ch] = 2
+                if main_current < 0:
+                    on_off = False
+                    main_current = 0
 
-#         rospy.loginfo("Turned off controller")
+        elif data == UInt8(3): # zero
+            on_off = False
+            main_current = 0
 
 
 def main():
@@ -190,6 +190,8 @@ def main():
     global mean_cadence # mean rpm speed of last cycle
     global distance_km # distance travelled in km
     global stim_current # stim current amplitude for each channel
+    global button_event # true when a button is pressed
+    global main_current # reference current at the moment
     # global auto_add_current # automatic current adjustment - add value
 
     # init control node
@@ -207,22 +209,27 @@ def main():
     speedMsg = Float64()
     cadenceMsg = Float64()
     distanceMsg = Float64()
+    displayMsg = UInt8()
     signalMsg = Int32MultiArray() # visual stimulator signal
     signalMsg.data = 9*[0] # [index] is the actual channel number
 
     # communicate with the dynamic server
-    dyn_params = dynamic_reconfigure.client.Client(
-                    'reconfig', config_callback=server_callback) # 'server node name'
+    if platform == 'pc':
+        dyn_params = dynamic_reconfigure.client.Client(
+                        'reconfig', config_callback=server_callback) # 'server node name'
     
     # get control config
     controller = trike.Control(rospy.get_param('trike'))
 
-    # list subscribed topics
+    # init current amplitude
+    if platform == 'rasp':
+        main_current, stim_current = controller.initialize(stim_current)
+
+    # list common subscribed topics
     sub = {}
     sub['pedal'] = rospy.Subscriber('imu/pedal', Imu, callback=pedal_callback)
-    # sub['button'] = rospy.Subscriber('button/value', Int8, callback = button_callback)
     
-    # list published topics
+    # list common published topics
     pub = {}
     pub['control'] = rospy.Publisher('stimulator/ccl_update', Stimulator, queue_size=10)
     pub['angle'] = rospy.Publisher('trike/angle', Float64, queue_size=10)
@@ -230,6 +237,11 @@ def main():
     pub['speed'] = rospy.Publisher('trike/speed', Float64, queue_size=10)
     pub['cadence'] = rospy.Publisher('trike/cadence', Float64, queue_size=10)
     pub['distance'] = rospy.Publisher('trike/distance', Float64, queue_size=10)
+
+    # exclusive subscribed and publised topics - rasp
+    if platform == 'rasp':
+        sub['button'] = rospy.Subscriber('button/action', UInt8, callback = button_callback)
+        pub['intensity'] = rospy.Publisher('display/update', UInt8, queue_size=10)
 
     # define loop rate (in hz)
     rate = rospy.Rate(50)
@@ -260,10 +272,19 @@ def main():
             cycle_speed.append(speed[-1])
 
         # calculate control signal
-        stimfactors = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)  
+        stimfactors = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err, platform)  
+
+        if platform == 'rasp':
+            # get the proportion for each channel
+            proportion = controller.multipliers()
+            # limits the stimulation intensity
+            if main_current > controller.currentLimit(): 
+                main_current = controller.currentLimit()
 
         # update current and pw values
         for i, ch in enumerate(stim_order):
+            if platform == 'rasp':
+                stim_current[ch] = round(main_current*proportion[ch])
             stimMsg.pulse_current[i] = round(stimfactors[i]*stim_current[ch])
             stimMsg.pulse_width[i] = stim_pw[ch]
             signalMsg.data[i+1] = stimMsg.pulse_current[i] # [index] is the actual channel number
@@ -290,6 +311,12 @@ def main():
         pub['cadence'].publish(cadenceMsg)
         # send distance update
         pub['distance'].publish(distanceMsg)
+
+        if button_event:
+            button_event = False
+            displayMsg.data = main_current
+            # send display update
+            pub['intensity'].publish(displayMsg)
 
         # wait for next loop
         rate.sleep()

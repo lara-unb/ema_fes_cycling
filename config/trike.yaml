@@ -23,36 +23,36 @@ shift: 0 # speed angle shift parameter
 # current amplitude relation/multiplier
 stim_proportion: {
     'Ch1': 1.00, 'Ch2': 1.00,
-    'Ch3': 0.00, 'Ch4': 0.00,
+    'Ch3': 0.50, 'Ch4': 0.50,
     'Ch5': 0.00, 'Ch6': 0.00,
-    'Ch7': 0.00, 'Ch8': 0.00
+    'Ch7': 1.00, 'Ch8': 1.00
 }
 
 # angle range for each stim channel
 Ch12: {
-    'Ch1_Angle_Min': 280,
-    'Ch1_Angle_Max': 20,
-    'Ch2_Angle_Min': 100,
-    'Ch2_Angle_Max': 200
+    'Ch1AngleMin': 280,
+    'Ch1AngleMax': 20,
+    'Ch2AngleMin': 100,
+    'Ch2AngleMax': 200
 }
 
 Ch34: {
-    'Ch3_Angle_Min': 30,
-    'Ch3_Angle_Max': 105,
-    'Ch4_Angle_Min': 210,
-    'Ch4_Angle_Max': 285
+    'Ch3AngleMin': 30,
+    'Ch3AngleMax': 105,
+    'Ch4AngleMin': 210,
+    'Ch4AngleMax': 285
 }
 
 Ch56: {
-    'Ch5_Angle_Min': 70,
-    'Ch5_Angle_Max': 170,
-    'Ch6_Angle_Min': 250,
-    'Ch6_Angle_Max': 350
+    'Ch5AngleMin': 70,
+    'Ch5AngleMax': 170,
+    'Ch6AngleMin': 250,
+    'Ch6AngleMax': 350
 }
 
 Ch78: {
-    'Ch7_Angle_Min': 280,
-    'Ch7_Angle_Max': 20,
-    'Ch8_Angle_Min': 100,
-    'Ch8_Angle_Max': 200
+    'Ch7AngleMin': 280,
+    'Ch7AngleMax': 20,
+    'Ch8AngleMin': 100,
+    'Ch8AngleMax': 200
 }

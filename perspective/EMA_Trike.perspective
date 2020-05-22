@@ -359,7 +359,7 @@
                 },
                 "topics": {
                   "type": "repr",
-                  "repr": "u'/ema/control/angle/data'"
+                  "repr": "u'/ema/trike/angle/data'"
                 },
                 "y_limits": {
                   "type": "repr",
@@ -406,7 +406,7 @@
                 },
                 "topics": {
                   "type": "repr",
-                  "repr": "[u'/ema/control/stimsignal/data[2]', u'/ema/control/stimsignal/data[1]']"
+                  "repr": "[u'/ema/trike/stimsignal/data[2]', u'/ema/trike/stimsignal/data[1]']"
                 },
                 "y_limits": {
                   "type": "repr",
@@ -453,7 +453,7 @@
                 },
                 "topics": {
                   "type": "repr",
-                  "repr": "[u'/ema/control/stimsignal/data[4]', u'/ema/control/stimsignal/data[3]']"
+                  "repr": "[u'/ema/trike/stimsignal/data[4]', u'/ema/trike/stimsignal/data[3]']"
                 },
                 "y_limits": {
                   "type": "repr",
@@ -500,7 +500,7 @@
                 },
                 "topics": {
                   "type": "repr",
-                  "repr": "[u'/ema/control/stimsignal/data[6]', u'/ema/control/stimsignal/data[5]']"
+                  "repr": "[u'/ema/trike/stimsignal/data[6]', u'/ema/trike/stimsignal/data[5]']"
                 },
                 "y_limits": {
                   "type": "repr",
@@ -547,7 +547,7 @@
                 },
                 "topics": {
                   "type": "repr",
-                  "repr": "[u'/ema/control/stimsignal/data[8]', u'/ema/control/stimsignal/data[7]']"
+                  "repr": "[u'/ema/trike/stimsignal/data[8]', u'/ema/trike/stimsignal/data[7]']"
                 },
                 "y_limits": {
                   "type": "repr",
