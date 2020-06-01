@@ -19,16 +19,23 @@ class Control:
 # To stimulate or not based on sensor's angle 
 ###############################################
 
-    def fx(self, ch, angle, speed, speed_ref):
+    def fx(self, ch, angle, speed, speed_ref, platform):
         ramp_degrees = 10.0
-        param_dict = rospy.get_param('/ema/server/')
-        # param_dict = self.config_dict[channel[0:4]]
-        # dth = (speed/speed_ref)*param_dict['Shift']
-        # dth = (speed/speed_ref)*self.config_dict['Shift']
+        n = int(ch[2])
+        m = (n-1)+(2*(n%2)) # if n=odd, m=even; if n=even, m=odd
+
+        if platform == 'pc':
+            param_dict = rospy.get_param('/ema/reconfig/')
+            # dth = (speed/speed_ref)*param_dict['Shift']
+        elif platform == 'rasp':
+            param_dict = self.config_dict['Ch'+str(min(n,m))+str(max(n,m))]
+            # dth = (speed/speed_ref)*self.config_dict['Shift']
+        
+        # shift disabled
         dth = 0
 
-        theta_min = param_dict[ch+"_Angle_Min"] - dth
-        theta_max = param_dict[ch+"_Angle_Max"] - dth
+        theta_min = param_dict[ch+"AngleMin"] - dth
+        theta_max = param_dict[ch+"AngleMax"] - dth
 
         # check if angle in range (theta_min, theta_max) 
         if theta_min <= angle and angle <= theta_max:
@@ -38,7 +45,7 @@ class Control:
                 return (theta_max-angle)/ramp_degrees
             else:
                 return 1
-        elif param_dict[ch+"_Angle_Min"] > param_dict[ch+"_Angle_Max"]:
+        elif param_dict[ch+"AngleMin"] > param_dict[ch+"AngleMax"]:
             if angle <= theta_min and angle <= theta_max:
                 if theta_min <= angle + 360 and angle <= theta_max:
                     if (angle+360-theta_min) <= ramp_degrees:
@@ -89,11 +96,11 @@ class Control:
 # Control applied to stimulation signal
 ###############################################
     
-    def calculate(self, angle, speed, speed_ref, speed_err):
+    def calculate(self, angle, speed, speed_ref, speed_err, platform):
         factor = 8*[0]
 
         for i, ch in enumerate(stim_order):
-            factor[i] = self.fx(ch, angle, speed, speed_ref)
+            factor[i] = self.fx(ch, angle, speed, speed_ref, platform)
 
         return factor
     
@@ -114,3 +121,31 @@ class Control:
                 stim_dict[ch] = stim_dict[ch] + step
 
         return stim_dict, increment
+
+###############################################
+# Initializes the current amplitude
+###############################################
+
+    def initialize(self, current_dict):
+
+        ini = self.config_dict['initial_current']
+        proportion = self.config_dict['stim_proportion']
+
+        for ch in stim_order:
+            current_dict[ch] = round(ini*proportion[ch])
+
+        return ini, current_dict
+
+###############################################
+# Returns the proportion dictionary
+###############################################
+    
+    def multipliers(self):
+        return self.config_dict['stim_proportion']
+
+###############################################
+# Returns the max current among all channels
+###############################################
+    
+    def currentLimit(self):
+        return self.config_dict['stim_limit']
