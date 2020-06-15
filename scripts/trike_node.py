@@ -15,7 +15,7 @@ http://wiki.ros.org/Nodes
 """
 
 import rospy
-import ema.modules.trike as trike
+import modules.trike as trike
 
 # Import ROS msgs
 from std_msgs.msg import Float64

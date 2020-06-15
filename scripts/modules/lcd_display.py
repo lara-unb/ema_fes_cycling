@@ -103,7 +103,7 @@ En = 0b00000100 # Enable bit
 Rw = 0b00000010 # Read/Write bit
 Rs = 0b00000001 # Register select bit
 
-class Display:
+class LCD:
    #initializes objects and LCD
    def __init__(self):
       self.lcd_device = i2c_device(ADDRESS)
@@ -163,7 +163,7 @@ class Display:
       self.lcd_write(LCD_CLEARDISPLAY)
       self.lcd_write(LCD_RETURNHOME)
 
-   # define backlight on/off (Display.backlight(1); off= Display.backlight(0)
+   # define backlight on/off (LCD.backlight(1); off= LCD.backlight(0)
    def backlight(self, state): # for state, 1 = on, 0 = off
       if state == 1:
          self.lcd_device.write_cmd(LCD_BACKLIGHT)

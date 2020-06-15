@@ -1,11 +1,25 @@
 #!/usr/bin/env python
 
+"""
+
+Particularly, this code initializes the button interface, check for interaction
+with polling and asynchronously publishes a ROS message.
+
+The ROS node runs this code. It should make all the necessary
+communication/interaction with ROS and it shouldn't deal with minor details.
+For example, it would be used to publish a filtered sensor measurement as
+a ROS message to other ROS nodes instead of establishing the serial comm
+and treating that raw measurement. For more info, check:
+http://wiki.ros.org/Nodes
+
+"""
+
 import rospy
 
-# import ros msgs
+# Import ROS msgs
 from std_msgs.msg import UInt8
 
-# import utilities
+# Import utilities
 import RPi.GPIO as GPIO
 
 def main():

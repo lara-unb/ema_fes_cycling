@@ -1,12 +1,21 @@
+<!--
+
+The launch file is an XML that specifies which parameters to set and ROS
+nodes to launch. It's used with a roslaunch command, which is responsible
+for doing the initial setup and starting the system. The launch file includes
+options to automatically respawn processes that have already died. This
+file is usually in the /launch subdirectory of a package. For a specification
+of this XML format, see:
+http://wiki.ros.org/roslaunch/XML
+
+-->
+
 <launch>
   <group ns="ema">
 
     <!-- declare and load launch arguments-->
-    <!-- plataform -->
     <arg name="platform" value="pc" doc="specify which platform to use: rasp/pc"/>
     <param name="platform" value="$(arg platform)"/>
-
-    <!-- display type or connected-->
     <arg name="display_type" value="lcd" doc="specify display type connected: lcd/oled"/>
     <param name="display_type" value="$(arg display_type)"/>
 
@@ -27,12 +36,12 @@
     <group if="$(eval platform == 'rasp')">
 		      <node name="button" pkg="ema_fes_cycling" type="button_node.py" output="screen" respawn="true" respawn_delay="5"/>
 
-          <!-- launch exclusive lcd display node -->
+          <!-- launch lcd-exclusive node -->
           <group if="$(eval display_type == 'lcd')">
                 <node name="display" pkg="ema_fes_cycling" type="display_lcd_node.py" output="screen" respawn="true" respawn_delay="5"/>
           </group>
 
-          <!-- launch exclusive lcd display node -->
+          <!-- launch oled-exclusive node -->
           <group if="$(eval display_type == 'oled')">
                 <node name="display" pkg="ema_fes_cycling" type="display_oled_node.py" output="screen" respawn="true" respawn_delay="5"/>
           </group>

@@ -1,20 +1,32 @@
 #!/usr/bin/env python
 
-import rospy
-import ema.modules.lcd_display as display
+"""
 
-# import ema common msgs
+Particularly, this code initializes the LCD display and updates the screen 
+based on received ROS messages.
+
+The ROS node runs this code. It should make all the necessary
+communication/interaction with ROS and it shouldn't deal with minor details.
+For example, it would be used to publish a filtered sensor measurement as
+a ROS message to other ROS nodes instead of establishing the serial comm
+and treating that raw measurement. For more info, check:
+http://wiki.ros.org/Nodes
+
+"""
+
+import rospy
+import modules.lcd_display as display
+
+# Import ROS msgs
+from std_msgs.msg import UInt8
 from ema_common_msgs.msg import Stimulator
 
-# import ros msgs
-from std_msgs.msg import UInt8
-
-# define global values
+# Global variables
 global lcdi2c
 global current
 
 # initialize lcd display
-lcdi2c = display.Display()
+lcdi2c = display.LCD()
 
 # set initial value
 current =-1

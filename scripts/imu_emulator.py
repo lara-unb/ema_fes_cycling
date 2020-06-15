@@ -1,14 +1,30 @@
 #!/usr/bin/env python
 
+"""
+
+Particularly, this code takes recorded data from a bag file and publishes  
+the pedal angle as a ROS message.
+
+The ROS node runs this code. It should make all the necessary
+communication/interaction with ROS and it shouldn't deal with minor details.
+For example, it would be used to publish a filtered sensor measurement as
+a ROS message to other ROS nodes instead of establishing the serial comm
+and treating that raw measurement. For more info, check:
+http://wiki.ros.org/Nodes
+
+"""
+
 import rospy
 import rosbag
 import rospkg
-# import ros msgs
+
+# Import ROS msgs
 from sensor_msgs.msg import Imu
 
+# Global variables
 global file
 
-file = "pedal15.bag"
+file = "Recorded.bag"
 
 
 def main():
