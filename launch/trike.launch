@@ -11,48 +11,48 @@ http://wiki.ros.org/roslaunch/XML
 -->
 
 <launch>
-  <group ns="ema">
+    <group ns="ema">
 
-    <!-- declare and load launch arguments-->
-    <arg name="platform" value="pc" doc="specify which platform to use: rasp/pc"/>
-    <param name="platform" value="$(arg platform)"/>
-    <arg name="display_type" value="oled" doc="specify display type connected: lcd/oled"/>
-    <param name="display_type" value="$(arg display_type)"/>
+        <!-- declare and load launch arguments-->
+        <arg name="platform" value="pc" doc="specify which platform to use: rasp/pc"/>
+        <param name="platform" value="$(arg platform)"/>
+        <arg name="display_type" value="oled" doc="specify display type connected: lcd/oled"/>
+        <param name="display_type" value="$(arg display_type)"/>
 
-    <!-- load common config files-->
-    <rosparam command="load" file="$(find yostlabs_3space_imu)/config/imu.yaml" ns="imu"/>
-    <rosparam command="load" file="$(find hasomed_rehastim_stimulator)/config/CCL18F50.yaml" ns="stimulator"/>
-    <rosparam command="load" file="$(find ema_fes_cycling)/config/trike.yaml" ns="trike"/>
+        <!-- load common config files-->
+        <rosparam command="load" file="$(find yostlabs_3space_imu)/config/imu.yaml" ns="imu"/>
+        <rosparam command="load" file="$(find hasomed_rehastim_stimulator)/config/CCL18F50.yaml" ns="stimulator"/>
+        <rosparam command="load" file="$(find ema_fes_cycling)/config/trike.yaml" ns="trike"/>
 
-    <!-- launch common nodes -->
-    <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/>
-    <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/>
-    <node name="trike" pkg="ema_fes_cycling" type="trike_node.py" output="log" respawn="true" respawn_delay="5"/>
+        <!-- launch common nodes -->
+        <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/>
+        <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/>
+        <node name="trike" pkg="ema_fes_cycling" type="trike_node.py" output="log" respawn="true" respawn_delay="5"/>
 
-    <!-- launch pc-exclusive nodes -->
-    <group if="$(eval platform == 'pc')">
-        <node name="reconfig" pkg="ema_fes_cycling" type="trike_server_node.py" output="screen" respawn="true" respawn_delay="5"/>
-        <node name="dashboard" pkg="rqt_gui" type="rqt_gui" output="log" args="--perspective-file $(find ema_fes_cycling)/perspective/EMA_Trike.perspective"/>
-        <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args=" /ema/trike/angle /ema/trike/stimsignal 
-            /ema/stimulator/ccl_update -o $(env HOME)/bagfiles/ema_fes_cycling/ --split --max-splits 3 --duration 5m"/>
-    </group>
-
-    <!-- launch rasp-exclusive nodes -->
-    <group if="$(eval platform == 'rasp')">
-        <node name="button" pkg="ema_fes_cycling" type="button_node.py" output="screen" respawn="true" respawn_delay="5"/>
-        <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args="/ema/button/action /ema/trike/angle 
-            /ema/trike/stimsignal /ema/stimulator/ccl_update -o $(env HOME)/bagfiles/ema_fes_cycling/ --split --max-splits 3 --duration 5m"/>
-        
-        <!-- launch lcd-exclusive node -->
-        <group if="$(eval display_type == 'lcd')">
-            <node name="display" pkg="ema_fes_cycling" type="display_lcd_node.py" output="screen" respawn="true" respawn_delay="5"/>
+        <!-- launch pc-exclusive nodes -->
+        <group if="$(eval platform == 'pc')">
+            <node name="reconfig" pkg="ema_fes_cycling" type="trike_server_node.py" output="screen" respawn="true" respawn_delay="5"/>
+            <node name="dashboard" pkg="rqt_gui" type="rqt_gui" output="log" args="--perspective-file $(find ema_fes_cycling)/perspective/EMA_Trike.perspective"/>
+            <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args=" /ema/trike/angle /ema/trike/stimsignal 
+                /ema/stimulator/ccl_update -o $(env HOME)/bagfiles/ema_fes_cycling/ --split --max-splits 3 --duration 5m"/>
         </group>
 
-        <!-- launch oled-exclusive node -->
-        <group if="$(eval display_type == 'oled')">
-            <node name="display" pkg="ema_fes_cycling" type="display_oled_node.py" output="screen" respawn="true" respawn_delay="5"/>
-        </group>
-    </group>
+        <!-- launch rasp-exclusive nodes -->
+        <group if="$(eval platform == 'rasp')">
+            <node name="button" pkg="ema_fes_cycling" type="button_node.py" output="screen" respawn="true" respawn_delay="5"/>
+            <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args="/ema/button/action /ema/trike/angle 
+                /ema/trike/stimsignal /ema/stimulator/ccl_update -o $(env HOME)/bagfiles/ema_fes_cycling/ --split --max-splits 3 --duration 5m"/>
 
-  </group>
+            <!-- launch lcd-exclusive node -->
+            <group if="$(eval display_type == 'lcd')">
+                <node name="display" pkg="ema_fes_cycling" type="display_lcd_node.py" output="screen" respawn="true" respawn_delay="5"/>
+            </group>
+
+            <!-- launch oled-exclusive node -->
+            <group if="$(eval display_type == 'oled')">
+                <node name="display" pkg="ema_fes_cycling" type="display_oled_node.py" output="screen" respawn="true" respawn_delay="5"/>
+            </group>
+        </group>
+
+    </group>
 </launch>

@@ -10,7 +10,7 @@ This repository provides the main code to run the Project EMA FES cycling applic
 
 ## Updates
 
-The _'master'_ branch is only for PC and embedded system stable versions, usually followed by a release. Modifications, updates and new features stay on _'develop'_ until tested and approved to go to _'master'_. The changes are first made for PC and then adapted for the embedded system on _'raspema'_. The _'tests'_ branch is rarely used and is for tests not related to a new feature.
+The _'master'_ branch is only for PC and embedded system stable versions, usually followed by a release. Modifications, updates and new features stay on _'develop'_ until tested and approved to go to _'master'_. The _'tests'_ branch is rarely used and is for tests not related to a new feature.
 
 ## Quick Reference
 
@@ -34,6 +34,10 @@ The _'master'_ branch is only for PC and embedded system stable versions, usuall
 
 - **launch:** includes ROS launch files
 
-- **scripts:** contains ROS node files and auxiliary modules
+- **other:** out-of-date scripts, legacy code once used for testing or miscellaneous 
 
-- **unused:** out-of-date scripts, legacy code once used for testing or miscellaneous files in general
+- **perspective:** groups the predefined GUI perspectives/layouts
+
+- **resources:** groups supplementary files
+
+- **scripts:** contains ROS node files and auxiliary modules

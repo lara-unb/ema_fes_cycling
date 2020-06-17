@@ -2,7 +2,7 @@
 
 """
 
-Particularly, this code takes recorded data from a bag file and publishes  
+Particularly, this code takes recorded data from a bag file and publishes
 the pedal angle as a ROS message.
 
 The ROS node runs this code. It should make all the necessary
@@ -18,28 +18,27 @@ import rospy
 import rosbag
 import rospkg
 
-# Import ROS msgs
+# Import ROS msgs:
 from sensor_msgs.msg import Imu
 
-# Global variables
+# Global variables:
 global file
 
 file = "Recorded.bag"
 
 
 def main():
-    # init button node
+    # Init button node:
     rospy.init_node('imu_emulator', anonymous=False)
-    
-    # list published topics
+
+    # List published topics:
     pub = rospy.Publisher('imu/pedal', Imu, queue_size=10)
 
-    # define loop rate (in hz) 'Define data sample rate '
-    rate = rospy.Rate(164)
+    # Define loop rate (in hz):
+    rate = rospy.Rate(164)  # Equivalent to the data sample rate
 
     rospack = rospkg.RosPack()
-    path = rospack.get_path("ema_fes_cycling")+"/resources/"+ file
-    
+    path = rospack.get_path("ema_fes_cycling")+"/resources/"+file
     bag = rosbag.Bag(path)
     messages = {}
 
@@ -48,16 +47,17 @@ def main():
             messages[topic] = [msg]
         else:
             messages[topic].append(msg)
-    
+
     msg = list(messages['/ema/imu/pedal'])
-    # node loop
+
+    # Node loop:
     while not rospy.is_shutdown():
-        if len(msg) < 1:   
+        if len(msg) < 1:
             msg = list(messages['/ema/imu/pedal'])
-        
-        pub.publish(msg.pop(0)) 
-        
-        # wait for next loop
+
+        pub.publish(msg.pop(0))
+
+        # Wait for next loop:
         rate.sleep()
 
 if __name__ == '__main__':

@@ -11,41 +11,41 @@ http://wiki.ros.org/roslaunch/XML
 -->
 
 <launch>
-  <group ns="ema">
+    <group ns="ema">
 
-    <!-- declare and load launch arguments-->
-    <arg name="platform" value="pc" doc="specify which platform to use: rasp/pc"/>
-    <param name="platform" value="$(arg platform)"/>
-    <arg name="display_type" value="lcd" doc="specify display type connected: lcd/oled"/>
-    <param name="display_type" value="$(arg display_type)"/>
+        <!-- declare and load launch arguments-->
+        <arg name="platform" value="pc" doc="specify which platform to use: rasp/pc"/>
+        <param name="platform" value="$(arg platform)"/>
+        <arg name="display_type" value="lcd" doc="specify display type connected: lcd/oled"/>
+        <param name="display_type" value="$(arg display_type)"/>
 
-    <!-- load common config files-->
-    <rosparam command="load" file="$(find ema_fes_cycling)/config/trike.yaml" ns="trike" />
+        <!-- load common config files-->
+        <rosparam command="load" file="$(find ema_fes_cycling)/config/trike.yaml" ns="trike" />
 
-    <!-- launch common nodes-->
-    <node name="imu_emulator" pkg="ema_fes_cycling" type="imu_emulator.py" output="screen" respawn="true" respawn_delay="5"/>
-    <node name="trike" pkg="ema_fes_cycling" type="trike_node.py" output="screen" respawn="true" respawn_delay="5"/>
-    
-    <!-- launch pc-exclusive nodes -->
-    <group if="$(eval platform == 'pc')">
-          <node name="reconfig" pkg="ema_fes_cycling" type="trike_server_node.py" output="screen" respawn="true" respawn_delay="5"/>
-          <node name="dashboard" pkg="rqt_gui" type="rqt_gui" output="log" args="--perspective-file $(find ema_fes_cycling)/perspective/EMA_Trike.perspective"/>
-    </group>
+        <!-- launch common nodes-->
+        <node name="imu_emulator" pkg="ema_fes_cycling" type="imu_emulator.py" output="screen" respawn="true" respawn_delay="5"/>
+        <node name="trike" pkg="ema_fes_cycling" type="trike_node.py" output="screen" respawn="true" respawn_delay="5"/>
 
-    <!-- launch rasp-exclusive nodes -->
-    <group if="$(eval platform == 'rasp')">
-		      <node name="button" pkg="ema_fes_cycling" type="button_node.py" output="screen" respawn="true" respawn_delay="5"/>
+        <!-- launch pc-exclusive nodes -->
+        <group if="$(eval platform == 'pc')">
+            <node name="reconfig" pkg="ema_fes_cycling" type="trike_server_node.py" output="screen" respawn="true" respawn_delay="5"/>
+            <node name="dashboard" pkg="rqt_gui" type="rqt_gui" output="log" args="--perspective-file $(find ema_fes_cycling)/perspective/EMA_Trike.perspective"/>
+        </group>
 
-          <!-- launch lcd-exclusive node -->
-          <group if="$(eval display_type == 'lcd')">
+        <!-- launch rasp-exclusive nodes -->
+        <group if="$(eval platform == 'rasp')">
+            <node name="button" pkg="ema_fes_cycling" type="button_node.py" output="screen" respawn="true" respawn_delay="5"/>
+
+            <!-- launch lcd-exclusive node -->
+            <group if="$(eval display_type == 'lcd')">
                 <node name="display" pkg="ema_fes_cycling" type="display_lcd_node.py" output="screen" respawn="true" respawn_delay="5"/>
-          </group>
+            </group>
 
-          <!-- launch oled-exclusive node -->
-          <group if="$(eval display_type == 'oled')">
+            <!-- launch oled-exclusive node -->
+            <group if="$(eval display_type == 'oled')">
                 <node name="display" pkg="ema_fes_cycling" type="display_oled_node.py" output="screen" respawn="true" respawn_delay="5"/>
-          </group>
-    </group>
+            </group>
+        </group>
 
-  </group>
+    </group>
 </launch>

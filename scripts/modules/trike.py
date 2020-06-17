@@ -2,42 +2,43 @@
 
 import rospy
 
-# stim channel mapping
+# Stim channel mapping:
 stim_order = [
-    'Ch1','Ch2',
-    'Ch3','Ch4',
-    'Ch5','Ch6',
-    'Ch7','Ch8'
+    'Ch1', 'Ch2',
+    'Ch3', 'Ch4',
+    'Ch5', 'Ch6',
+    'Ch7', 'Ch8'
 ]
+
 
 class Control:
 
     def __init__(self, config_dict):
-    	self.config_dict = config_dict
+        self.config_dict = config_dict
 
 ###############################################
-# To stimulate or not based on sensor's angle 
+# To stimulate or not based on sensor's angle:
 ###############################################
 
     def fx(self, ch, angle, speed, speed_ref, platform):
         ramp_degrees = 10.0
         n = int(ch[2])
-        m = (n-1)+(2*(n%2)) # if n=odd, m=even; if n=even, m=odd
+        m = (n-1)+(2*(n%2))  # if n=odd, m=even; if n=even, m=odd
 
         if platform == 'pc':
             param_dict = rospy.get_param('/ema/reconfig/')
             # dth = (speed/speed_ref)*param_dict['Shift']
         elif platform == 'rasp':
-            param_dict = self.config_dict['Ch'+str(min(n,m))+str(max(n,m))]
+            param_dict = self.config_dict['Ch'+str(min(n, m))+str(max(n, m))]
             # dth = (speed/speed_ref)*self.config_dict['Shift']
-        
-        # shift disabled
+
+        # Shift disabled:
         dth = 0
 
         theta_min = param_dict[ch+"AngleMin"] - dth
         theta_max = param_dict[ch+"AngleMax"] - dth
 
-        # check if angle in range (theta_min, theta_max) 
+        # Check if angle in range (theta_min, theta_max):
         if theta_min <= angle and angle <= theta_max:
             if (angle-theta_min) <= ramp_degrees:
                 return (angle-theta_min)/ramp_degrees
@@ -66,36 +67,36 @@ class Control:
         return 0
 
 ###############################################
-# Control coefficient routine
+# Control coefficient routine:
 ###############################################
 
     def g(self, error):
 
         Kp = 1/float(5000)
         Ki = 1/float(100000)
-        
-        # If there is a change of signal, reset
+
+        # If there is a change of signal, reset.
         if ((error[-2] >= 0) and (error[-1] < 0)) or ((error[-2] < 0) and (error[-1] >= 0)):
             errorTemp = [0 for x in range(len(error))]
             errorTemp[-1] = error[-1]
             error = errorTemp
-        
+
         signal = 0.5 + Kp*error[-1]+Ki*sum(error)
-        
-        # saturation
+
+        # Saturation:
         if signal > 1:
             signal = 1
             error[-1] = 0
         elif signal < 0:
             signal = 0
             error[-1] = 0
-        
+
         return signal
-    
+
 ###############################################
-# Control applied to stimulation signal
+# Control applied to stimulation signal:
 ###############################################
-    
+
     def calculate(self, angle, speed, speed_ref, speed_err, platform):
         factor = 8*[0]
 
@@ -103,13 +104,13 @@ class Control:
             factor[i] = self.fx(ch, angle, speed, speed_ref, platform)
 
         return factor
-    
+
 ###############################################
-# Control applied to current amplitude
+# Control applied to current amplitude:
 ###############################################
-    
+
     def automatic(self, stim_dict, increment, cadence, min_cadence, limit):
-        if (cadence < min_cadence) and (increment<limit):
+        if (cadence < min_cadence) and (increment < limit):
             step = 2
 
             if increment+step > limit:
@@ -123,7 +124,7 @@ class Control:
         return stim_dict, increment
 
 ###############################################
-# Initializes the current amplitude
+# Initialize the current amplitude:
 ###############################################
 
     def initialize(self, current_dict):
@@ -137,15 +138,15 @@ class Control:
         return ini, current_dict
 
 ###############################################
-# Returns the proportion dictionary
+# Return the proportion dictionary:
 ###############################################
-    
+
     def multipliers(self):
         return self.config_dict['stim_proportion']
 
 ###############################################
-# Returns the max current among all channels
+# Return the max current among all channels:
 ###############################################
-    
+
     def currentLimit(self):
         return self.config_dict['stim_limit']
