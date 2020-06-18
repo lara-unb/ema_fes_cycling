@@ -1,5 +1,19 @@
 #!/usr/bin/env python
 
+"""
+
+Particularly, this code is an auxiliary module for the FES cycling
+application. It consists of classes and methods that define the stimulation
+controller and give support in a deeper level.
+
+The ROS node uses this code. It gives support in a deeper level, dealing
+with minor details and is supposed to be independent of ROS, meaning it
+shouldn't have to interact with ROS in any way. For example, it would
+establish serial comm and treat raw measurements instead ofpublishing a
+filtered sensor measurement as a ROS message to other ROS nodes.
+
+"""
+
 import rospy
 
 # Stim channel mapping:
@@ -12,18 +26,26 @@ stim_order = [
 
 
 class Control:
+    """A class used to control the stimulation.
 
+    Attributes:
+        config_dict (dict): stores the static config parameters
+    """
     def __init__(self, config_dict):
         self.config_dict = config_dict
 
-###############################################
-# To stimulate or not based on sensor's angle:
-###############################################
-
     def fx(self, ch, angle, speed, speed_ref, platform):
+        """Decide to stimulate or not based on sensor.
+
+        Attributes:
+            angle (double): pedal angle
+            speed (double): pedal angular speed
+            speed_ref (double): predefined reference speed
+            platform (str): where the system is running
+        """
         ramp_degrees = 10.0
         n = int(ch[2])
-        m = (n-1)+(2*(n%2))  # if n=odd, m=even; if n=even, m=odd
+        m = (n - 1) + (2 * (n % 2))  # if n=odd, m=even; if n=even, m=odd
 
         if platform == 'pc':
             param_dict = rospy.get_param('/ema/reconfig/')
@@ -66,12 +88,12 @@ class Control:
 
         return 0
 
-###############################################
-# Control coefficient routine:
-###############################################
-
     def g(self, error):
+        """PI speed controller logic.
 
+        Attributes:
+            error (double): speed error input
+        """
         Kp = 1/float(5000)
         Ki = 1/float(100000)
 
@@ -93,11 +115,16 @@ class Control:
 
         return signal
 
-###############################################
-# Control applied to stimulation signal:
-###############################################
-
     def calculate(self, angle, speed, speed_ref, speed_err, platform):
+        """Tell if stimulation should be activated or not.
+
+        Attributes:
+            angle (double): pedal angle
+            speed (double): pedal angular speed
+            speed_ref (double): predefined reference speed
+            speed_err (double): calculated speed error
+            platform (str): where the system is running
+        """
         factor = 8*[0]
 
         for i, ch in enumerate(stim_order):
@@ -105,11 +132,16 @@ class Control:
 
         return factor
 
-###############################################
-# Control applied to current amplitude:
-###############################################
-
     def automatic(self, stim_dict, increment, cadence, min_cadence, limit):
+        """Cadence control applied to stimulation current amplitude.
+
+        Attributes:
+            stim_dict (dict): stores the current in each stimulation channel
+            increment (int): amount to add
+            cadence (int): speed in rpm
+            min_cadence (int): control threshold
+            limit (int): auto-adjust control limit
+        """
         if (cadence < min_cadence) and (increment < limit):
             step = 2
 
@@ -123,12 +155,12 @@ class Control:
 
         return stim_dict, increment
 
-###############################################
-# Initialize the current amplitude:
-###############################################
-
     def initialize(self, current_dict):
+        """Initialize the current amplitude.
 
+        Attributes:
+            config_dict (dict): stores the static config parameters
+        """
         ini = self.config_dict['initial_current']
         proportion = self.config_dict['stim_proportion']
 
@@ -137,16 +169,10 @@ class Control:
 
         return ini, current_dict
 
-###############################################
-# Return the proportion dictionary:
-###############################################
-
     def multipliers(self):
+        """Return the proportion dictionary."""
         return self.config_dict['stim_proportion']
 
-###############################################
-# Return the max current among all channels:
-###############################################
-
     def currentLimit(self):
+        """Return the max current among all channels."""
         return self.config_dict['stim_limit']

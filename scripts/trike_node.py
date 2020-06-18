@@ -97,8 +97,14 @@ stim_order = [
     'Ch7', 'Ch8'
 ]
 
+
 if platform == 'pc':
     def server_callback(config):
+        """Assign the server parameters to the equivalent variables.
+
+        Attributes:
+            config (dict): server dictionary with its parameters
+        """
         global stim_current
         global stim_pw
         global auto_on
@@ -109,13 +115,17 @@ if platform == 'pc':
         auto_max_current = config['AutoCShift']
         auto_minvel = config['AutoCVelocity']
 
-        # Assign updated server parameters to global vars:
         for ch in stim_order:
             stim_current[ch] = config[ch+'Current']
             stim_pw[ch] = config[ch+'PulseWidth']
 
 
 def pedal_callback(data):
+    """Process measurements from the pedal IMU sensor.
+
+    Attributes:
+        data (Imu): msg from the pedal IMU sensor
+    """
     global angle
     global speed
     global speed_err
@@ -157,6 +167,11 @@ def pedal_callback(data):
 
 if platform == 'rasp':
     def button_callback(data):
+        """Process the button commands from the user.
+
+        Attributes:
+            data (UInt8): latest msg from the buttons
+        """
         global on_off
         global button_event
         global main_current
@@ -320,6 +335,7 @@ def main():
 
         # Wait for next loop:
         rate.sleep()
+
 
 if __name__ == '__main__':
     try:

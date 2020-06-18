@@ -14,16 +14,18 @@ http://wiki.ros.org/dynamic_reconfigure/Tutorials/SettingUpDynamicReconfigureFor
 
                     _________ NOTES _________
 
-Be careful when changing parameters, their attributes are used by other
-pieces of code.
-
-Everytime a parameter changes the callback is executed. The code identifies
+Everytime a parameter changes, the callback is executed. The code identifies
 which parameter was changed by the level number. Levels are integers declared
 in the .cfg file to identify each parameter and is passed to the callback
 to express what was modified. At last, rules and restrictions are applied
 and some parameters are related to others.
 
-Ch12: used with quadriceps (medial), refers to stimulator channels 1 and 2
+Level identifies each parameter and consists of 5 numbers described here:
+    - First 2: refer to its group
+    - Next 2: refer to the element/parameter itself
+    - Last: refer to the stimulator channel affected
+
+Ch12: used with quadriceps (rectus), refers to stimulator channels 1 and 2
 Ch34: used with hamstrings, refers to stimulator channels 3 and 4
 Ch56: used with gluteal, refers to stimulator channels 5 and 6
 Ch78: used with quadriceps (lateral), refers to stimulator channels 7 and 8
@@ -37,32 +39,46 @@ from ema_fes_cycling.cfg import TrikeServerConfig  # pkgname.cfg, cfgfilenameCon
 import dynamic_reconfigure.server
 
 
-# Auxiliary class to categorize parameters:
 class Param:
+    """A class used to categorize and represent a server parameter.
 
+    Attributes:
+        level (int): numerical identifier
+        group (int): group number
+        element (str): param name
+        channel (int): stim channel affected
+        dual (int): dual param level when applicable
+    """
     def __init__(self, ref_dict, lev):
-        self.level = lev  # Stores the level
-        self.group = str(lev)[0:2]  # First 2 digits refer to group (99,12,34,56,78)
-        self.element = ref_dict[lev]['name']  # Gets the element according to dict
-        self.channel = str(lev)[4]  # Last digit refers to channel 1-8
-        self.dual = None  # Level for the same element of dual channel
+        """
+        Args:
+            ref_dict (dict): a reference dictionary with levels and
+                respective parameters
+            lev (int): new Param numerical identifier
+        """
+        self.level = lev
+        self.group = int(str(lev)[0:2])
+        self.element = ref_dict[lev]['name']
+        self.channel = int(str(lev)[4])
+        self.dual = None
 
-    # Get the dual element level:
-    def getElementDual(self):
-        # For Ch1Current element, returns Ch2Current level;
-        # for Ch8PulseWidth, returns Ch7PulseWidth level, so forth ...
-        ch = int(str(self.level)[-1])
-        if (ch != 0):
-            if (ch % 2 == 0):  # Even channel
-                self.dual = self.level - 1  # Same group, same element, diff channel
+        # Some parameters can have a dual, the equivalent parameter for
+        # the other channel in its group, e.g. Ch2Current is Ch1Current's
+        # dual and Ch7PulseWidth is Ch8PulseWidth's dual. Their level
+        # differs only by the last digit, the channel.
+        if self.channel != 0:  # General parameters dont have dual
+            if (self.channel % 2) == 0:  # Even channel
+                self.dual = self.level - 1
             else:  # Odd channel
-                self.dual = self.level + 1  # Same group, same element, diff channel
-
-        return self.dual  # Level of the dual
+                self.dual = self.level + 1
 
 
-# Handler for changes in enabled parameters:
 def enableCheck(config):
+    """Check for the Enable server parameters to turn on/off stim.
+
+    Attributes:
+        config (dict): server dictionary with its parameters
+    """
     for pair in ['12', '34', '56', '78']:  # All channel groups
         if not config['Ch' + pair + 'Enable']:  # Group deactivated
             config['groups']['groups']['Ch' + pair]['state'] = False  # Hide/collapse group
@@ -74,39 +90,58 @@ def enableCheck(config):
     return
 
 
-# Handler for changes in general parameters:
-def generalUpdated(config, item):  # Item from Param class
+def generalUpdated(config, item):
+    """Deal with General parameter changes in the server.
+
+    Attributes:
+        config (dict): server dictionary with its parameters
+        item (Param): parameter class instance
+    """
     callback_ref[item.level]['prev'] = config[item.element]  # Update previous value
     return
 
 
-# Handler for changes in current link parameters:
-def linkCurrentUpdated(config, item):  # item from Param class
-    # Reset group current and pulse width when link is activated:
+def linkCurrentUpdated(config, item):
+    """Deal with LinkCurrent parameter changes in the server.
+
+    When a LinkCurrent is activated, both channels in a group will have
+    the Current and PulseWidth parameters bound to their duals.
+
+    Attributes:
+        config (dict): server dictionary with its parameters
+        item (Param): parameter class instance
+    """
     if config[item.element]:  # Link activated
         for elem in ('Current', 'PulseWidth'):
-            odd_element = 'Ch' + item.group[0] + elem
-            even_element = 'Ch' + item.group[1] + elem
+            odd_element = 'Ch' + str(item.group)[0] + elem
+            even_element = 'Ch' + str(item.group)[1] + elem
             odd_level = reverse_ref[odd_element]
             even_level = reverse_ref[even_element]
 
             # Reset current values to the min and link:
-            reseter = min(config[odd_element],config[even_element])
+            reseter = min(config[odd_element], config[even_element])
             config[odd_element] = config[even_element] = reseter
-            callback_ref[odd_level]['prev'] = reseter
-            callback_ref[even_level]['prev'] = reseter
+            callback_ref[odd_level]['prev'] = reseter  # Update dual
+            callback_ref[even_level]['prev'] = reseter  # Update previous value
 
     callback_ref[item.level]['prev'] = config[item.element]  # Update previous value
     return
 
 
-# Handler for changes in angle link parameters:
-def linkAngleUpdated(config, item):  # Item from Param class
-    # Reset group min and max angles when link is activated:
+def linkAngleUpdated(config, item):
+    """Deal with LinkAngle parameter changes in the server.
+
+    When a LinkAngle is activated, both channels in a group will have
+    the AngleMin and AngleMax parameters bound to their duals.
+
+    Attributes:
+        config (dict): server dictionary with its parameters
+        item (Param): parameter class instance
+    """
     if config[item.element]:  # Link activated
         for elem in ('AngleMin', 'AngleMax'):
-            odd_element = 'Ch' + item.group[0] + elem
-            even_element = 'Ch' + item.group[1] + elem
+            odd_element = 'Ch' + str(item.group)[0] + elem
+            even_element = 'Ch' + str(item.group)[1] + elem
             even_level = reverse_ref[even_element]
 
             # Reset angle values and link:
@@ -118,8 +153,13 @@ def linkAngleUpdated(config, item):  # Item from Param class
     return
 
 
-# Handler for changes in current parameters:
-def currentUpdated(config, item):  # Item from Param class
+def currentUpdated(config, item):
+    """Deal with Current parameter changes in the server.
+
+    Attributes:
+        config (dict): server dictionary with its parameters
+        item (Param): parameter class instance
+    """
     prev = callback_ref[item.level]['prev']  # Value before update
 
     # Prevents the user from abruptly increasing the current:
@@ -127,8 +167,8 @@ def currentUpdated(config, item):  # Item from Param class
         config[item.element] = prev + 2
 
     # Modifies the current as a pair:
-    if config['Ch' + item.group + 'LinkCurrent']:
-        item_dual = Param(callback_ref, item.getElementDual())  # Linked channel
+    if config['Ch' + str(item.group) + 'LinkCurrent']:
+        item_dual = Param(callback_ref, item.dual)  # Linked channel
         config[item_dual.element] = config[item.element]  # Update dual
         callback_ref[item_dual.level]['prev'] = config[item_dual.element]  # Update previous value
 
@@ -136,11 +176,15 @@ def currentUpdated(config, item):  # Item from Param class
     return
 
 
-# Handler for changes in pulse width parameters:
-def pulseWidthUpdated(config, item):  # Item from Param class
-    # Modifies the pulse width as a pair:
-    if config['Ch' + item.group + 'LinkCurrent']:
-        item_dual = Param(callback_ref, item.getElementDual())  # Linked channel
+def pulseWidthUpdated(config, item):
+    """Deal with PulseWidth parameter changes in the server.
+
+    Attributes:
+        config (dict): server dictionary with its parameters
+        item (Param): parameter class instance
+    """
+    if config['Ch' + str(item.group) + 'LinkCurrent']:
+        item_dual = Param(callback_ref, item.dual)  # Linked channel
         config[item_dual.element] = config[item.element]  # Update dual
         callback_ref[item_dual.level]['prev'] = config[item_dual.element]  # Update previous value
 
@@ -148,13 +192,18 @@ def pulseWidthUpdated(config, item):  # Item from Param class
     return
 
 
-# Handler for changes in angle parameters:
-def angleUpdated(config, item):  # Item from Param class
+def angleUpdated(config, item):
+    """Deal with Angle parameter changes in the server.
+
+    Attributes:
+        config (dict): server dictionary with its parameters
+        item (Param): parameter class instance
+    """
     prev = callback_ref[item.level]['prev']  # Value before update
 
     # Modifies the angle as a pair:
-    if config['Ch' + item.group + 'LinkAngle']:
-        item_dual = Param(callback_ref, item.getElementDual())  # Linked channel
+    if config['Ch' + str(item.group) + 'LinkAngle']:
+        item_dual = Param(callback_ref, item.dual)  # Linked channel
         diff = config[item.element] - prev
         reseter = (config[item_dual.element] + diff) % 360
         config[item_dual.element] = reseter  # Update dual
@@ -162,6 +211,7 @@ def angleUpdated(config, item):  # Item from Param class
 
     callback_ref[item.level]['prev'] = config[item.element]  # Update previous value
     return
+
 
 # Reference dict with all elements and respective levels:
 reverse_ref = {
@@ -278,13 +328,18 @@ callback_ref = {
 }
 
 
-# Called when a parameter is changed:
 def callback(config, level):
+    """Deal with any change in the server.
+
+    Attributes:
+        config (dict): server dictionary with its parameters
+        level (int): numerical identifier of changed parameter
+    """
+
     # Always check if groups are enabled for safety.
     enableCheck(config)
 
-    # Doesn't check for level = 0 and -1 and calls the appropriate function
-    # based on changed param.
+    # Call the appropriate function based on changed param:
     if level > 0:
         callback_ref[level]['flag'](config, Param(callback_ref, level))
 
@@ -298,7 +353,9 @@ def main():
     srv = dynamic_reconfigure.server.Server(
             TrikeServerConfig, callback)  # cfgfilenameConfig, callbackname
 
+    # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
+
 
 if __name__ == '__main__':
     try:

@@ -33,6 +33,11 @@ current = -1
 
 
 def callback(data):
+    """Update the display screen.
+
+    Attributes:
+        data (UInt8): new current amplitude
+    """
     global lcdi2c
     global current
 
@@ -46,7 +51,7 @@ def callback(data):
 
 def main():
     # Init display node:
-    rospy.init_node('display', anonymous=True)
+    rospy.init_node('display')  # Overwritten by launch file name
 
     # List subscribed topics:
     sub = rospy.Subscriber("display/update", UInt8, callback=callback)
