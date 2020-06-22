@@ -15,6 +15,7 @@ http://wiki.ros.org/Nodes
 """
 
 import rospy
+import rospkg
 import modules.oled_display as display
 
 # Import ROS msgs:
@@ -59,8 +60,10 @@ bottom = height-padding
 x = 0
 
 # Load font:
+fontfile = "FreeMono.ttf"
+font_path = rospack.get_path("ema_fes_cycling") + "/resources/" + fontfile
 fontsize = 26
-font = ImageFont.truetype('./resources/FreeMono.ttf', fontsize)
+font = ImageFont.truetype(font_path, fontsize)
 
 # Set initial value:
 current = -1
