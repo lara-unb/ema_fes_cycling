@@ -47,6 +47,7 @@ global stim_current        # Stim current for each channel
 global stim_pw             # Stim pulse width for each channel
 global button_event        # Flag for button press
 global main_current        # Reference current at the moment
+global controller
 # global auto_on           # Auto current adjust - on/off
 # global auto_max_current  # Auto current adjust - limit
 # global auto_minvel       # Auto current adjust - trigger speed
@@ -66,6 +67,7 @@ mean_cadence = 0
 distance_km = 0
 button_event = False
 main_current = 0
+controller = None
 # auto_on = False
 # auto_max_current = 0
 # auto_minvel = 0
@@ -102,13 +104,9 @@ def server_callback(config):
     """
     global stim_current
     global stim_pw
-    global auto_on
-    global auto_max_current
-    global auto_minvel
+    global controller
 
-    auto_on = config['AutoCEnable']
-    auto_max_current = config['AutoCShift']
-    auto_minvel = config['AutoCVelocity']
+    controller.updateParam(config)
 
     for ch in stim_order:
         stim_current[ch] = config[ch+'Current']
@@ -131,11 +129,12 @@ def pedal_callback(data):
     time.append(data.header.stamp)
 
     # Get pedal IMU angles:
-    qx, qy, qz, qw = data.orientation.x,
-                     data.orientation.y,
-                     data.orientation.z,
-                     data.orientation.w
-    euler = transformations.euler_from_quaternion([qx, qy, qz, qw], axes='rzyx')
+    qx = data.orientation.x
+    qy = data.orientation.y
+    qz = data.orientation.z
+    qw = data.orientation.w
+    euler = transformations.euler_from_quaternion(
+                [qx, qy, qz, qw], axes='rzyx')
     x = euler[2]
     y = euler[1]
 
@@ -203,6 +202,7 @@ def main():
     global stim_current
     global button_event
     global main_current
+    global controller
     # global auto_add_current
 
     # Init control node:
@@ -261,7 +261,7 @@ def main():
     # PC system exclusive initialization:
     elif platform == 'pc':
         # Communicate with the dynamic server:
-        dyn_params = dynamic_reconfigure.client.Client('reconfig',
+        dyn_params = dynamic_reconfigure.client.Client('trike_config',
                         config_callback=server_callback)  # 'server_node_name'
 
     # Define loop rate (in hz):
@@ -293,8 +293,8 @@ def main():
             cycle_speed.append(speed[-1])
 
         # Calculate control factor:
-        stimfactors = controller.calculate(angle[-1], speed[-1], speed_ref,
-                        speed_err, platform)
+        stimfactors = controller.calculate(angle[-1], speed[-1], 
+                        speed_ref, speed_err)
 
         # Embedded system exclusive:
         if platform == 'rasp':

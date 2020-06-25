@@ -29,30 +29,22 @@ stim_proportion: {
 }
 
 # Angle range for each stim channel
-Ch12: {
-    'Ch1AngleMin': 280,
-    'Ch1AngleMax': 20,
-    'Ch2AngleMin': 100,
-    'Ch2AngleMax': 200
-}
+Ch1AngleMin: 280
+Ch1AngleMax: 20
+Ch2AngleMin: 100
+Ch2AngleMax: 200
 
-Ch34: {
-    'Ch3AngleMin': 30,
-    'Ch3AngleMax': 105,
-    'Ch4AngleMin': 210,
-    'Ch4AngleMax': 285
-}
+Ch3AngleMin: 30
+Ch3AngleMax: 105
+Ch4AngleMin: 210
+Ch4AngleMax: 285
 
-Ch56: {
-    'Ch5AngleMin': 70,
-    'Ch5AngleMax': 170,
-    'Ch6AngleMin': 250,
-    'Ch6AngleMax': 350
-}
+Ch5AngleMin: 70
+Ch5AngleMax: 170
+Ch6AngleMin: 250
+Ch6AngleMax: 350
 
-Ch78: {
-    'Ch7AngleMin': 280,
-    'Ch7AngleMax': 20,
-    'Ch8AngleMin': 100,
-    'Ch8AngleMax': 200
-}
+Ch7AngleMin: 280
+Ch7AngleMax: 20
+Ch8AngleMin: 100
+Ch8AngleMax: 200

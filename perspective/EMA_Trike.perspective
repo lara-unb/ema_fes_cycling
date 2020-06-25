@@ -342,7 +342,7 @@
                 },
                 "dock_widget_title": {
                   "type": "repr",
-                  "repr": "u'PyQtGraph'"
+                  "repr": "u'Pedal Angle (deg)'"
                 }
               },
               "groups": {}
@@ -389,7 +389,7 @@
                 },
                 "dock_widget_title": {
                   "type": "repr",
-                  "repr": "u'PyQtGraph (2)'"
+                  "repr": "u'Stim. Current Ch1&2 (mA)'"
                 }
               },
               "groups": {}
@@ -436,7 +436,7 @@
                 },
                 "dock_widget_title": {
                   "type": "repr",
-                  "repr": "u'PyQtGraph (3)'"
+                  "repr": "u'Stim. Current Ch3&4 (mA)'"
                 }
               },
               "groups": {}
@@ -483,7 +483,7 @@
                 },
                 "dock_widget_title": {
                   "type": "repr",
-                  "repr": "u'PyQtGraph (4)'"
+                  "repr": "u'Stim. Current Ch5&6 (mA)'"
                 }
               },
               "groups": {}
@@ -530,7 +530,7 @@
                 },
                 "dock_widget_title": {
                   "type": "repr",
-                  "repr": "u'PyQtGraph (5)'"
+                  "repr": "u'Stim. Current Ch7&8 (mA)'"
                 }
               },
               "groups": {}

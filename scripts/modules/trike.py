@@ -14,8 +14,6 @@ filtered sensor measurement as a ROS message to other ROS nodes.
 
 """
 
-import rospy
-
 # Stim channel mapping:
 stim_order = [
     'Ch1', 'Ch2',
@@ -34,31 +32,24 @@ class Control:
     def __init__(self, config_dict):
         self.config_dict = config_dict
 
-    def fx(self, ch, angle, speed, speed_ref, platform):
+    def fx(self, ch, angle, speed, speed_ref):
         """Decide to stimulate or not based on sensor.
 
         Attributes:
             angle (double): pedal angle
             speed (double): pedal angular speed
             speed_ref (double): predefined reference speed
-            platform (str): where the system is running
         """
         ramp_degrees = 10.0
-        n = int(ch[2])
-        m = (n - 1) + (2 * (n % 2))  # if n=odd, m=even; if n=even, m=odd
 
-        if platform == 'pc':
-            param_dict = rospy.get_param('/ema/reconfig/')
-            # dth = (speed/speed_ref)*param_dict['Shift']
-        elif platform == 'rasp':
-            param_dict = self.config_dict['Ch'+str(min(n, m))+str(max(n, m))]
-            # dth = (speed/speed_ref)*self.config_dict['Shift']
+        # dth = (speed/speed_ref)*param_dict['Shift']
+        # dth = (speed/speed_ref)*self.config_dict['Shift']
 
         # Shift disabled:
         dth = 0
 
-        theta_min = param_dict[ch+"AngleMin"] - dth
-        theta_max = param_dict[ch+"AngleMax"] - dth
+        theta_min = self.config_dict[ch+"AngleMin"] - dth
+        theta_max = self.config_dict[ch+"AngleMax"] - dth
 
         # Check if angle in range (theta_min, theta_max):
         if theta_min <= angle and angle <= theta_max:
@@ -68,7 +59,7 @@ class Control:
                 return (theta_max-angle)/ramp_degrees
             else:
                 return 1
-        elif param_dict[ch+"AngleMin"] > param_dict[ch+"AngleMax"]:
+        elif self.config_dict[ch+"AngleMin"] > self.config_dict[ch+"AngleMax"]:
             if angle <= theta_min and angle <= theta_max:
                 if theta_min <= angle + 360 and angle <= theta_max:
                     if (angle+360-theta_min) <= ramp_degrees:
@@ -115,7 +106,7 @@ class Control:
 
         return signal
 
-    def calculate(self, angle, speed, speed_ref, speed_err, platform):
+    def calculate(self, angle, speed, speed_ref, speed_err):
         """Tell if stimulation should be activated or not.
 
         Attributes:
@@ -123,12 +114,11 @@ class Control:
             speed (double): pedal angular speed
             speed_ref (double): predefined reference speed
             speed_err (double): calculated speed error
-            platform (str): where the system is running
         """
         factor = 8*[0]
 
         for i, ch in enumerate(stim_order):
-            factor[i] = self.fx(ch, angle, speed, speed_ref, platform)
+            factor[i] = self.fx(ch, angle, speed, speed_ref)
 
         return factor
 
@@ -176,3 +166,10 @@ class Control:
     def currentLimit(self):
         """Return the max current among all channels."""
         return self.config_dict['stim_limit']
+
+    def updateParam(self, new, value=None):
+        if isinstance(new, dict):
+            self.config_dict = new
+        else:
+            self.config_dict[new] = value
+        return
