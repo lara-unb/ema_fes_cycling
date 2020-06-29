@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 
@@ -13,6 +13,12 @@ and treating that raw measurement. For more info, check:
 http://wiki.ros.org/Nodes
 
 """
+
+# Python 2 and 3 compatibility
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from builtins import *
 
 import rospy
 import modules.trike as trike

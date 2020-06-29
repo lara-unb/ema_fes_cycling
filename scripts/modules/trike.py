@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 
 Particularly, this code is an auxiliary module for the FES cycling
@@ -9,7 +7,7 @@ controller and give support in a deeper level.
 The ROS node uses this code. It gives support in a deeper level, dealing
 with minor details and is supposed to be independent of ROS, meaning it
 shouldn't have to interact with ROS in any way. For example, it would
-establish serial comm and treat raw measurements instead ofpublishing a
+establish serial comm and treat raw measurements instead of publishing a
 filtered sensor measurement as a ROS message to other ROS nodes.
 
 """
@@ -23,7 +21,7 @@ stim_order = [
 ]
 
 
-class Control:
+class Control(object):
     """A class used to control the stimulation.
 
     Attributes:
