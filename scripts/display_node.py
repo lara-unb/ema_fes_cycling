@@ -15,7 +15,7 @@ global current
 
 # initialize lcd display
 lcdi2c = display.Display()
-
+lcdi2c.lcd_display_string("Pronto para Uso", 1,1)
 # set initial value
 current =-1
 

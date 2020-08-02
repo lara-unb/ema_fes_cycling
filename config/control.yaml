@@ -1,7 +1,7 @@
 ## Replacing the dynamic reconfigure server #
 #
 # initial current amplitude
-initial_current: 30
+initial_current: 8
 
 # max current among all channels
 stim_limit: 110

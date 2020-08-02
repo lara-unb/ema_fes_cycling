@@ -15,7 +15,7 @@
     <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/>
     <node name="control" pkg="ema_fes_cycling" type="control_node.py" output="log" respawn="true" respawn_delay="5"/>
     <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args="/ema/button/action /ema/control/angle 
-        /ema/control/stimsignal /ema/stimulator/ccl_update -o /home/raspema/bagfiles/ --split --max-splits 3 --duration 5m"/>
+        /ema/control/stimsignal /ema/stimulator/ccl_update -o /home/ubuntu/bagfiles/ --split --max-splits 3 --duration 5m"/>
 
     <!-- launch pc-exclusive nodes -->
     <group if="$(eval platform == 'pc')">
