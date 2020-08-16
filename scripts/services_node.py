@@ -2,6 +2,7 @@
 
 import rospy
 import os
+import yaml
 from std_srvs.srv import Trigger, TriggerResponse
 
 def reboot_request(data):

@@ -26,6 +26,7 @@
     <group if="$(eval platform == 'rasp')">
         <node name="button" pkg="ema_fes_cycling" type="button_node.py" output="screen" respawn="true" respawn_delay="5"/>
         <node name="display" pkg="ema_fes_cycling" type="display_node.py" output="screen" respawn="true" respawn_delay="5"/>
+        <node name="services" pkg="ema_fes_cycling" type="services_node.py" output="screen" respawn="true" respawn_delay="5"/>
     </group>
 
   </group>
