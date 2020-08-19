@@ -1,6 +1,18 @@
 #!/usr/bin/env python
 
-import time
+"""
+
+Interface draft 
+
+The 'menu_ref' dictionary defines the menu/screen structure and the
+corresponding interaction between them. Each screen has its message and
+submenus, which also have their messages and submenus. The 'welcome'
+screen is the root and the screens that have submenus as None are the
+leaves, or action screens, where the user is prompt to make changes.
+
+"""
+
+import os
 
 DISPLAY_SIZE = (2,16)
 
@@ -55,23 +67,28 @@ menu_ref = {
 
 
 class Interface(object):
-    '''A class used to create the user interface menus
-    Attributes:
-        menu_idx:
-        menu_max:
-        submenu_idx:
-        screen:
-    '''
-    def __init__(self, ref_dict):
-        self.screen_now = None
-        self.screens = {}
-        self.build_screen_group(ref_dict, None)
-        self.welcome()
+    """A class used to create the user interface menus.
 
-    def build_screen_group(self, structure_dict, parent):
+    Attributes:
+        ref_dict (dict): screen structure
+        self.screen_now (dict): screen being displayed
+        self.screens (dict): dict with all screens
+    """
+    def __init__(self, ref_dict):
+        self.screens = {}
+        self.build_screen_group(ref_dict)
+        self.screen_now = self.screens['welcome']
+        self.update_display()
+
+    def build_screen_group(self, structure_dict, parent=None):
+        """Recursively transfer the structure from the dict to the class.
+
+        Attributes:
+            structure_dict (dict): screen structure
+            parent (string): upper level parent screen
+        """
         if structure_dict:
             siblings = list(structure_dict)
-            print siblings
             for label, menu in structure_dict.items():
                 new_screen = {}
                 new_screen['label'] = label
@@ -104,58 +121,112 @@ class Interface(object):
                 self.screens[label] = new_screen
 
                 self.build_screen_group(menu['submenus'], label)
-
         return
 
-    def interaction(self, key):
-        # if self.screen_now['type'] == 'root':
+    def output_screen(self, msg):
+        """Format and send screen content to the display.
 
-        # elif self.screen_now['type'] == 'menu':
+        Attributes:
+            msg (string): the message to be displayed
+        """
 
-        # else:
-
-
-        if (key == 1) and (self.submenu_idx == 0):
-            if self.menu_idx > 0:
-                self.menu_idx -= 1
-
-        elif (key == 2) and (self.submenu_idx == 0):
-            if self.menu_idx < self.menu_max:
-                self.menu_idx += 1
-
-        elif (key == 11) and (self.submenu_idx > 0):
-            self.submenu_idx -= 1
-
-        elif (key == 22) and (self.submenu_idx <= 2):
-            self.submenu_idx += 1
-
-    def update_display(self, msg):
         #
-        # Code to center and chop if long missing
+        # Add code to center and chop if long, based on display size
         #
+        os.system('cls' if os.name == 'nt' else 'clear')
         print '++++++++++++++++'
         print msg+'\n'
         print '++++++++++++++++'
+        return
 
-    def get_screen_type(self, screen):
-        return screen['type']
+    def translate_input(self, key):
+        """Classify the user input and act accordingly.
 
-    def std_menu(self):
+        Attributes:
+            key (int): key pressed
+        """
+        if key == 1:
+            return 'single_left'
+        elif key == 2:
+            return 'single_right'
+        elif key == 11:
+            return 'double_left'
+        elif key == 22:
+            return 'double_right'
+        elif (key == 12) or (key == 21):
+            return 'both'
+
+    def output_response(self, action):
+        """Output based on user input and current screen.
+
+        Attributes:
+            action (string): interpreted user action
+        """
+        if self.screen_now['type'] == 'root':
+            if action == 'both':
+                output_screen_name = 'welcome'
+                self.screen_now = self.screens[output_screen_name]
+            else:
+                self.screen_now = self.screens[self.screen_now['select']]
+
+        elif self.screen_now['type'] == 'menu':
+            try:
+                if action == 'single_left':
+                    output_screen_name = self.screen_now['prev']
+                    self.screen_now = self.screens[output_screen_name]
+                elif action == 'single_right':
+                    output_screen_name = self.screen_now['next']
+                    self.screen_now = self.screens[output_screen_name]
+                elif action == 'double_left':
+                    output_screen_name = self.screen_now['parent']
+                    self.screen_now = self.screens[output_screen_name]
+                elif action == 'double_right':
+                    output_screen_name = self.screen_now['select']
+                    self.screen_now = self.screens[output_screen_name]
+                elif action == 'both':
+                    output_screen_name = 'welcome'
+                    self.screen_now = self.screens[output_screen_name]
+            except KeyError:
+                pass
+
+        elif self.screen_now['type'] == 'action':
+            if (action == 'single_left') or (action == 'single_right'):
+                # if self.screen_now['label'] == 'change_pw':
+                #     self.change_pw(action)
+                # elif self.screen_now['label'] == 'change_freq':
+                #     self.change_freq(action)
+                # elif self.screen_now['label'] == 'change_current':
+                #     self.change_current(action)
+                # elif self.screen_now['label'] == 'cycling':
+                #     self.cycling(action)
+                pass
+            elif action == 'double_left':
+                output_screen_name = self.screen_now['parent']
+                self.screen_now = self.screens[output_screen_name]
+            elif action == 'double_right':
+                pass
+            elif action == 'both':
+                output_screen_name = 'welcome'
+                self.screen_now = self.screens[output_screen_name]
+
+        self.update_display()
+        return
+
+    def update_display(self):
+        """Change display to current screen."""
         msg = self.screen_now['msg']
-        if self.screen_now['prev']:
-            msg = '< '+msg
-        if self.screen_now['next']:
-            msg += ' >'
-        self.update_display(msg)
 
-    def welcome(self):
-        self.screen_now = self.screens['welcome']
-        self.update_display('~ '+self.screen_now['msg']+' ~')
-        time.sleep(2)
-        self.screen_now = self.screens[self.screen_now['select']]
-        self.std_menu()
+        if self.screen_now['type'] == 'root':
+            pass
+        elif self.screen_now['type'] == 'menu':
+            if self.screen_now['prev']:
+                msg = '< '+msg
+            if self.screen_now['next']:
+                msg += ' >'
+        elif self.screen_now['type'] == 'action':
+            pass
 
-    # def action(self):
+        self.output_screen(msg)
 
     # def change_pw(self):
 
@@ -168,21 +239,12 @@ class Interface(object):
 
 def main():
     aux = Interface(menu_ref)
-    print aux.screens
 
     while True:
         try:
             key = input()
-            aux.interaction(key)
-            screen = aux.screen_now
-            screen_type = aux.get_screen_type(screen)
-
-            if screen_type == 'root':
-                aux.welcome()
-            elif screen_type == 'menu':
-                aux.std_menu()
-            elif screen_type == 'action':
-                aux.action()
+            action = aux.translate_input(key)
+            aux.output_response(action)
 
         except (NameError, SyntaxError, EOFError):
             pass
