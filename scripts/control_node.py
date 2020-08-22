@@ -8,6 +8,7 @@ from sensor_msgs.msg import Imu
 from std_msgs.msg import Float64
 from std_msgs.msg import UInt8
 from std_msgs.msg import Int32MultiArray
+from std_srvs.srv import SetBool
 from ema_common_msgs.msg import Stimulator
 
 # import utilities
@@ -28,8 +29,8 @@ global mean_cadence # mean rpm speed of last cycle
 global distance_km # distance travelled in km
 global stim_current # stim current amplitude for each channel
 global stim_pw # stim pulse width for each channel
-global button_event # true when a button is pressed
-global main_current # reference current at the moment 
+global main_current # reference current at the moment
+global current_limit # maximum intensity
 # global auto_on # automatic current adjustment - on/off
 # global auto_max_current # automatic current adjustment - limit
 # global auto_minvel # automatic current adjustment - trigger speed
@@ -48,6 +49,7 @@ mean_cadence = 0
 distance_km = 0
 button_event = False
 main_current = 0
+current_limit = 0
 # auto_on = False
 # auto_max_current = 0
 # auto_minvel = 0
@@ -131,31 +133,45 @@ def pedal_callback(data):
     # get error
     speed_err.append(speed_ref - speed[-1])
 
-def button_callback(data):
-    global on_off
-    global button_event
+def change_intensity(req):
     global main_current
-    
-    # raise a button_event flag
-    button_event = True
-    
-    if data == UInt8(2): # turn on, increase
-        if on_off == False:
-            on_off = True
-        
+    global current_limit
+
+    if req.data:  # Increase
         main_current += 2
+        if main_current > current_limit: 
+            main_current = current_limit
+    else:  # Decrease
+        main_current -= 2
+        if main_current < 0:
+            main_current = 0
+    return {'success': True, 'message': str(main_current)}
 
-    elif data == UInt8(1): # decrease
-        if on_off == True:
-            main_current -= 2
+# def button_callback(data):
+#     global on_off
+#     global button_event
+#     global main_current
+    
+#     # raise a button_event flag
+#     button_event = True
+    
+#     if data == UInt8(2): # turn on, increase
+#         if on_off == False:
+#             on_off = True
+        
+#         main_current += 2
 
-            if main_current < 0:
-                on_off = False
-                main_current = 0
+#     elif data == UInt8(1): # decrease
+#         if on_off == True:
+#             main_current -= 2
 
-    elif data == UInt8(3): # zero
-        on_off = False
-        main_current = 0
+#             if main_current < 0:
+#                 on_off = False
+#                 main_current = 0
+
+#     elif data == UInt8(3): # zero
+#         on_off = False
+#         main_current = 0
 
 def main():
     global cycles # number of pedal turns
@@ -164,8 +180,8 @@ def main():
     global mean_cadence # mean rpm speed of last cycle
     global distance_km # distance travelled in km
     global stim_current # stim current amplitude for each channel
-    global button_event # true when a button is pressed
     global main_current # reference current at the moment 
+    global current_limit # maximum intensity
     # global auto_add_current # automatic current adjustment - add value
 
     # init control node
@@ -183,7 +199,7 @@ def main():
     speedMsg = Float64()
     cadenceMsg = Float64()
     distanceMsg = Float64()
-    displayMsg = UInt8()
+    intensityMsg = UInt8()
     signalMsg = Int32MultiArray() # visual stimulator signal
     signalMsg.data = 9*[0] # [index] is the actual channel number
 
@@ -196,10 +212,16 @@ def main():
     # init current amplitude
     main_current, stim_current = controller.initialize(stim_current)
 
+    # current maximum amplitude
+    current_limit = controller.currentLimit()
+
+    # list provided services
+    services = {}
+    services['intensity'] = rospy.Service('control/change_intensity', SetBool, change_intensity)
+
     # list subscribed topics
     sub = {}
     sub['pedal'] = rospy.Subscriber('imu/pedal', Imu, callback = pedal_callback)
-    sub['button'] = rospy.Subscriber('button/action', UInt8, callback = button_callback)
     
     # list published topics
     pub = {}
@@ -209,7 +231,7 @@ def main():
     pub['speed'] = rospy.Publisher('control/speed', Float64, queue_size=10)
     pub['cadence'] = rospy.Publisher('control/cadence', Float64, queue_size=10)
     pub['distance'] = rospy.Publisher('control/distance', Float64, queue_size=10)
-    pub['intensity'] = rospy.Publisher('display/update', UInt8, queue_size=10)
+    pub['intensity'] = rospy.Publisher('control/intensity', UInt8, queue_size=10)
     
     # define loop rate (in hz)
     rate = rospy.Rate(50)
@@ -241,10 +263,6 @@ def main():
         # get the proportion for each channel
         proportion = controller.multipliers()
 
-        # limits the stimulation intensity
-        if main_current > controller.currentLimit(): 
-            main_current = controller.currentLimit()
-
         # update current and pw values
         for i, ch in enumerate(stim_order):
             stim_current[ch] = round(main_current*proportion[ch])
@@ -259,6 +277,7 @@ def main():
         speedMsg.data = speed[-1]
         cadenceMsg.data = mean_cadence
         distanceMsg.data = distance_km
+        intensityMsg.data = main_current
 
         # send stimulator update
         pub['control'].publish(stimMsg)
@@ -272,12 +291,8 @@ def main():
         pub['cadence'].publish(cadenceMsg)
         # send distance update
         pub['distance'].publish(distanceMsg)
-
-        if button_event:
-            button_event = False
-            displayMsg.data = main_current
-            # send display update
-            pub['intensity'].publish(displayMsg)
+        # send intensity update
+        pub['intensity'].publish(intensityMsg)
 
         # wait for next loop
         rate.sleep()
