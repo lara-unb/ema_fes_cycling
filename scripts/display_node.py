@@ -9,33 +9,41 @@ from ema_common_msgs.msg import Stimulator
 # import ros msgs
 from std_msgs.msg import UInt8
 
+from ema_common_msgs.srv import display as disp 
+from ema_common_msgs.srv import displayResponse
+
 # define global values
 global lcdi2c
-global current
+# global current
 
 # initialize lcd display
 lcdi2c = display.Display()
 lcdi2c.lcd_display_string("Pronto para Uso", 1,1)
 # set initial value
-current =-1
-
-def callback(data):
+#current =-1
+def display_request(req):
     global lcdi2c
-    global current
-
-    # check current value and update display
-    if data.data != current:
+    if req.clear:
         lcdi2c.lcd_clear()
-        lcdi2c.lcd_display_string("Corrente", 1,4)
-        lcdi2c.lcd_display_string("%2d mA" %data.data, 2,6)
-        current = data.data
+    lcdi2c.lcd_display_string(req.message, req.line+1,req.position)
+    return displayResponse(success=True)
+# def callback(data):
+#     global lcdi2c
+#     global current
+
+#     # check current value and update display
+#     if data.data != current:
+#         lcdi2c.lcd_clear()
+#         lcdi2c.lcd_display_string("Corrente", 1,4)
+#         lcdi2c.lcd_display_string("%2d mA" %data.data, 2,6)
+#         current = data.data
         
 def main():
     # init display node
-    rospy.init_node('display', anonymous=True)
-    
+    rospy.init_node('display', anonymous=False)
+    display_service =rospy.Service('display/write', disp, display_request)
     # subscribe to main current topic from control node
-    sub = rospy.Subscriber("display/update", UInt8, callback = callback)
+    # sub = rospy.Subscriber("display/update", UInt8, callback = callback)
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
