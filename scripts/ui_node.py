@@ -16,7 +16,7 @@ import rospy
 
 # Import ros msgs:
 from std_srvs.srv import SetBool
-from ema_common_msgs.msg import Stimulator
+from ema_common_msgs.srv import display
 
 # import utilities:
 import os
@@ -94,13 +94,11 @@ class Interface(object):
         self.services (dict): dict with all services
     """
     def __init__(self, ref_dict):
-        self.output_screen('  Iniciando...\n')
         self.screen_now = {}
         self.screens = {}
         self.services = {}
 
         # Organize the interface structure
-        self.output_screen('  UI...\n')
         self.build_screen_group(ref_dict)
         for name, screen in self.screens.items():
             if screen['type'] == 'root':
@@ -108,14 +106,17 @@ class Interface(object):
                 break
 
         # List services:
-        self.output_screen('  Servicos...\n')
         try:
             rospy.wait_for_service('control/change_intensity')
             self.services['intensity'] = rospy.ServiceProxy('control/change_intensity',
                 SetBool, persistent=True)
+            rospy.wait_for_service('display/write')
+            self.services['display'] = rospy.ServiceProxy('display/write',
+                display, persistent=True)
         except rospy.ServiceException as e:
             rospy.logerr(e)
 
+        self.initialize()
         self.update_display()
 
     def build_screen_group(self, structure_dict, parent=''):
@@ -160,6 +161,22 @@ class Interface(object):
                 self.build_screen_group(menu['submenus'], label)
         return
 
+    def initialize(self):
+        """Load parameters with their initial values."""
+
+        imu = str(rospy.get_param('imu/wireless_id').values()[0])
+        pw = '500'
+        freq = str(rospy.get_param('stimulator/freq'))
+        current = str(rospy.get_param('control/initial_current'))
+
+        self.screens['change_imu']['msg'] += '\n'+imu
+        self.screens['change_pw']['msg'] += '\n'+pw+' us'
+        self.screens['change_freq']['msg'] += '\n'+freq+' Hz'
+        self.screens['change_current']['msg'] += '\n'+current+' mA'
+        self.screens['cycling']['msg'] += '\n'+current+' mA'
+
+        return
+
     def translate_input(self, key):
         """Classify the user input and act accordingly.
 
@@ -179,16 +196,23 @@ class Interface(object):
         else:
             return
 
-    def output_screen(self, msg):
-        """Format and send screen content to the display.
+    def display_output(self, msg, line, position, clear):
+        """Send screen content to the display.
 
         Attributes:
-            msg (string): the message to be displayed
+            msg (string): the messages to be displayed
+            line (int): the display line to print, 0 is top
+            position (int): the display column to print, 0 is left
+            clear (bool): to clear display or not
         """
-        os.system('cls' if os.name == 'nt' else 'clear')
-        print '++++++++++++++++'
-        print msg
-        print '++++++++++++++++'
+        rospy.wait_for_service('display/write')
+        try:
+            resp = self.services['display'](message=msg,line=line,
+                position=position,clear=clear)
+        except rospy.ServiceException as e:
+            self.services['display'] = rospy.ServiceProxy('display/write',
+                display, persistent=True)
+            rospy.logwarn(e)
         return
 
     def output_response(self, action):
@@ -229,14 +253,19 @@ class Interface(object):
                 if (action == 'single_left') or (action == 'single_right'):
                     if self.screen_now['label'] == 'change_imu':
                         self.change_imu(action)
+                        return
                     elif self.screen_now['label'] == 'change_pw':
                         self.change_pw(action)
+                        return
                     elif self.screen_now['label'] == 'change_freq':
                         self.change_freq(action)
+                        return
                     elif self.screen_now['label'] == 'change_current':
                         self.change_current(action)
+                        return
                     elif self.screen_now['label'] == 'cycling':
                         self.cycling(action)
+                        return
                 elif action == 'double_left':  # Previous upper level menu
                     output_screen_name = self.screen_now['parent']
                     self.screen_now = self.screens[output_screen_name]
@@ -249,70 +278,72 @@ class Interface(object):
         self.update_display()
         return
 
+    def format_msg(self, msg, margin):
+        """Format message according to display size and desired margin.
+
+        Attributes:
+            msg (string): the messages to be formatted
+            margin (int): symmetric blank space amount for side padding
+        """
+        msg = msg[0:(DISPLAY_SIZE[1]-(2*margin))]
+        remainder = DISPLAY_SIZE[1]-(2*margin)-len(msg)
+        paddingL = remainder/2
+        paddingR = (remainder/2)+(remainder%2)
+        msg = (paddingL*' ')+msg+(paddingR*' ')
+        return msg
+
     def update_display(self):
         """Display the current screen."""
-        original_msg = self.screen_now['msg']
-        msg = ''
+        msg_lst = self.screen_now['msg'].split('\n')
 
-        # Chop and center msg leaving some padding space:
-        msg_lst = original_msg.split('\n')
-
-        for line in msg_lst:
-            margin = 2 if (self.screen_now['type'] == 'menu') else 0
-            formatted_line  = line[0:(DISPLAY_SIZE[1]-(2*margin))]
-            remainder = DISPLAY_SIZE[1]-len(formatted_line)-(2*margin)
-            paddingN = remainder/2
-            paddingM = (remainder/2)+(remainder%2)
-            formatted_line = (paddingN*' ')+formatted_line+(paddingM*' ')
-
+        # Chop and center msg:
+        for idx, linemsg in enumerate(msg_lst):
             if self.screen_now['type'] == 'menu':
+                linemsg = self.format_msg(linemsg, 2)
+
                 if self.screen_now['prev']:
-                    formatted_line = '< '+formatted_line
+                    linemsg = '< '+linemsg
                 else:
-                    formatted_line = '  '+formatted_line
-
+                    linemsg = '  '+linemsg
                 if self.screen_now['next']:
-                    formatted_line += ' >'
+                    linemsg += ' >'
                 else:
-                    formatted_line += '  '
+                    linemsg += '  '
+            else:
+                linemsg = self.format_msg(linemsg, 0)
 
-            if (len(msg_lst) == 1) or (line != msg_lst[-1]):
-                formatted_line += '\n'
-
-            msg += formatted_line
-
-        self.output_screen(msg)
+            self.display_output(linemsg, idx, 0, (not idx))
 
     def change_imu(self, button):
-        """Deal with user action on the change imu screen
+        """Deal with user action on the change imu screen.
 
         Attributes:
             button (string): describes button event
         """
 
     def change_pw(self, button):
-        """Deal with user action on the change pw screen
+        """Deal with user action on the change pw screen.
 
         Attributes:
             button (string): describes button event
         """
 
     def change_freq(self, button):
-        """Deal with user action on the change frequency screen
+        """Deal with user action on the change frequency screen.
 
         Attributes:
             button (string): describes button event
         """
 
     def change_current(self, button):
-        """Deal with user action on the change current screen
+        """Deal with user action on the change current screen.
 
         Attributes:
             button (string): describes button event
         """
 
     def cycling(self, button):
-        """Deal with user action on the cycling training screen
+        """Deal with user action on the cycling training screen.
 
         Attributes:
             button (string): describes button event
@@ -326,8 +357,11 @@ class Interface(object):
                 SetBool, persistent=True)
             rospy.logwarn(e)
         if resp.success:
-            new_value = resp.message
-            self.screen_now['msg'] = 'Corrente:\n'+new_value+' mA'
+            new_msg = resp.message+' mA'
+            end = self.screen_now['msg'].index('\n')+1
+            self.screen_now['msg'] = self.screen_now['msg'][0:end]+new_msg
+            new_msg = self.format_msg(new_msg, 0)
+            self.display_output(new_msg, 1, 0, False)
         return
 
 
