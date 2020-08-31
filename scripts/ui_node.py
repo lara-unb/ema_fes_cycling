@@ -16,7 +16,8 @@ import rospy
 
 # Import ros msgs:
 from std_srvs.srv import SetBool
-from ema_common_msgs.srv import display
+from ema_common_msgs.srv import Display
+from ema_common_msgs.srv import SetUInt16
 
 # import utilities:
 import os
@@ -107,17 +108,72 @@ class Interface(object):
 
         # List services:
         try:
+            rospy.wait_for_service('display/write')
+            self.services['display'] = rospy.ServiceProxy('display/write',
+                Display, persistent=True)
+
+            rospy.wait_for_service('imu/set_imu_number')
+            self.services['set_imu_number'] = rospy.ServiceProxy('imu/set_imu_number', SetUInt16)
+
             rospy.wait_for_service('control/change_intensity')
             self.services['intensity'] = rospy.ServiceProxy('control/change_intensity',
                 SetBool, persistent=True)
-            rospy.wait_for_service('display/write')
-            self.services['display'] = rospy.ServiceProxy('display/write',
-                display, persistent=True)
+
         except rospy.ServiceException as e:
             rospy.logerr(e)
 
         self.initialize()
         self.update_display()
+
+    def display_write_handler(self, msg, line, position, clear):
+        """ROS Service handler to write to the display
+
+        Attributes:
+            msg (string): the messages to be displayed
+            line (int): the display line to print, 0 is top
+            position (int): the display column to print, 0 is left
+            clear (bool): to clear display or not
+        """
+        rospy.wait_for_service('display/write')
+        try:
+            resp = self.services['display'](message=msg, line=line,
+                position=position, clear=clear)
+        except rospy.ServiceException as e:
+            self.services['display'] = rospy.ServiceProxy('display/write',
+                Display, persistent=True)
+            rospy.logwarn(e)
+        return
+
+    def set_imu_number_handler(self, req):
+        """ROS Service handler to set a different IMU number
+
+        Attributes:
+            req (int): new IMU number from 0 to 10
+        """
+        rospy.wait_for_service('imu/set_imu_number')
+        try:
+            resp = self.services['set_imu_number'](req)
+            return resp.message  # Return the IMU now as str
+        except rospy.ServiceException as e:
+            rospy.logwarn(e)
+        return
+
+    def change_intensity_handler(self, req):
+        """ROS Service handler to request a change in intensity
+
+        Attributes:
+            req (bool): 0 to decrease and 1 to increase
+        """
+        rospy.wait_for_service('control/change_intensity')
+        try:
+            resp = self.services['intensity'](req)
+            if resp.success:
+                return resp.message  # If success return the intensity now as str
+        except rospy.ServiceException as e:
+            self.services['intensity'] = rospy.ServiceProxy('control/change_intensity',
+                SetBool, persistent=True)
+            rospy.logwarn(e)
+        return
 
     def build_screen_group(self, structure_dict, parent=''):
         """Recursively transfer the structure from the dict to the class.
@@ -163,8 +219,7 @@ class Interface(object):
 
     def initialize(self):
         """Load parameters with their initial values."""
-
-        imu = str(rospy.get_param('imu/wireless_id').values()[0])
+        imu = str(rospy.get_param('imu/wireless_id/pedal'))
         pw = '500'
         freq = str(rospy.get_param('stimulator/freq'))
         current = str(rospy.get_param('control/initial_current'))
@@ -195,25 +250,6 @@ class Interface(object):
             return 'both'
         else:
             return
-
-    def display_output(self, msg, line, position, clear):
-        """Send screen content to the display.
-
-        Attributes:
-            msg (string): the messages to be displayed
-            line (int): the display line to print, 0 is top
-            position (int): the display column to print, 0 is left
-            clear (bool): to clear display or not
-        """
-        rospy.wait_for_service('display/write')
-        try:
-            resp = self.services['display'](message=msg,line=line,
-                position=position,clear=clear)
-        except rospy.ServiceException as e:
-            self.services['display'] = rospy.ServiceProxy('display/write',
-                display, persistent=True)
-            rospy.logwarn(e)
-        return
 
     def output_response(self, action):
         """Output based on user input and current screen.
@@ -250,7 +286,10 @@ class Interface(object):
 
         elif self.screen_now['type'] == 'action':
             try:
-                if (action == 'single_left') or (action == 'single_right'):
+                if action == 'both':  # Reset
+                    output_screen_name = 'welcome'
+                    self.screen_now = self.screens[output_screen_name]
+                else:
                     if self.screen_now['label'] == 'change_imu':
                         self.change_imu(action)
                         return
@@ -266,12 +305,6 @@ class Interface(object):
                     elif self.screen_now['label'] == 'cycling':
                         self.cycling(action)
                         return
-                elif action == 'double_left':  # Previous upper level menu
-                    output_screen_name = self.screen_now['parent']
-                    self.screen_now = self.screens[output_screen_name]
-                elif action == 'both':  # Reset
-                    output_screen_name = 'welcome'
-                    self.screen_now = self.screens[output_screen_name]
             except KeyError:
                 pass
 
@@ -312,7 +345,7 @@ class Interface(object):
             else:
                 linemsg = self.format_msg(linemsg, 0)
 
-            self.display_output(linemsg, idx, 0, (not idx))
+            self.display_write_handler(linemsg, idx, 0, (not idx))
 
     def change_imu(self, button):
         """Deal with user action on the change imu screen.
@@ -320,6 +353,34 @@ class Interface(object):
         Attributes:
             button (string): describes button event
         """
+        if button == 'double_left':  # Previous upper level menu
+            old_msg = self.screen_now['msg']
+            new_msg = str(rospy.get_param('imu/wireless_id/pedal'))
+            end = old_msg.index('\n')+1
+            self.screen_now['msg'] = old_msg[0:end]+new_msg
+
+            output_screen_name = self.screen_now['parent']
+            self.screen_now = self.screens[output_screen_name]
+            self.update_display()
+        elif button == 'double_right':  # Confirm modification
+            old_msg = self.screen_now['msg']
+            imu_update = int(''.join(x for x in old_msg if x.isdigit()))  # int in str
+            result = self.set_imu_number_handler(imu_update)
+            if result:
+                end = old_msg.index('\n')+1
+                self.screen_now['msg'] = old_msg[0:end]+result
+        else:  # single_left or single_right
+            request = -1 if button == 'single_left' else 1  # Drecease or increase
+            old_msg = self.screen_now['msg']
+            imu_before = int(''.join(x for x in old_msg if x.isdigit()))  # int in str
+            attempt = imu_before+request
+            if attempt > 0 and attempt <= 10:
+                new_msg = str(attempt)
+                end = old_msg.index('\n')+1
+                self.screen_now['msg'] = old_msg[0:end]+new_msg
+                new_msg = self.format_msg(new_msg, 0)
+                self.display_write_handler(new_msg, 1, 0, False)
+        return
 
     def change_pw(self, button):
         """Deal with user action on the change pw screen.
@@ -327,6 +388,11 @@ class Interface(object):
         Attributes:
             button (string): describes button event
         """
+        if button == 'double_left':  # Previous upper level menu
+            output_screen_name = self.screen_now['parent']
+            self.screen_now = self.screens[output_screen_name]
+            self.update_display()
+        return
 
     def change_freq(self, button):
         """Deal with user action on the change frequency screen.
@@ -334,6 +400,11 @@ class Interface(object):
         Attributes:
             button (string): describes button event
         """
+        if button == 'double_left':  # Previous upper level menu
+            output_screen_name = self.screen_now['parent']
+            self.screen_now = self.screens[output_screen_name]
+            self.update_display()
+        return
 
     def change_current(self, button):
         """Deal with user action on the change current screen.
@@ -341,6 +412,11 @@ class Interface(object):
         Attributes:
             button (string): describes button event
         """
+        if button == 'double_left':  # Previous upper level menu
+            output_screen_name = self.screen_now['parent']
+            self.screen_now = self.screens[output_screen_name]
+            self.update_display()
+        return
 
     def cycling(self, button):
         """Deal with user action on the cycling training screen.
@@ -348,22 +424,22 @@ class Interface(object):
         Attributes:
             button (string): describes button event
         """
-        request = 0 if button == 'single_left' else 1  # Drecease or increase
-        rospy.wait_for_service('control/change_intensity')
-        try:
-            resp = self.services['intensity'](request)
-        except rospy.ServiceException as e:
-            self.services['intensity'] = rospy.ServiceProxy('control/change_intensity',
-                SetBool, persistent=True)
-            rospy.logwarn(e)
-        if resp.success:
-            new_msg = resp.message+' mA'
-            end = self.screen_now['msg'].index('\n')+1
-            self.screen_now['msg'] = self.screen_now['msg'][0:end]+new_msg
-            new_msg = self.format_msg(new_msg, 0)
-            self.display_output(new_msg, 1, 0, False)
+        if button == 'double_left':  # Previous upper level menu
+            output_screen_name = self.screen_now['parent']
+            self.screen_now = self.screens[output_screen_name]
+            self.update_display()
+        else:  # single_left or single_right
+            request = 0 if button == 'single_left' else 1  # Drecease or increase
+            old_msg = self.screen_now['msg']
+            resp = self.change_intensity_handler(request)
+            if resp:
+                new_msg = resp+' mA'
+                end = old_msg.index('\n')+1
+                self.screen_now['msg'] = old_msg[0:end]+new_msg
+                new_msg = self.format_msg(new_msg, 0)
+                self.display_write_handler(new_msg, 1, 0, False)
+            return
         return
-
 
 def main():
     # Init display node:

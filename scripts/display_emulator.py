@@ -3,7 +3,7 @@
 import rospy
 import pygame
 from std_msgs.msg import UInt8
-from ema_common_msgs.srv import display, displayResponse
+from ema_common_msgs.srv import Display, DisplayResponse
 
 
 global screen
@@ -54,14 +54,14 @@ def display_request(req):
     if req.clear:
         screen_clear()
     draw_text(req.message, req.line,req.position)
-    return displayResponse(success=True)
+    return DisplayResponse(success=True)
 
         
 def main():
     # init display node
     
     rospy.init_node('display_emulator', anonymous=False)
-    display_service =rospy.Service('display/write', display, display_request)
+    display_service =rospy.Service('display/write', Display, display_request)
     pub = rospy.Publisher('button/action', UInt8, queue_size=10)
     screen_clear()
     draw_text("Pronto para Uso", 0,1)

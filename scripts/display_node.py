@@ -9,8 +9,8 @@ from ema_common_msgs.msg import Stimulator
 # import ros msgs
 from std_msgs.msg import UInt8
 
-from ema_common_msgs.srv import display as disp 
-from ema_common_msgs.srv import displayResponse
+from ema_common_msgs.srv import Display as disp 
+from ema_common_msgs.srv import DisplayResponse
 
 # define global values
 global lcdi2c
@@ -26,7 +26,7 @@ def display_request(req):
     if req.clear:
         lcdi2c.lcd_clear()
     lcdi2c.lcd_display_string(req.message, req.line+1,req.position)
-    return displayResponse(success=True)
+    return DisplayResponse(success=True)
 # def callback(data):
 #     global lcdi2c
 #     global current

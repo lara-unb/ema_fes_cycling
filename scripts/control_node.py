@@ -133,7 +133,7 @@ def pedal_callback(data):
     # get error
     speed_err.append(speed_ref - speed[-1])
 
-def change_intensity(req):
+def change_intensity_callback(req):
     global main_current
     global current_limit
 
@@ -145,7 +145,7 @@ def change_intensity(req):
         main_current -= 2
         if main_current < 0:
             main_current = 0
-    return {'success': True, 'message': str(main_current)}
+    return {'success':True, 'message':str(main_current)}
 
 # def button_callback(data):
 #     global on_off
@@ -217,7 +217,8 @@ def main():
 
     # list provided services
     services = {}
-    services['intensity'] = rospy.Service('control/change_intensity', SetBool, change_intensity)
+    services['change_intensity'] = rospy.Service('control/change_intensity',
+        SetBool, change_intensity_callback)
 
     # list subscribed topics
     sub = {}
