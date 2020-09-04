@@ -119,18 +119,20 @@ class Control:
         return stim_dict, increment
 
 ###############################################
-# Initializes the current amplitude
+# Initializes the current amplitude and pw
 ###############################################
 
-    def initialize(self, current_dict):
+    def initialize(self, current_dict, pw_dict):
 
         ini = self.config_dict['initial_current']
+        pw = self.config_dict['pulse_width']
         proportion = self.config_dict['stim_proportion']
 
         for ch in stim_order:
             current_dict[ch] = round(ini*proportion[ch])
+            pw_dict[ch] = pw
 
-        return ini, current_dict
+        return ini, current_dict, pw_dict
 
 ###############################################
 # Returns the proportion dictionary

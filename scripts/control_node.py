@@ -8,12 +8,16 @@ from sensor_msgs.msg import Imu
 from std_msgs.msg import Float64
 from std_msgs.msg import UInt8
 from std_msgs.msg import Int32MultiArray
+from std_srvs.srv import Empty
 from std_srvs.srv import SetBool
 from ema_common_msgs.msg import Stimulator
+from ema_common_msgs.srv import SetUInt16
 
 # import utilities
 from tf import transformations
 from math import pi
+import yaml
+import rospkg
 
 # global variables
 global on_off # system on/off
@@ -133,6 +137,68 @@ def pedal_callback(data):
     # get error
     speed_err.append(speed_ref - speed[-1])
 
+def kill_node_callback(req):
+    rospy.loginfo('Node shutdown: service request')
+    rospy.Timer(rospy.Duration(1), rospy.signal_shutdown, oneshot=True)
+    return {}
+
+def on_off_callback(req):
+    global on_off
+    global main_current
+
+    if req.data:
+        on_off = True
+        main_current = rospy.get_param('control/initial_current')
+        return {'success':True, 'message':'on'}
+    else:
+        on_off = False
+        main_current = 0
+        return {'success':True, 'message':'off'}
+
+def set_pulse_width_callback(req):
+    global stim_pw
+
+    pw_now = rospy.get_param('control/pulse_width')
+    msg = str(pw_now)
+    if pw_now != req.data:
+        if req.data >= 0:
+            rospy.set_param('control/pulse_width', req.data)
+            rospack = rospkg.RosPack()
+            control_cfg_path = rospack.get_path('ema_fes_cycling')+'/config/control.yaml'
+
+            with open(control_cfg_path, 'r') as f:
+                control_file = yaml.safe_load(f)
+                control_file['pulse_width'] = req.data
+            with open(control_cfg_path, 'w') as f:
+                yaml.safe_dump(control_file, f, default_flow_style=False)
+
+            msg = str(req.data)
+            rospy.loginfo('Node shutdown: new pulse width')
+            rospy.Timer(rospy.Duration(1), rospy.signal_shutdown, oneshot=True)
+            return {'success':True, 'message':msg}
+    return {'success':False, 'message':msg}
+
+def set_init_intensity_callback(req):
+    init_current = rospy.get_param('control/initial_current')
+    msg = str(init_current)
+    if init_current != req.data:
+        if req.data >= 0:
+            rospy.set_param('control/initial_current', req.data)
+            rospack = rospkg.RosPack()
+            control_cfg_path = rospack.get_path('ema_fes_cycling')+'/config/control.yaml'
+
+            with open(control_cfg_path, 'r') as f:
+                control_file = yaml.safe_load(f)
+                control_file['initial_current'] = req.data
+            with open(control_cfg_path, 'w') as f:
+                yaml.safe_dump(control_file, f, default_flow_style=False)
+
+            msg = str(req.data)
+            rospy.loginfo('Node shutdown: new initial intensity')
+            rospy.Timer(rospy.Duration(1), rospy.signal_shutdown, oneshot=True)
+            return {'success':True, 'message':msg}
+    return {'success':False, 'message':msg}
+
 def change_intensity_callback(req):
     global main_current
     global current_limit
@@ -174,12 +240,14 @@ def change_intensity_callback(req):
 #         main_current = 0
 
 def main():
+    global on_off # system on/off
     global cycles # number of pedal turns
     global new_cycle # a new pedal turn happened
     global cycle_speed # list of current cycle speeds
     global mean_cadence # mean rpm speed of last cycle
     global distance_km # distance travelled in km
     global stim_current # stim current amplitude for each channel
+    global stim_pw # stim pulse width for each channel
     global main_current # reference current at the moment 
     global current_limit # maximum intensity
     # global auto_add_current # automatic current adjustment - add value
@@ -210,13 +278,21 @@ def main():
     controller = control.Control(rospy.get_param('/ema/control'))
 
     # init current amplitude
-    main_current, stim_current = controller.initialize(stim_current)
+    main_current, stim_current, stim_pw = controller.initialize(stim_current, stim_pw)
 
     # current maximum amplitude
     current_limit = controller.currentLimit()
 
     # list provided services
     services = {}
+    services['kill_node'] = rospy.Service('control/kill_node',
+        Empty, kill_node_callback)
+    services['on_off'] = rospy.Service('control/on_off',
+        SetBool, on_off_callback)
+    services['set_pulse_width'] = rospy.Service('control/set_pulse_width',
+        SetUInt16, set_pulse_width_callback)
+    services['set_init_intensity'] = rospy.Service('control/set_init_intensity',
+        SetUInt16, set_init_intensity_callback)
     services['change_intensity'] = rospy.Service('control/change_intensity',
         SetBool, change_intensity_callback)
 
@@ -239,6 +315,12 @@ def main():
 
     # node loop
     while not rospy.is_shutdown():
+
+        if on_off:
+            pass
+        else:
+            main_current = 0
+
         # check for a new pedal turn
         if angle[-2]-angle[-1] > 350:
             try: # ignores ZeroDivisionError
