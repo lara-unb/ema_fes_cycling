@@ -170,7 +170,7 @@ def set_pulse_width_callback(req):
                 control_file = yaml.safe_load(f)
                 control_file['pulse_width'] = req.data
             with open(control_cfg_path, 'w') as f:
-                yaml.safe_dump(control_file, f, default_flow_style=False)
+                yaml.safe_dump(control_file, f)
 
             msg = str(req.data)
             rospy.loginfo('Node shutdown: new pulse width')
@@ -191,7 +191,7 @@ def set_init_intensity_callback(req):
                 control_file = yaml.safe_load(f)
                 control_file['initial_current'] = req.data
             with open(control_cfg_path, 'w') as f:
-                yaml.safe_dump(control_file, f, default_flow_style=False)
+                yaml.safe_dump(control_file, f)
 
             msg = str(req.data)
             rospy.loginfo('Node shutdown: new initial intensity')

@@ -7,7 +7,7 @@
 
     <!-- load common config files-->
     <rosparam command="load" file="$(find yostlabs_3space_imu)/config/imu.yaml" ns="imu"/>
-    <rosparam command="load" file="$(find hasomed_rehastim_stimulator)/config/stim_trike.yaml" ns="stimulator"/>
+    <rosparam command="load" file="$(find hasomed_rehastim_stimulator)/config/stim.yaml" ns="stimulator"/>
     <rosparam command="load" file="$(find ema_fes_cycling)/config/control.yaml" ns="control"/>
 
     <!-- launch common nodes -->
