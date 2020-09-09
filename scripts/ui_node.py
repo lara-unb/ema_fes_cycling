@@ -35,6 +35,7 @@ with their own characteristcs:
 import rospy
 
 # Import ros msgs
+from std_srvs.srv import Empty
 from std_srvs.srv import SetBool
 from ema_common_msgs.srv import Display
 from ema_common_msgs.srv import SetUInt16
@@ -105,6 +106,18 @@ menu_ref = {
 }
 
 
+def kill_node_callback(req):
+    """ROS Service handler to shutdown this node.
+
+    Attributes:
+        req (Empty): empty input
+    """
+    # Shutdown this node and rely on roslaunch respawn to restart
+    rospy.loginfo('Node shutdown: service request')
+    rospy.Timer(rospy.Duration(1), rospy.signal_shutdown, oneshot=True)
+    return {}
+
+
 class Interface(object):
     """A class used to create the user interface menus.
 
@@ -120,6 +133,18 @@ class Interface(object):
         self.screens = {}
         self.services = {}
 
+        # Connect to vital services
+        rospy.loginfo('Connecting to vital services...')
+        try:
+            rospy.wait_for_service('display/write')
+            self.services['display'] = rospy.ServiceProxy(
+                'display/write', Display, persistent=True)
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logerr(e)
+            raise
+
+        self.display_write(self.format_msg('...', 0), 1, 0, True)
+
         # Organize the interface structure
         rospy.loginfo('Building screen structure...')
         self.build_screen_group(ref_dict)
@@ -129,45 +154,58 @@ class Interface(object):
                 self.screen_now = screen
                 break
 
-        # List services:
+        self.update_display()
+        self.display_write(self.format_msg('Iniciando...', 0), 1, 0, False)
+
+        # Connect to other services
+        rospy.loginfo('Connecting to other services...')
         try:
-            rospy.loginfo('Checking and establishing services...')
-
-            rospy.wait_for_service('display/write')
-            self.services['display'] = rospy.ServiceProxy(
-                'display/write', Display, persistent=True)
-
-            # rospy.wait_for_service('imu/set_imu_number')
-            # self.services['set_imu_number'] = rospy.ServiceProxy(
-            #     'imu/set_imu_number', SetUInt16)
-
-            rospy.wait_for_service('control/set_pulse_width')
+            rospy.wait_for_service('control/kill_all', timeout=1.0)
+            self.services['kill_all'] = rospy.ServiceProxy(
+                'control/kill_all', Empty)
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logerr(e)
+        try:
+            rospy.wait_for_service('imu/set_imu_number', timeout=1.0)
+            self.services['set_imu_number'] = rospy.ServiceProxy(
+                'imu/set_imu_number', SetUInt16)
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logerr(e)
+        try:
+            rospy.wait_for_service('control/set_pulse_width', timeout=1.0)
             self.services['set_pulse_width'] = rospy.ServiceProxy(
                 'control/set_pulse_width', SetUInt16)
-
-            # rospy.wait_for_service('stimulator/set_frequency')
-            # self.services['set_stim_freq'] = rospy.ServiceProxy(
-            #     'stimulator/set_frequency', SetUInt16)
-
-            rospy.wait_for_service('control/set_init_intensity')
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logerr(e)
+        try:
+            rospy.wait_for_service('stimulator/set_frequency', timeout=1.0)
+            self.services['set_stim_freq'] = rospy.ServiceProxy(
+                'stimulator/set_frequency', SetUInt16)
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logerr(e)
+        try:
+            rospy.wait_for_service('control/set_init_intensity', timeout=1.0)
             self.services['set_init_intensity'] = rospy.ServiceProxy(
                 'control/set_init_intensity', SetUInt16)
-
-            rospy.wait_for_service('control/change_intensity')
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logerr(e)
+        try:
+            rospy.wait_for_service('control/change_intensity', timeout=1.0)
             self.services['intensity'] = rospy.ServiceProxy(
                 'control/change_intensity', SetBool, persistent=True)
-
-            rospy.wait_for_service('control/on_off')
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logerr(e)
+        try:
+            rospy.wait_for_service('control/on_off', timeout=1.0)
             self.services['on_off'] = rospy.ServiceProxy(
                 'control/on_off', SetBool)
-
-        except rospy.ServiceException as e:
+        except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
 
         # Get the initial value for imu number, current, pw, freq, etc...
         rospy.loginfo('Loading parameter values...')
         self.update_parameters()
-        self.update_display()
+        self.display_write(self.format_msg('APERTE UM BOTAO', 0), 1, 0, False)
         rospy.loginfo('Ready!')
 
     def build_screen_group(self, structure_dict, parent=''):
@@ -210,7 +248,6 @@ class Interface(object):
                 self.screens[label] = new_screen
 
                 self.build_screen_group(menu['submenus'], label)
-        return
 
     def update_parameters(self):
         """Load parameters with their initial values."""
@@ -230,7 +267,6 @@ class Interface(object):
         for k, v in aux.items():
             param_now = ''.join(x for x in self.screens[k]['msg'] if x.isdigit())  # int in str
             self.screens[k]['msg'] = self.screens[k]['msg'].replace(param_now,v)
-        return
 
     def update_display(self):
         """Display the current screen."""
@@ -299,15 +335,14 @@ class Interface(object):
         """
         if self.screen_now['type'] == 'root':
             if action == 'both':
-                output_screen_name = 'welcome'
-                self.screen_now = self.screens[output_screen_name]
+                self.kill_all()
+                return
             else:
                 self.screen_now = self.screens[self.screen_now['select']]
         elif self.screen_now['type'] == 'menu':
             try:
                 if action == 'both':  # Reset and come back to root
-                    output_screen_name = 'welcome'
-                    self.screen_now = self.screens[output_screen_name]
+                    self.kill_all()
                 elif action == 'single_left':  # Previous same level menu
                     output_screen_name = self.screen_now['prev']
                     self.screen_now = self.screens[output_screen_name]
@@ -362,10 +397,7 @@ class Interface(object):
                 self.display_write(update, 1, 0, False)
         # Check param and come back to root
         elif button == 'both':
-            param_new = str(rospy.get_param('imu/wireless_id/pedal'))
-            self.screen_now['msg'] = msg_now.replace(param_now,param_new)
-            self.screen_now = self.screens['welcome']
-            self.update_display()
+            self.kill_all()
         # Check param and go to parent, previous upper level menu
         elif button == 'double_left':
             param_new = str(rospy.get_param('imu/wireless_id/pedal'))
@@ -374,9 +406,9 @@ class Interface(object):
             self.update_display()
         # Confirm modification
         elif button == 'double_right':
-            # result = self.set_imu_number(int(param_now))
-            # if result:
-            #     self.screen_now['msg'] = msg_now.replace(param_now,result)
+            result = self.set_imu_number(int(param_now))
+            if result:
+                self.screen_now['msg'] = msg_now.replace(param_now,result)
 
     def change_pw(self, button):
         """Deal with user action on the change pw screen.
@@ -399,10 +431,7 @@ class Interface(object):
                 self.display_write(update, 1, 0, False)
         # Check param and come back to root
         elif button == 'both':
-            param_new = str(rospy.get_param('control/pulse_width'))
-            self.screen_now['msg'] = msg_now.replace(param_now,param_new)
-            self.screen_now = self.screens['welcome']
-            self.update_display()
+            self.kill_all()
         # Check param and go to parent, previous upper level menu
         elif button == 'double_left':
             param_new = str(rospy.get_param('control/pulse_width'))
@@ -436,10 +465,7 @@ class Interface(object):
                 self.display_write(update, 1, 0, False)
         # Check param and come back to root
         elif button == 'both':
-            param_new = str(rospy.get_param('stimulator/freq'))
-            self.screen_now['msg'] = msg_now.replace(param_now,param_new)
-            self.screen_now = self.screens['welcome']
-            self.update_display()
+            self.kill_all()
         # Check param and go to parent, previous upper level menu
         elif button == 'double_left':
             param_new = str(rospy.get_param('stimulator/freq'))
@@ -448,9 +474,9 @@ class Interface(object):
             self.update_display()
         # Confirm modification
         elif button == 'double_right':
-            # result = self.set_stim_freq(int(param_now))
-            # if result:
-            #     self.screen_now['msg'] = msg_now.replace(param_now,result)
+            result = self.set_stim_freq(int(param_now))
+            if result:
+                self.screen_now['msg'] = msg_now.replace(param_now,result)
 
     def change_current(self, button):
         """Deal with user action on the change current screen.
@@ -473,10 +499,7 @@ class Interface(object):
                 self.display_write(update, 1, 0, False)
         # Check param and come back to root
         elif button == 'both':
-            param_new = str(rospy.get_param('control/initial_current'))
-            self.screen_now['msg'] = msg_now.replace(param_now,param_new)
-            self.screen_now = self.screens['welcome']
-            self.update_display()
+            self.kill_all()
         # Check param and go to parent, previous upper level menu
         elif button == 'double_left':
             param_new = str(rospy.get_param('control/initial_current'))
@@ -512,10 +535,7 @@ class Interface(object):
         # Check param and come back to root
         elif button == 'both':
             self.on_off(False)
-            param_new = str(rospy.get_param('control/initial_current'))
-            self.screen_now['msg'] = msg_now.replace(param_now,param_new)
-            self.screen_now = self.screens['welcome']
-            self.update_display()
+            self.kill_all()
         # Check param and go to parent, previous upper level menu
         elif button == 'double_left':
             self.on_off(False)
@@ -527,8 +547,18 @@ class Interface(object):
         elif button == 'double_right':
         	pass
 
+    def kill_all(self):
+        """Call a ROS Service to shutdown all nodes."""
+        try:
+            rospy.wait_for_service('control/kill_all', timeout=1.0)
+            self.services['kill_all']()
+            return True
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logwarn(e)
+        return False
+
     def display_write(self, msg, line, position, clear):
-        """Call a ROS Service to write to the display
+        """Call a ROS Service to write to the display.
 
         Attributes:
             msg (string): the messages to be displayed
@@ -536,100 +566,100 @@ class Interface(object):
             position (int): the display column to print, 0 is left
             clear (bool): to clear display or not
         """
-        rospy.wait_for_service('display/write')
         try:
+            rospy.wait_for_service('display/write', timeout=1.0)
             resp = self.services['display'](message=msg, line=line,
                 position=position, clear=clear)
-        except rospy.ServiceException as e:
+        except (rospy.ServiceException, rospy.ROSException) as e:
             self.services['display'] = rospy.ServiceProxy('display/write',
                 Display, persistent=True)
             rospy.logwarn(e)
         return
 
     def set_imu_number(self, req):
-        """Call a ROS Service to set a different IMU number
+        """Call a ROS Service to set a different IMU number.
 
         Attributes:
             req (int): new IMU number from 0 to 10
         """
-        rospy.wait_for_service('imu/set_imu_number')
         try:
+            rospy.wait_for_service('imu/set_imu_number', timeout=1.0)
             resp = self.services['set_imu_number'](req)
             return resp.message  # Return the IMU now as str
-        except rospy.ServiceException as e:
-            rospy.logwarn(e)
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logerr(e)
         return
 
     def set_pulse_width(self, req):
-        """Call a ROS Service to set the stim pulse width
+        """Call a ROS Service to set the stim pulse width.
 
         Attributes:
             req (int): new pulse width
         """
-        rospy.wait_for_service('control/set_pulse_width')
         try:
+            rospy.wait_for_service('control/set_pulse_width', timeout=1.0)
             resp = self.services['set_pulse_width'](req)
             return resp.message  # Return the pulse width as str
-        except rospy.ServiceException as e:
+        except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logwarn(e)
         return
 
     def set_stim_freq(self, req):
-        """Call a ROS Service to set the stim frequency
+        """Call a ROS Service to set the stim frequency.
 
         Attributes:
             req (int): new frequency
         """
-        rospy.wait_for_service('stimulator/set_frequency')
         try:
+            rospy.wait_for_service('stimulator/set_frequency', timeout=1.0)
             resp = self.services['set_stim_freq'](req)
             return resp.message  # Return the IMU now as str
-        except rospy.ServiceException as e:
-            rospy.logwarn(e)
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logerr(e)
         return
 
     def set_init_intensity(self, req):
-        """Call a ROS Service to set the initial stim intensity
+        """Call a ROS Service to set the initial stim intensity.
 
         Attributes:
             req (int): new initial intensity
         """
-        rospy.wait_for_service('control/set_init_intensity')
         try:
+            rospy.wait_for_service('control/set_init_intensity', timeout=1.0)
             resp = self.services['set_init_intensity'](req)
             return resp.message  # Return the intensity as str
-        except rospy.ServiceException as e:
+        except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logwarn(e)
         return
         return
 
     def change_intensity(self, req):
-        """Call a ROS Service to request a change in intensity
+        """Call a ROS Service to request a change in intensity.
 
         Attributes:
             req (bool): 0 to decrease and 1 to increase
         """
-        rospy.wait_for_service('control/change_intensity')
         try:
+            rospy.wait_for_service('control/change_intensity', timeout=1.0)
             resp = self.services['intensity'](req)
             return resp.message  # Return the intensity now as str
-        except rospy.ServiceException as e:
+        except (rospy.ServiceException, rospy.ROSException) as e:
             self.services['intensity'] = rospy.ServiceProxy('control/change_intensity',
                 SetBool, persistent=True)
             rospy.logwarn(e)
         return
 
     def on_off(self, req):
-        """Call a ROS Service to turn control on/off
+        """Call a ROS Service to turn control on/off.
 
         Attributes:
             req (bool): 0 to turn off and 1 to turn on
         """
-        rospy.wait_for_service('control/on_off')
         try:
+            rospy.wait_for_service('control/on_off', timeout=1.0)
             resp = self.services['on_off'](req)
             return resp.message  # Return the control state (on/off)
-        except rospy.ServiceException as e:
+        except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logwarn(e)
         return
 
@@ -641,6 +671,10 @@ def main():
     # Create interface auxiliary class
     aux = Interface(menu_ref)
 
+    # list provided services
+    services = {}
+    services['kill_node'] = rospy.Service('interface/kill_node', Empty, kill_node_callback)
+ 
     # Node loop
     while not rospy.is_shutdown():
         try:

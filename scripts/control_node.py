@@ -18,6 +18,7 @@ from tf import transformations
 from math import pi
 import yaml
 import rospkg
+import rosnode
 
 # global variables
 global on_off # system on/off
@@ -137,12 +138,42 @@ def pedal_callback(data):
     # get error
     speed_err.append(speed_ref - speed[-1])
 
+def kill_all_callback(req):
+    """ROS Service handler to shutdown all nodes.
+
+    Attributes:
+        req (Empty): empty input
+    """
+    rospy.loginfo('Shutdown all nodes: service request')
+    nodes = rosnode.get_node_names('ema')  # List all nodes running
+    # Shutdown the nodes and rely on roslaunch respawn to restart
+    for name in nodes:
+        try:
+            rospy.wait_for_service(name+'/kill_node', timeout=1.0)
+            rospy.ServiceProxy(name+'/kill_node', Empty)()
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logerr(e)
+    rospy.loginfo('Node shutdown: service request')
+    rospy.Timer(rospy.Duration(1), rospy.signal_shutdown, oneshot=True)
+    return {}
+
 def kill_node_callback(req):
+    """ROS Service handler to shutdown this node.
+
+    Attributes:
+        req (Empty): empty input
+    """
+    # Shutdown this node and rely on roslaunch respawn to restart
     rospy.loginfo('Node shutdown: service request')
     rospy.Timer(rospy.Duration(1), rospy.signal_shutdown, oneshot=True)
     return {}
 
 def on_off_callback(req):
+    """ROS Service handler to turn control on/off.
+
+    Attributes:
+        req (bool): 0 to turn off and 1 to turn on
+    """
     global on_off
     global main_current
 
@@ -156,22 +187,27 @@ def on_off_callback(req):
         return {'success':True, 'message':'off'}
 
 def set_pulse_width_callback(req):
+    """ROS Service handler to set the stim pulse width.
+
+    Attributes:
+        req (int): new pulse width
+    """
     global stim_pw
 
     pw_now = rospy.get_param('control/pulse_width')
     msg = str(pw_now)
     if pw_now != req.data:
         if req.data >= 0:
-            rospy.set_param('control/pulse_width', req.data)
+            rospy.set_param('control/pulse_width', req.data)  # Change the param server
             rospack = rospkg.RosPack()
             control_cfg_path = rospack.get_path('ema_fes_cycling')+'/config/control.yaml'
-
+            # Change the config yaml file
             with open(control_cfg_path, 'r') as f:
                 control_file = yaml.safe_load(f)
                 control_file['pulse_width'] = req.data
             with open(control_cfg_path, 'w') as f:
                 yaml.safe_dump(control_file, f)
-
+            # Shutdown this node and rely on roslaunch respawn to restart
             msg = str(req.data)
             rospy.loginfo('Node shutdown: new pulse width')
             rospy.Timer(rospy.Duration(1), rospy.signal_shutdown, oneshot=True)
@@ -179,20 +215,25 @@ def set_pulse_width_callback(req):
     return {'success':False, 'message':msg}
 
 def set_init_intensity_callback(req):
+    """ROS Service handler to set the initial stim intensity.
+
+    Attributes:
+        req (int): new initial intensity
+    """
     init_current = rospy.get_param('control/initial_current')
     msg = str(init_current)
     if init_current != req.data:
         if req.data >= 0:
-            rospy.set_param('control/initial_current', req.data)
+            rospy.set_param('control/initial_current', req.data)  # Change the param server
             rospack = rospkg.RosPack()
             control_cfg_path = rospack.get_path('ema_fes_cycling')+'/config/control.yaml'
-
+            # Change the config yaml file
             with open(control_cfg_path, 'r') as f:
                 control_file = yaml.safe_load(f)
                 control_file['initial_current'] = req.data
             with open(control_cfg_path, 'w') as f:
                 yaml.safe_dump(control_file, f)
-
+            # Shutdown this node and rely on roslaunch respawn to restart
             msg = str(req.data)
             rospy.loginfo('Node shutdown: new initial intensity')
             rospy.Timer(rospy.Duration(1), rospy.signal_shutdown, oneshot=True)
@@ -200,6 +241,11 @@ def set_init_intensity_callback(req):
     return {'success':False, 'message':msg}
 
 def change_intensity_callback(req):
+    """ROS Service handler to request a change in intensity.
+
+    Attributes:
+        req (bool): 0 to decrease and 1 to increase
+    """
     global main_current
     global current_limit
 
@@ -285,6 +331,8 @@ def main():
 
     # list provided services
     services = {}
+    services['kill_all'] = rospy.Service('control/kill_all',
+        Empty, kill_all_callback)
     services['kill_node'] = rospy.Service('control/kill_node',
         Empty, kill_node_callback)
     services['on_off'] = rospy.Service('control/on_off',
