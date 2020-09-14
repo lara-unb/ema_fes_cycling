@@ -21,7 +21,7 @@ stim_order = [
 ]
 
 
-class Control(object):
+class Trike(object):
     """A class used to control the stimulation.
 
     Attributes:

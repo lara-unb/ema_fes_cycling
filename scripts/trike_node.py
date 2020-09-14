@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 """
 
@@ -14,11 +14,11 @@ http://wiki.ros.org/Nodes
 
 """
 
-# Python 2 and 3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from builtins import *
+# # Python 2 and 3 compatibility
+# from __future__ import absolute_import
+# from __future__ import division
+# from __future__ import print_function
+# from builtins import *
 
 import rospy
 import modules.trike as trike
@@ -37,317 +37,189 @@ from tf import transformations
 import dynamic_reconfigure.client
 from math import pi
 
-# Global variables:
-global on_off              # System on/off
-global angle               # List of pedal angles
-global speed               # List of pedal angular speeds
-global speed_ref           # Reference speed
-global speed_err           # Speed error
-global time                # List of imu timestamps
-global cycles              # Number of pedal turns
-global new_cycle           # Flag for every new pedal turn
-global cycle_speed         # List of current cycle speeds
-global mean_cadence        # Mean RPM speed of last cycle
-global distance_km         # Distance travelled in km
-global stim_current        # Stim current for each channel
-global stim_pw             # Stim pulse width for each channel
-global button_event        # Flag for button press
-global main_current        # Reference current at the moment
-global controller
-# global auto_on           # Auto current adjust - on/off
-# global auto_max_current  # Auto current adjust - limit
-# global auto_minvel       # Auto current adjust - trigger speed
-# global auto_add_current  # Auto current adjust - add value
-
-# Set initial param values:
-on_off = False
-angle = [0, 0]
-speed = [0, 0]
-speed_ref = 300
-speed_err = [0, 0]
-time = [0, 0]
-cycles = 0
-new_cycle = False
-cycle_speed = [0, 0]
-mean_cadence = 0
-distance_km = 0
-button_event = False
-main_current = 0
-controller = None
-# auto_on = False
-# auto_max_current = 0
-# auto_minvel = 0
-# auto_add_current = 0
-
-stim_current = {
+# Dictionary used for stimulation parameters
+template_dict = {
     'Ch1': 0, 'Ch2': 0,
     'Ch3': 0, 'Ch4': 0,
     'Ch5': 0, 'Ch6': 0,
     'Ch7': 0, 'Ch8': 0
 }
 
-stim_pw = {
-    'Ch1': 500, 'Ch2': 500,
-    'Ch3': 500, 'Ch4': 500,
-    'Ch5': 500, 'Ch6': 500,
-    'Ch7': 500, 'Ch8': 500
-}
 
-# Stim channel mapping:
-stim_order = [
-    'Ch1', 'Ch2',
-    'Ch3', 'Ch4',
-    'Ch5', 'Ch6',
-    'Ch7', 'Ch8'
-]
-
-
-def server_callback(config):
-    """Assign the server parameters to the equivalent variables.
-
-    Attributes:
-        config (dict): server dictionary with its parameters
+class TrikeWrapper(object):
+    """A class used to wrap the trike functionalities and establish a ROS
+    interface for its module.
     """
-    global stim_current
-    global stim_pw
-    global controller
+    def __init__(self):
+        # Declare internal components
+        self.trike = trike.Trike(rospy.get_param('trike'))  # Init from lower level class
+        self.platform = rospy.get_param('platform')  # Where it's running - desktop/embedded
+        self.paramserver = {}  # Interface with ROS parameters
+        self.topics = {'pub': {},'sub': {}}  # ROS Topics - published/subscribed
+        self.services = {'prov': {},'req': {}}  # ROS Services - provided(server)/requested(client)
+        self.msgs = {}  # Exchanged msgs through the topics
+        self.stim_pw = {}  # Stimulation pulse width for each channel
+        self.stim_current = {}  # Maximum stimulation current for each channel at the moment
+        self.stim_current_max = 0  # Maximum current from all channels at the moment
+        self.stim_current_now = 9*[0]  # Instant stimulation current for each channel
 
-    controller.updateParam(config)
+        # Other components
+        self.on_off = False  # System on/off
+        self.angle = []  # List of pedal angles
+        self.speed = []  # List of pedal angular speeds
+        self.speed_ref = 300  # Reference speed
+        self.speed_err = []  # Speed error
+        self.time = []  # List of imu timestamps
 
-    for ch in stim_order:
-        stim_current[ch] = config[ch+'Current']
-        stim_pw[ch] = config[ch+'PulseWidth']
+        # Initial setup
+        self.build_msgs()
+        self.set_topics()
+        self.initialize()
 
+    def initialize(self):
+        """Configure the proper setup according to the present platform."""
+        # Initialize current and pw dicts
+        self.stim_current.update(template_dict)
+        self.stim_pw.update(template_dict)
+        # Exclusive initialization for embedded
+        if self.platform == 'rasp':
+            # Initialize control
+            self.stim_current_max, self.stim_current = self.trike.initialize(self.stim_current)
+        # Exclusive initialization for desktop
+        elif self.platform == 'pc':
+            # Communicate with the dynamic server
+            self.paramserver = dynamic_reconfigure.client.Client('trike_config',
+                config_callback=server_callback)  # 'server_node_name'
 
-def pedal_callback(data):
-    """Process measurements from the pedal IMU sensor.
+    def build_msgs(self):
+        """Prepare and build msgs according to their ROS Msg type."""
+        # Build stimulator msg
+        stim_msg = Stimulator()
+        stim_msg.channel = list(range(1, 8+1))  # All the 8 channels
+        stim_msg.mode = 8*['single']  # No doublets/triplets
+        stim_msg.pulse_width = 8*[0]  # Init w/ zeros
+        stim_msg.pulse_current = 8*[0]
+        # Build signal msg to publish instant current
+        signal_msg = Int32MultiArray()
+        signal_msg.data = 9*[0]  # Index corresponds to stimulation channel 1-8
+        # Assign designated internal variables
+        self.msgs['stim'] = stim_msg
+        self.msgs['signal'] = signal_msg
+        self.msgs['angle'] = Float64()
+        self.msgs['speed'] = Float64()
+        self.msgs['intensity'] = UInt8()
 
-    Attributes:
-        data (Imu): msg from the pedal IMU sensor
-    """
-    global angle
-    global speed
-    global speed_err
-    global time
-    # pi = 3.14159
+    def set_topics(self):
+        """Declare the subscribed and published ROS Topics."""
+        # List subscribed topics:
+        self.topics['sub']['pedal'] = rospy.Subscriber('imu/pedal', Imu, pedal_callback)
+        # List published topics:
+        self.topics['pub']['stim'] = rospy.Publisher('stimulator/single_pulse', Stimulator, queue_size=10)
+        self.topics['pub']['signal'] = rospy.Publisher('trike/signal', Int32MultiArray, queue_size=10)
+        self.topics['pub']['angle'] = rospy.Publisher('trike/angle', Float64, queue_size=10)
+        self.topics['pub']['speed'] = rospy.Publisher('trike/speed', Float64, queue_size=10)
+        self.topics['pub']['intensity'] = rospy.Publisher('trike/intensity', UInt8, queue_size=10)
 
-    # Get timestamp:
-    time.append(data.header.stamp)
+    def recalculate(self):
+        """Reconsider the control action based on present state."""
+        # Calculate control factors for each channel
+        stimfactors = self.trike.calculate(self.angle[-1], self.speed[-1],
+            self.speed_ref, self.speed_err)
+        # Update instant current
+        for k, v in self.stim_current:
+            channel = int(''.join(num for num in k if num.isdigit()))  # int in str
+            self.stim_current_now[channel] = round(stimfactors[channel-1]*v)
 
-    # Get pedal IMU angles:
-    qx = data.orientation.x
-    qy = data.orientation.y
-    qz = data.orientation.z
-    qw = data.orientation.w
-    euler = transformations.euler_from_quaternion(
-                [qx, qy, qz, qw], axes='rzyx')
-    x = euler[2]
-    y = euler[1]
+    def update_msgs(self):
+        """Modify ROS Msg variables according to their present value."""
+        # Update stimulation pulse width and current values
+        for k, v in self.stim_pw:
+            channel = int(''.join(num for num in k if num.isdigit()))  # int in str
+            self.msgs['stim'].pulse_width[channel-1] = v
+        self.msgs['stim'].pulse_current = self.stim_current_now[1:]
+        self.msgs['signal'].data = self.stim_current_now
+        # Update other msgs
+        self.msgs['angle'].data = self.angle[-1]
+        self.msgs['speed'].data = self.speed[-1]
+        self.msgs['intensity'].data = self.stim_current_max
 
-    # Correct issues with more than one axis rotating:
-    if y >= 0:
-        y = (y/pi)*180
-        if abs(x) > (pi*0.5):
-            y = 180-y
-    else:
-        y = (y/pi)*180
-        if abs(x) > (pi*0.5):
-            y = 180-y
+    def publish_msgs(self):
+        """Publish on all ROS Topics."""
+        for name, tp in self.topics['pub']:
+            tp.publish(self.msgs[name])
+
+    def server_callback(self, config):
+        """ROS dynamic reconfigure callback to assign the modified server
+        parameters to the equivalent variables.
+
+        Attributes:
+            config (dict): server dictionary with all parameters
+        """
+        # Update the angles and other parameters
+        self.trike.updateParam(config)
+        # Update internal variables
+        maxvalue = self.stim_current_max
+        for k in self.stim_current.keys():
+            # Find greater value
+            if config[k+'Current'] > maxvalue:
+                maxvalue = config[k+'Current']
+            self.stim_current[k] = config[k+'Current']
+            self.stim_pw[k] = config[k+'PulseWidth']
+        # Update maximum value
+        self.stim_current_max = maxvalue
+
+    def pedal_callback(self, data):
+        """ROS Topic callback to process measurements from the pedal IMU.
+
+        Attributes:
+            data (Imu): ROS Msg from the pedal IMU sensor
+        """
+        # Get timestamp:
+        self.time.append(data.header.stamp)
+        # Get pedal IMU angles:
+        qx = data.orientation.x
+        qy = data.orientation.y
+        qz = data.orientation.z
+        qw = data.orientation.w
+        euler = transformations.euler_from_quaternion(
+                    [qx, qy, qz, qw], axes='rzyx')
+        x = euler[2]
+        y = euler[1]
+        # Correct issues with more than one axis rotating:
+        if y >= 0:
+            y = (y/pi)*180
+            if abs(x) > (pi*0.5):
+                y = 180-y
         else:
-            y = 360+y
+            y = (y/pi)*180
+            if abs(x) > (pi*0.5):
+                y = 180-y
+            else:
+                y = 360+y
 
-    angle.append(y)
-
-    # Get angular speed:
-    speed.append(data.angular_velocity.y*(180/pi))
-
-    # Get speed error for controller:
-    speed_err.append(speed_ref - speed[-1])
-
-
-def button_callback(data):
-    """Process the button commands from the user.
-
-    Attributes:
-        data (UInt8): latest msg from the buttons
-    """
-    global on_off
-    global button_event
-    global main_current
-
-    # Raise a button pressed flag:
-    button_event = True
-
-    # Turn on or increase intensity:
-    if data == UInt8(2):
-        if not on_off:
-            on_off = True
-        main_current += 2
-
-    # Decrease intensity:
-    elif data == UInt8(1):
-        if on_off:
-            main_current -= 2
-
-            if main_current < 0:
-                on_off = False
-                main_current = 0
-
-    # Zero intensity:
-    elif data == UInt8(3):
-        on_off = False
-        main_current = 0
+        #  Update angle and speed data
+        self.angle.append(y)
+        self.speed.append(data.angular_velocity.y*(180/pi))
+        self.speed_err.append(self.speed_ref - self.speed[-1])
 
 
 def main():
-    global cycles
-    global new_cycle
-    global cycle_speed
-    global mean_cadence
-    global distance_km
-    global stim_current
-    global button_event
-    global main_current
-    global controller
-    # global auto_add_current
-
-    # Init control node:
-    rospy.init_node('trike')  # Overwritten by launch file name
-
-    # Build basic stimulator msg:
-    stimMsg = Stimulator()
-    stimMsg.channel = list(range(1, 8+1))  # All the 8 channels
-    stimMsg.mode = 8*['single']  # No doublets/triplets
-    stimMsg.pulse_width = 8*[0]  # Init w/ zeros
-    stimMsg.pulse_current = 8*[0]
-
-    # Build auxiliary msg to help visualize stimulator signal:
-    signalMsg = Int32MultiArray()
-    signalMsg.data = 9*[0]  # 1-8 channels, 0 index isnt used
-
-    # Build other msgs:
-    angleMsg = Float64()
-    speedMsg = Float64()
-    cadenceMsg = Float64()
-    distanceMsg = Float64()
-
-    # Get control config:
-    controller = trike.Control(rospy.get_param('trike'))
-
-    # List subscribed topics:
-    sub = {}
-    sub['pedal'] = rospy.Subscriber('imu/pedal', Imu, callback=pedal_callback)
-
-    # List published topics:
-    pub = {}
-    pub['control'] = rospy.Publisher('stimulator/ccl_update', Stimulator, queue_size=10)
-    pub['angle'] = rospy.Publisher('trike/angle', Float64, queue_size=10)
-    pub['signal'] = rospy.Publisher('trike/stimsignal', Int32MultiArray, queue_size=10)
-    pub['speed'] = rospy.Publisher('trike/speed', Float64, queue_size=10)
-    pub['cadence'] = rospy.Publisher('trike/cadence', Float64, queue_size=10)
-    pub['distance'] = rospy.Publisher('trike/distance', Float64, queue_size=10)
-
-    # Retrieve where the code is currently running (change in .launch):
-    platform = rospy.get_param('platform')
-
-    # Embedded system exclusive initialization:
-    if platform == 'rasp':
-        # Build other msgs:
-        displayMsg = UInt8()
-
-        # Initialize control:
-        main_current, stim_current = controller.initialize(stim_current)
-
-        # Additional subscribed topics:
-        sub['button'] = rospy.Subscriber('button/action', UInt8, callback=button_callback)
-
-        # Additional published topics:
-        pub['intensity'] = rospy.Publisher('display/update', UInt8, queue_size=10)
-
-    # PC system exclusive initialization:
-    elif platform == 'pc':
-        # Communicate with the dynamic server:
-        dyn_params = dynamic_reconfigure.client.Client('trike_config',
-                        config_callback=server_callback)  # 'server_node_name'
-
-    # Define loop rate (in hz):
+    # Init control node
+    rospy.init_node('trike')
+    # Create trike auxiliary class
+    aux = TrikeWrapper()
+    # Define loop rate (in hz)
     rate = rospy.Rate(50)
-
-    # Node loop:
+    # Node loop
     while not rospy.is_shutdown():
-        # Check for a new pedal turn:
-        if angle[-2]-angle[-1] > 350:
-            try:  # Ignores ZeroDivisionError
-                new_cycle = True
-                cycles += 1  # Count turns
-                mean_cadence = sum(cycle_speed)/len(cycle_speed)  # Simple mean
-                cycle_speed = []  # Reset list for new cycle
-                # 1.5: volta da coroa em relacao ao pneu, 66cm(26in): diametro
-                # do pneu, 100000: cm para km
-                distance_km = (cycles*3.14159*1.5*66)/100000
-                # print cycles, mean_cadence, distance_km
-
-                # if auto_on:
-                #    stim_current, auto_add_current = controller.automatic(
-                #             stim_current, auto_add_current, mean_cadence,
-                #             auto_minvel, auto_max_current)
-                #    print auto_add_current
-            except:
-                pass
-        else:
-            new_cycle = False
-            cycle_speed.append(speed[-1])
-
-        # Calculate control factor:
-        stimfactors = controller.calculate(angle[-1], speed[-1], 
-                        speed_ref, speed_err)
-
-        # Embedded system exclusive:
-        if platform == 'rasp':
-            # Get the proportion for each channel:
-            proportion = controller.multipliers()
-
-            # Limit the stimulation intensity:
-            if main_current > controller.currentLimit():
-                main_current = controller.currentLimit()
-
-            if button_event:
-                button_event = False
-                displayMsg.data = main_current
-                # Send display update:
-                pub['intensity'].publish(displayMsg)
-
-        # Update current and pw values:
-        for i, ch in enumerate(stim_order):
-            # Embedded system exclusive:
-            if platform == 'rasp':
-                stim_current[ch] = round(main_current*proportion[ch])
-
-            stimMsg.pulse_current[i] = round(stimfactors[i]*stim_current[ch])
-            stimMsg.pulse_width[i] = stim_pw[ch]
-            signalMsg.data[i+1] = stimMsg.pulse_current[i]  # 1-8 channels, 0 index isnt used
-
-            # if new_cycle and auto_on:
-            #     dyn_params.update_configuration({ch+'_Current':stim_current[ch]})
-
-        angleMsg.data = angle[-1]
-        speedMsg.data = speed[-1]
-        cadenceMsg.data = mean_cadence
-        distanceMsg.data = distance_km
-
-        # print signalMsg.data
-
-        # Send updates:
-        pub['control'].publish(stimMsg)
-        pub['angle'].publish(angleMsg)
-        pub['signal'].publish(signalMsg)
-        pub['speed'].publish(speedMsg)
-        pub['cadence'].publish(cadenceMsg)
-        pub['distance'].publish(distanceMsg)
-
-        # Wait for next loop:
+        # Control action to update applied stimulation 
+        aux.recalculate()
+        # Redefine published msgs
+        aux.update_msgs()
+        # Send the new msgs
+        aux.publish_msgs()
+        # Wait for next loop
         rate.sleep()
-
 
 if __name__ == '__main__':
     try:

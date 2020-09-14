@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 """
 
@@ -33,11 +33,11 @@ Ch78: used with quadriceps (lateral), refers to stimulator channels 7 and 8
 
 """
 
-# Python 2 and 3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from builtins import *
+# # Python 2 and 3 compatibility
+# from __future__ import absolute_import
+# from __future__ import division
+# from __future__ import print_function
+# from builtins import *
 
 import rospy
 from ema_fes_cycling.cfg import TrikeServerConfig  # pkgname.cfg, cfgfilenameConfig
