@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
+import time
 import pygame
 from std_msgs.msg import UInt8
 from ema_common_msgs.srv import Display, DisplayResponse
@@ -65,36 +66,51 @@ def main():
     pub = rospy.Publisher('button/action', UInt8, queue_size=10)
     screen_clear()
     draw_text("Pronto para Uso", 0,1)
-    rate = rospy.Rate(20)
+
+    freq=20
+    rate = rospy.Rate(freq)
+    wait_time = 200
     
-    back_value = [0,0]
     current_value = 0
+    button_press=False
+    
+    last = 0
     done = False
     while not done and not rospy.is_shutdown():
-        mouse = pygame.mouse.get_pressed()
-        current_value = 0b00000000
-        # apply OR operation on byte if button pressed
-        if mouse[0]:
-            current_value=current_value|0b00000001
-        if mouse[2]:
-            current_value=current_value|0b00000010
-        if current_value == back_value[0] and current_value != back_value[1] and current_value:
-            pub.publish(UInt8(current_value))
-        back_value[1]=back_value[0]
-        back_value[0]=current_value
+        if button_press:
+            if (time.time()-last) * 1000 > wait_time:
+                pub.publish(UInt8(current_value))
+                current_value = 0
+                button_press=False
 
         for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                        done = True
-                        rospy.signal_shutdown("Closed")
-        rate.sleep()
-                
+            if event.type == pygame.QUIT:
+                done = True
+                rospy.signal_shutdown("Closed")
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse=pygame.mouse.get_pressed()
+                pressed=0b00000000
+                if mouse[0]:
+                    pressed |= 0b00000001
+                if mouse[2]:
+                    pressed |= 0b00000010
+                current = time.time()
+                if current_value == 0:
+                    current_value = pressed
+                elif current_value == 1:
+                    if pressed == 1:
+                        current_value = 4
+                    elif pressed == 2:
+                        current_value = 3
+                elif current_value == 2:
+                    if pressed == 1:
+                        current_value = 3
+                    elif pressed == 2:
+                        current_value = 5
+                button_press = True
+                last = current
 
-                    
-                    
-    # subscribe to main current topic from control node
-    
-
+        rate.sleep()                  
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
 
