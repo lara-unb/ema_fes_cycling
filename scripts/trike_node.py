@@ -23,17 +23,17 @@ http://wiki.ros.org/Nodes
 import rospy
 import modules.trike as trike
 
-# Import ROS msgs:
+# Import ROS msgs
 from std_msgs.msg import Float64
 from std_msgs.msg import UInt8
 from std_msgs.msg import Int32MultiArray
 from sensor_msgs.msg import Imu
 from ema_common_msgs.msg import Stimulator
 
-# Import utilities:
+# Import utilities
 from tf import transformations
 
-# Other imports:
+# Other imports
 import dynamic_reconfigure.client
 from math import pi
 
@@ -112,9 +112,9 @@ class TrikeWrapper(object):
 
     def set_topics(self):
         """Declare the subscribed and published ROS Topics."""
-        # List subscribed topics:
+        # List subscribed topics
         self.topics['sub']['pedal'] = rospy.Subscriber('imu/pedal', Imu, self.pedal_callback)
-        # List published topics:
+        # List published topics
         self.topics['pub']['stim'] = rospy.Publisher('stimulator/ccl_update', Stimulator, queue_size=10)
         self.topics['pub']['signal'] = rospy.Publisher('trike/signal', Int32MultiArray, queue_size=10)
         self.topics['pub']['angle'] = rospy.Publisher('trike/angle', Float64, queue_size=10)
@@ -175,9 +175,9 @@ class TrikeWrapper(object):
         Attributes:
             data (Imu): ROS Msg from the pedal IMU sensor
         """
-        # Get timestamp:
+        # Get timestamp
         self.time.append(data.header.stamp)
-        # Get pedal IMU angles:
+        # Get pedal IMU angles
         qx = data.orientation.x
         qy = data.orientation.y
         qz = data.orientation.z
@@ -186,7 +186,7 @@ class TrikeWrapper(object):
                     [qx, qy, qz, qw], axes='rzyx')
         x = euler[2]
         y = euler[1]
-        # Correct issues with more than one axis rotating:
+        # Correct issues with more than one axis rotating
         if y >= 0:
             y = (y/pi)*180
             if abs(x) > (pi*0.5):
@@ -207,17 +207,17 @@ class TrikeWrapper(object):
 def main():
     # Init control node
     rospy.init_node('trike')
-    # Create trike auxiliary class
+    # Create auxiliary class
     aux = TrikeWrapper()
     # Define loop rate (in hz)
     rate = rospy.Rate(50)
     # Node loop
     while not rospy.is_shutdown():
-        # Control action to update applied stimulation 
+        # New interaction
         aux.recalculate()
-        # Redefine published msgs
+        # Redefine publisher msgs
         aux.update_msgs()
-        # Send the new msgs
+        # Send the msgs
         aux.publish_msgs()
         # Wait for next loop
         rate.sleep()

@@ -12,7 +12,7 @@ filtered sensor measurement as a ROS message to other ROS nodes.
 
 """
 
-# Stim channel mapping:
+# Stim channel mapping
 stim_order = [
     'Ch1', 'Ch2',
     'Ch3', 'Ch4',
@@ -43,13 +43,13 @@ class Trike(object):
         # dth = (speed/speed_ref)*param_dict['Shift']
         # dth = (speed/speed_ref)*self.config_dict['Shift']
 
-        # Shift disabled:
+        # Shift disabled
         dth = 0
 
         theta_min = self.config_dict[ch+"AngleMin"] - dth
         theta_max = self.config_dict[ch+"AngleMax"] - dth
 
-        # Check if angle in range (theta_min, theta_max):
+        # Check if angle in range (theta_min, theta_max)
         if theta_min <= angle and angle <= theta_max:
             if (angle-theta_min) <= ramp_degrees:
                 return (angle-theta_min)/ramp_degrees
@@ -86,7 +86,7 @@ class Trike(object):
         Kp = 1/float(5000)
         Ki = 1/float(100000)
 
-        # If there is a change of signal, reset.
+        # If there is a change of signal, reset
         if ((error[-2] >= 0) and (error[-1] < 0)) or ((error[-2] < 0) and (error[-1] >= 0)):
             errorTemp = [0 for x in range(len(error))]
             errorTemp[-1] = error[-1]
@@ -94,7 +94,7 @@ class Trike(object):
 
         signal = 0.5 + Kp*error[-1]+Ki*sum(error)
 
-        # Saturation:
+        # Saturation
         if signal > 1:
             signal = 1
             error[-1] = 0
