@@ -60,6 +60,7 @@ bottom = height-padding
 x = 0
 
 # Load font:
+rospack = rospkg.RosPack()
 fontfile = "FreeMono.ttf"
 font_path = rospack.get_path("ema_fes_cycling") + "/resources/" + fontfile
 fontsize = 26
