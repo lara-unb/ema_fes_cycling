@@ -12,13 +12,13 @@ filtered sensor measurement as a ROS message to other ROS nodes.
 
 """
 
-# Stim channel mapping
-stim_order = [
-    'Ch1', 'Ch2',
-    'Ch3', 'Ch4',
-    'Ch5', 'Ch6',
-    'Ch7', 'Ch8'
-]
+# Dictionary used for stimulation parameters
+template_dict = {
+    'Ch1': 0, 'Ch2': 0,
+    'Ch3': 0, 'Ch4': 0,
+    'Ch5': 0, 'Ch6': 0,
+    'Ch7': 0, 'Ch8': 0
+}
 
 
 class Trike(object):
@@ -29,27 +29,55 @@ class Trike(object):
     """
     def __init__(self, config_dict):
         self.config_dict = config_dict
+        self.stim_pw = template_dict.copy()  # Pulse width for each channel
+        self.stim_pw_now = template_dict.copy()  # Instant pulse width for each channel (index)
+        self.stim_current = template_dict.copy()  # Adjustable max current for each channel
+        self.stim_current_now = template_dict.copy()  # Instant current for each channel (index)
+        self.stim_current_max = 0  # Max from stim_current
 
-    def fx(self, ch, angle, speed, speed_ref):
-        """Decide to stimulate or not based on sensor.
+        # Other components
+        self.on_off = False  # System on/off
+        self.time = [0]  # List of sensor timestamps
+        self.angle = [0]  # List of pedal angles
+        self.speed = [0]  # List of pedal angular speeds
+        self.speed_err = [0]  # List of speed error
+        self.speed_ref = 300  # Reference speed
+
+    def apply_initial_config(self):
+        """Initialize the pulse width and current amplitude."""
+        ini = self.config_dict['initial_current']
+        proportion = self.config_dict['stim_proportion']
+        pw = self.config_dict['pulse_width']
+        # Update the current and pulse width dictionaries
+        self.stim_current = dict((k, ini*proportion[k]) for k in self.stim_current)
+        self.pw_dict = dict((k, pw) for k in self.pw_dict)
+
+    def calculate(self):
+        """Update stim attributes according to latest measurements."""
+        for channel, current in self.stim_current.items():
+            action = self.control_action(channel, self.angle[-1], self.speed[-1], self.speed_ref)
+            self.stim_current_now[channel] = round(action*current)
+            # Check safe limit
+            if self.stim_current_now[channel] > self.config_dict['stim_limit']:
+                self.stim_current_now[channel] = self.config_dict['stim_limit']
+        self.stim_pw_now = self.stim_pw.copy()
+
+    def control_action(self, ch, angle, speed, speed_ref):
+        """Return the control action according to specified inputs.
 
         Attributes:
+            ch (str): stim channel as in the angle parameters
             angle (double): pedal angle
             speed (double): pedal angular speed
             speed_ref (double): predefined reference speed
         """
         ramp_degrees = 10.0
-
-        # dth = (speed/speed_ref)*param_dict['Shift']
-        # dth = (speed/speed_ref)*self.config_dict['Shift']
-
-        # Shift disabled
-        dth = 0
-
+        dth = (speed/speed_ref)*param_dict['Shift']
+        dth = (speed/speed_ref)*self.config_dict['Shift']
         theta_min = self.config_dict[ch+"AngleMin"] - dth
         theta_max = self.config_dict[ch+"AngleMax"] - dth
 
-        # Check if angle in range (theta_min, theta_max)
+        # Check if angle is in range (theta_min, theta_max)
         if theta_min <= angle and angle <= theta_max:
             if (angle-theta_min) <= ramp_degrees:
                 return (angle-theta_min)/ramp_degrees
@@ -74,8 +102,68 @@ class Trike(object):
                         return (angle-theta_min)/ramp_degrees
                     else:
                         return 1
-
         return 0
+
+    def update_stim_current(self, item):
+        """Change the stimulation current for all channels. "Item" can be
+        a dictionary with the new currents or simply an amount to add or
+        subtract based on stim proportion.
+
+        Attributes:
+            item (dict/int): parameter to change current values.
+        """
+        if not isinstance(item, dict):
+            amount = item
+            proportion = self.config_dict['stim_proportion']
+            max_current = self.stim_current_max+amount
+            # Check safe limit
+            if max_current > self.config_dict['stim_limit']:
+                return
+            item = dict((k, max_current*proportion[k]) for k in self.stim_current)
+        else:
+            pass
+        self.stim_current_max = max(item.values())
+        self.stim_current = item
+        return
+
+    def update_stim_pw(self, pw_dict):
+        """Change the stimulation pulse width for all channels.
+
+        Attributes:
+            pw_dict (dict): pulse width dictionary
+        """
+        self.stim_pw = pw_dict
+
+    def update_config(self, new, value=None):
+        """Change configuration parameters. "New" can be a new configuration
+        dictionary or a specific parameter with its new value in "value".
+
+        Attributes:
+            new (dict/str): configuration dictionary or parameter name
+            value (): parameter value when "new" is a parameter name
+        """
+        if isinstance(new, dict):
+            self.config_dict = new
+        else:
+            self.config_dict[new] = value
+        return
+
+    def update_measurements(self, time, angle, speed):
+        """Update pedal data based on received measurements.
+
+        Attributes:
+            time (double): sensor timestamp
+            angle (double): pedal angle
+            speed (double): pedal angular speed
+        """
+        self.time.apeend(time)
+        self.angle.apeend(angle)
+        self.speed.apeend(speed)
+        self.speed_err.append(self.speed_ref-speed)
+
+    def get_latest_measurements(self):
+        """Return latest pedal data: timestamp, angle, speed, speed error."""
+        return self.time[-1], self.angle[-1], self.speed[-1], self.speed_err[-1]
 
     def g(self, error):
         """PI speed controller logic.
@@ -104,22 +192,6 @@ class Trike(object):
 
         return signal
 
-    def calculate(self, angle, speed, speed_ref, speed_err):
-        """Tell if stimulation should be activated or not.
-
-        Attributes:
-            angle (double): pedal angle
-            speed (double): pedal angular speed
-            speed_ref (double): predefined reference speed
-            speed_err (double): calculated speed error
-        """
-        factor = 8*[0]
-
-        for i, ch in enumerate(stim_order):
-            factor[i] = self.fx(ch, angle, speed, speed_ref)
-
-        return factor
-
     def automatic(self, stim_dict, increment, cadence, min_cadence, limit):
         """Cadence control applied to stimulation current amplitude.
 
@@ -142,33 +214,3 @@ class Trike(object):
                 stim_dict[ch] = stim_dict[ch] + step
 
         return stim_dict, increment
-
-    def initialize(self, current_dict, pw_dict):
-        """Initialize the current amplitude.
-
-        Attributes:
-            config_dict (dict): stores the static config parameters
-        """
-        ini = self.config_dict['initial_current']
-        proportion = self.config_dict['stim_proportion']
-
-        for ch in stim_order:
-            current_dict[ch] = round(ini*proportion[ch])
-            pw_dict[ch] = self.config_dict['pulse_width']
-
-        return ini, current_dict, pw_dict
-
-    def multipliers(self):
-        """Return the proportion dictionary."""
-        return self.config_dict['stim_proportion']
-
-    def currentLimit(self):
-        """Return the max current among all channels."""
-        return self.config_dict['stim_limit']
-
-    def updateParam(self, new, value=None):
-        if isinstance(new, dict):
-            self.config_dict = new
-        else:
-            self.config_dict[new] = value
-        return
