@@ -143,7 +143,7 @@ class Trike(object):
 
         return stim_dict, increment
 
-    def initialize(self, current_dict):
+    def initialize(self, current_dict, pw_dict):
         """Initialize the current amplitude.
 
         Attributes:
@@ -154,8 +154,9 @@ class Trike(object):
 
         for ch in stim_order:
             current_dict[ch] = round(ini*proportion[ch])
+            pw_dict[ch] = self.config_dict['pulse_width']
 
-        return ini, current_dict
+        return ini, current_dict, pw_dict
 
     def multipliers(self):
         """Return the proportion dictionary."""

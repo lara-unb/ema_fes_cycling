@@ -65,11 +65,11 @@ class TrikeWrapper(object):
 
         # Other components
         self.on_off = False  # System on/off
-        self.angle = []  # List of pedal angles
-        self.speed = []  # List of pedal angular speeds
+        self.angle = [0]  # List of pedal angles
+        self.speed = [0]  # List of pedal angular speeds
         self.speed_ref = 300  # Reference speed
-        self.speed_err = []  # Speed error
-        self.time = []  # List of imu timestamps
+        self.speed_err = [0]  # Speed error
+        self.time = [0]  # List of imu timestamps
 
         # Initial setup
         self.build_msgs()
@@ -84,12 +84,13 @@ class TrikeWrapper(object):
         # Exclusive initialization for embedded
         if self.platform == 'rasp':
             # Initialize control
-            self.stim_current_max, self.stim_current = self.trike.initialize(self.stim_current)
+            self.stim_current_max, self.stim_current, self.stim_pw = self.trike.initialize(
+                self.stim_current, self.stim_pw)
         # Exclusive initialization for desktop
         elif self.platform == 'pc':
             # Communicate with the dynamic server
             self.paramserver = dynamic_reconfigure.client.Client('trike_config',
-                config_callback=server_callback)  # 'server_node_name'
+                config_callback=self.server_callback)  # 'server_node_name'
 
     def build_msgs(self):
         """Prepare and build msgs according to their ROS Msg type."""
@@ -112,9 +113,9 @@ class TrikeWrapper(object):
     def set_topics(self):
         """Declare the subscribed and published ROS Topics."""
         # List subscribed topics:
-        self.topics['sub']['pedal'] = rospy.Subscriber('imu/pedal', Imu, pedal_callback)
+        self.topics['sub']['pedal'] = rospy.Subscriber('imu/pedal', Imu, self.pedal_callback)
         # List published topics:
-        self.topics['pub']['stim'] = rospy.Publisher('stimulator/single_pulse', Stimulator, queue_size=10)
+        self.topics['pub']['stim'] = rospy.Publisher('stimulator/ccl_update', Stimulator, queue_size=10)
         self.topics['pub']['signal'] = rospy.Publisher('trike/signal', Int32MultiArray, queue_size=10)
         self.topics['pub']['angle'] = rospy.Publisher('trike/angle', Float64, queue_size=10)
         self.topics['pub']['speed'] = rospy.Publisher('trike/speed', Float64, queue_size=10)
@@ -126,14 +127,14 @@ class TrikeWrapper(object):
         stimfactors = self.trike.calculate(self.angle[-1], self.speed[-1],
             self.speed_ref, self.speed_err)
         # Update instant current
-        for k, v in self.stim_current:
+        for k, v in self.stim_current.items():
             channel = int(''.join(num for num in k if num.isdigit()))  # int in str
             self.stim_current_now[channel] = round(stimfactors[channel-1]*v)
 
     def update_msgs(self):
         """Modify ROS Msg variables according to their present value."""
         # Update stimulation pulse width and current values
-        for k, v in self.stim_pw:
+        for k, v in self.stim_pw.items():
             channel = int(''.join(num for num in k if num.isdigit()))  # int in str
             self.msgs['stim'].pulse_width[channel-1] = v
         self.msgs['stim'].pulse_current = self.stim_current_now[1:]
@@ -145,7 +146,7 @@ class TrikeWrapper(object):
 
     def publish_msgs(self):
         """Publish on all ROS Topics."""
-        for name, tp in self.topics['pub']:
+        for name, tp in self.topics['pub'].items():
             tp.publish(self.msgs[name])
 
     def server_callback(self, config):
