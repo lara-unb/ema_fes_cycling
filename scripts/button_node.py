@@ -10,7 +10,8 @@ import RPi.GPIO as GPIO
 
 global pressed_time
 global current_button_value
-
+pressed_time = 0
+current_button_value = 0
 def button1_callback(channel):
     global pressed_time
     global current_button_value
@@ -48,7 +49,7 @@ def main():
     # init I/O config
     button1=11
     button2=13
-    bouncetime = 20
+    bouncetime =140
     # set GPIO mode reference to board pin order
     GPIO.setmode(GPIO.BOARD)
 
@@ -63,7 +64,7 @@ def main():
     pub = rospy.Publisher('button/action', UInt8, queue_size=10)
 
     # define loop rate (in hz)
-    rate = rospy.Rate(20)
+    rate = rospy.Rate(15)
 
     #Time to wait to publish when a button is pressed (Miliseconds)
 
@@ -73,8 +74,8 @@ def main():
 
         if current_button_value > 0:
             if (time.time()-pressed_time) * 1000 > wait_time:     
-                pub.publish(UInt8(current_value))
-                current_value = 0
+                pub.publish(UInt8(current_button_value))
+                current_button_value = 0
         rate.sleep()
     GPIO.cleanup()
 

@@ -6,10 +6,21 @@ from std_msgs.msg import UInt8
 
 global display_service
 
+global last
+global count
+last = 0
+count = 0
 def button_callback(data):
+    global last
+    global count
+    if last == data.data:
+        count += 1
+    else:
+        count=1
+    last = data.data
+    print(count)
     resp = display_service(message="Teste",line=0,position=3,clear=1)
-    resp = display_service(message="%d"%data.data,line=1,position=6,clear=0)
-
+    resp = display_service(message="%d %d"%(data.data,count),line=1,position=6,clear=0)
 def main():
     global display_service
     rospy.init_node('display_test', anonymous=False)
