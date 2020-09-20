@@ -12,18 +12,30 @@ global pressed_time
 global current_button_value
 pressed_time = 0
 current_button_value = 0
-def button1_callback(channel):
+def button_callback(channel):
     global pressed_time
     global current_button_value
+    global button1
+    global button2
     current = time.time()
-    if current_button_value == 0:
-        current_button_value = 1
+    if channel == button1:
+        if current_button_value == 0:
+            current_button_value = 1
 
-    elif current_button_value == 1:
-        current_button_value = 4 
+        elif current_button_value == 1:
+            current_button_value = 4 
 
-    elif current_button_value == 2:       
-        current_button_value = 3
+        elif current_button_value == 2:       
+            current_button_value = 3
+    elif channel == button2:
+        if current_button_value == 0:
+            current_button_value = 2
+
+        elif current_button_value == 2:
+            current_button_value = 5 
+
+        elif current_button_value == 1:       
+            current_button_value = 3
     pressed_time = current
 
 def button2_callback(channel):
@@ -40,15 +52,21 @@ def button2_callback(channel):
         current_button_value = 3
     pressed_time = current
 
+global button1
+global button2
+button1=11
+button2=13
+
 def main():
+    global button1
+    global button2
     global current_button_value
     global pressed_time
     # init button node
     rospy.init_node('button', anonymous=False)
 
     # init I/O config
-    button1=11
-    button2=13
+    
     bouncetime =140
     # set GPIO mode reference to board pin order
     GPIO.setmode(GPIO.BOARD)
@@ -58,8 +76,8 @@ def main():
     GPIO.setup(button2, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     
     #Set on interrupt event in button ports
-    GPIO.add_event_detect(button1, GPIO.RISING, callback=button1_callback, bouncetime=bouncetime)
-    GPIO.add_event_detect(button2, GPIO.RISING, callback=button2_callback, bouncetime=bouncetime)
+    GPIO.add_event_detect(button1, GPIO.RISING, callback=button_callback, bouncetime=bouncetime)
+    GPIO.add_event_detect(button2, GPIO.RISING, callback=button_callback, bouncetime=bouncetime)
     # list published topics
     pub = rospy.Publisher('button/action', UInt8, queue_size=10)
 
