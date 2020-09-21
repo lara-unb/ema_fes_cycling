@@ -41,10 +41,10 @@ class Control(object):
         ramp_degrees = 10.0
 
         # dth = (speed/speed_ref)*param_dict['Shift']
-        # dth = (speed/speed_ref)*self.config_dict['Shift']
+        dth = (speed/speed_ref)*self.config_dict['shift']
 
         # Shift disabled:
-        dth = 0
+        # dth = 0
 
         theta_min = self.config_dict[ch+"AngleMin"] - dth
         theta_max = self.config_dict[ch+"AngleMax"] - dth

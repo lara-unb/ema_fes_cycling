@@ -33,15 +33,15 @@ http://wiki.ros.org/roslaunch/XML
         <group if="$(eval platform == 'pc')">
             <node name="trike_config" pkg="ema_fes_cycling" type="trike_server_node.py" output="screen" respawn="true" respawn_delay="5"/>
             <node name="dashboard" pkg="rqt_gui" type="rqt_gui" output="log" args="--perspective-file $(find ema_fes_cycling)/perspective/EMA_Trike.perspective"/>
-            <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args=" /ema/trike/angle /ema/trike/stimsignal 
-                /ema/stimulator/ccl_update -o $(env HOME)/bagfiles/ema_fes_cycling/ --split --max-splits 3 --duration 5m"/>
+            <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args=" /ema/trike/angle /ema/trike/speed /ema/trike/cadence /ema/trike/distance
+                /ema/trike/stimsignal /ema/stimulator/ccl_update -o $(env HOME)/bagfiles/ema_fes_cycling/ --split --max-splits 12 --duration 5m"/>
         </group>
 
         <!-- launch rasp-exclusive nodes -->
         <group if="$(eval platform == 'rasp')">
             <node name="button" pkg="ema_fes_cycling" type="button_node.py" output="screen" respawn="true" respawn_delay="5"/>
-            <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args="/ema/button/action /ema/trike/angle 
-                /ema/trike/stimsignal /ema/stimulator/ccl_update -o $(env HOME)/bagfiles/ema_fes_cycling/ --split --max-splits 3 --duration 5m"/>
+            <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args=" /ema/trike/angle /ema/trike/speed /ema/trike/cadence /ema/trike/distance
+                /ema/trike/stimsignal /ema/stimulator/ccl_update -o $(env HOME)/bagfiles/ema_fes_cycling/ --split --max-splits 12 --duration 5m"/>
 
             <!-- launch lcd-exclusive node -->
             <group if="$(eval display_type == 'lcd')">
