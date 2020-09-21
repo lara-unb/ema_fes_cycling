@@ -67,14 +67,17 @@ def main():
 
     # init I/O config
     
-    bouncetime =140
+    
     # set GPIO mode reference to board pin order
     GPIO.setmode(GPIO.BOARD)
 
     # turn on GPIO pull down onboard resistors 
     GPIO.setup(button1, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(button2, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-    
+
+    bouncetime=200
+    wait_time=300
+
     #Set on interrupt event in button ports
     GPIO.add_event_detect(button1, GPIO.RISING, callback=button_callback, bouncetime=bouncetime)
     GPIO.add_event_detect(button2, GPIO.RISING, callback=button_callback, bouncetime=bouncetime)
@@ -82,11 +85,9 @@ def main():
     pub = rospy.Publisher('button/action', UInt8, queue_size=10)
 
     # define loop rate (in hz)
-    rate = rospy.Rate(15)
+    rate = rospy.Rate(100)
 
-    #Time to wait to publish when a button is pressed (Miliseconds)
-
-    wait_time = 200 
+    #Time to wait to publish when a button is pressed (Miliseconds) 
     # node loop
     while not rospy.is_shutdown():
 
