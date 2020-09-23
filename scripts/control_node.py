@@ -113,24 +113,25 @@ def pedal_callback(data):
 
     # get angle position
     qx,qy,qz,qw = data.orientation.x,data.orientation.y,data.orientation.z,data.orientation.w
-    euler = transformations.euler_from_quaternion([qx, qy, qz, qw], axes='rzyx')
+    # rzxy - return (pitch, roll, yaw)
+    euler = transformations.euler_from_quaternion([qx, qy, qz, qw], axes='rzxy')
 
-    x = euler[2]
-    y = euler[1]
+    roll = euler[1]
+    yaw = euler[2]
 
     # correct issues with more than one axis rotating
-    if y >= 0:
-        y = (y/pi) * 180
-        if abs(x) > (pi*0.5):
-            y = 180-y            
+    if yaw >= 0:
+        yaw = (yaw/pi) * 180
+        if abs(roll) > (pi*0.5):
+            yaw = 180-yaw
     else:
-        y = (y/pi) * 180
-        if abs(x) > (pi*0.5):
-            y = 180 - y
+        yaw = (yaw/pi) * 180
+        if abs(roll) > (pi*0.5):
+            yaw = 180 - yaw
         else:
-            y = 360 + y
+            yaw = 360 + yaw
 
-    angle.append(y)
+    angle.append(yaw)
 
     # get angular speed
     speed.append(data.angular_velocity.y*(180/pi))
