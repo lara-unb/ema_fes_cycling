@@ -34,15 +34,12 @@ with their own characteristcs:
 
 import rospy
 
-# Import ros msgs
+# Import ROS msgs
 from std_msgs.msg import UInt8
 from std_srvs.srv import Empty
 from std_srvs.srv import SetBool
 from ema_common_msgs.srv import Display
 from ema_common_msgs.srv import SetUInt16
-
-# Import utilities
-import os
 
 # Declare constants
 DISPLAY_SIZE = (2,16)
@@ -129,14 +126,14 @@ class Interface(object):
         self.services (dict): dict with all ROS services
     """
     def __init__(self, ref_dict):
-        rospy.loginfo('Initializing interface...')
+        rospy.loginfo('Initializing interface')
         self.screen_now = {}
         self.screens = {}
         self.services = {}
         self.topics = {'pub': {},'sub': {}}
 
         # Connect to vital services
-        rospy.loginfo('Connecting to vital services...')
+        rospy.loginfo('Connecting to vital services')
         try:
             rospy.wait_for_service('display/write')
             self.services['display'] = rospy.ServiceProxy(
@@ -144,11 +141,18 @@ class Interface(object):
         except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
             raise
+        try:
+            rospy.wait_for_service('control/kill_all')
+            self.services['kill_all'] = rospy.ServiceProxy(
+                'control/kill_all', Empty)
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logerr(e)
+            raise
 
         self.display_write(self.format_msg('...', 0), 1, 0, True)
 
         # Organize the interface structure
-        rospy.loginfo('Building screen structure...')
+        rospy.loginfo('Building screen structure')
         self.build_screen_group(ref_dict)
         for name, screen in self.screens.items():
             # Get the first screen displayed
@@ -160,13 +164,7 @@ class Interface(object):
         self.display_write(self.format_msg('Iniciando...', 0), 1, 0, False)
 
         # Connect to other services
-        rospy.loginfo('Connecting to other services...')
-        try:
-            rospy.wait_for_service('control/kill_all', timeout=1.0)
-            self.services['kill_all'] = rospy.ServiceProxy(
-                'control/kill_all', Empty)
-        except (rospy.ServiceException, rospy.ROSException) as e:
-            rospy.logerr(e)
+        rospy.loginfo('Connecting to other services')
         try:
             rospy.wait_for_service('imu/set_imu_number', timeout=1.0)
             self.services['set_imu_number'] = rospy.ServiceProxy(
@@ -208,7 +206,7 @@ class Interface(object):
         self.topics['sub']['buttons'] = rospy.Subscriber('button/action', UInt8, self.button_callback)
 
         # Get the initial value for imu number, current, pw, freq, etc...
-        rospy.loginfo('Loading parameter values...')
+        rospy.loginfo('Loading parameter values')
         self.update_parameters()
         self.display_write(self.format_msg('APERTE UM BOTAO', 0), 1, 0, False)
         rospy.loginfo('Ready!')
@@ -352,6 +350,7 @@ class Interface(object):
             if action == 'both':
                 self.display_write(self.format_msg('Desligando...', 0), 1, 0, True)
                 self.kill_all()
+                rospy.sleep(3)  # Avoid changing the display
                 return
             else:
                 self.screen_now = self.screens[self.screen_now['select']]
@@ -360,6 +359,7 @@ class Interface(object):
                 if action == 'both':  # Shutdown
                     self.display_write(self.format_msg('Desligando...', 0), 1, 0, True)
                     self.kill_all()
+                    rospy.sleep(3)  # Avoid changing the display
                 elif action == 'single_left':  # Previous same level menu
                     output_screen_name = self.screen_now['prev']
                     self.screen_now = self.screens[output_screen_name]
@@ -420,6 +420,7 @@ class Interface(object):
         elif button == 'both':
             self.display_write(self.format_msg('Desligando...', 0), 1, 0, True)
             self.kill_all()
+            rospy.sleep(3)  # Avoid changing the display
         # Check param and go to parent, previous upper level menu
         elif button == 'double_left':
             if param_now:  # Param value exists
@@ -464,6 +465,7 @@ class Interface(object):
         elif button == 'both':
             self.display_write(self.format_msg('Desligando...', 0), 1, 0, True)
             self.kill_all()
+            rospy.sleep(3)  # Avoid changing the display
         # Check param and go to parent, previous upper level menu
         elif button == 'double_left':
             if param_now:  # Param value exists
@@ -508,6 +510,7 @@ class Interface(object):
         elif button == 'both':
             self.display_write(self.format_msg('Desligando...', 0), 1, 0, True)
             self.kill_all()
+            rospy.sleep(3)  # Avoid changing the display
         # Check param and go to parent, previous upper level menu
         elif button == 'double_left':
             if param_now:  # Param value exists
@@ -552,6 +555,7 @@ class Interface(object):
         elif button == 'both':
             self.display_write(self.format_msg('Desligando...', 0), 1, 0, True)
             self.kill_all()
+            rospy.sleep(3)  # Avoid changing the display
         # Check param and go to parent, previous upper level menu
         elif button == 'double_left':
             if param_now:  # Param value exists
@@ -588,6 +592,7 @@ class Interface(object):
             self.display_write(self.format_msg('Desligando...', 0), 1, 0, True)
             self.on_off(False)
             self.kill_all()
+            rospy.sleep(3)  # Avoid changing the display
         # Change the displayed value and request a change in intensity
         else:
             if param_now:  # Param value exists
@@ -603,7 +608,7 @@ class Interface(object):
     def kill_all(self):
         """Call a ROS Service to shutdown all nodes."""
         try:
-            rospy.wait_for_service('control/kill_all', timeout=1.0)
+            rospy.wait_for_service('control/kill_all')
             self.services['kill_all']()
             return True
         except (rospy.ServiceException, rospy.ROSException) as e:
@@ -722,19 +727,22 @@ class Interface(object):
 
 def main():
     # Init display node
+    rospy.loginfo('Initializing node')
     rospy.init_node('interface')
     
     # Create interface auxiliary class
+    rospy.loginfo('Creating auxiliary class')
     aux = Interface(menu_ref)
 
     # List provided services
+    rospy.loginfo('Setting up services')
     services = {}
     services['kill_node'] = rospy.Service('interface/kill_node', Empty, kill_node_callback)
  
     # Call service to turn off control when stopping
     rospy.on_shutdown(aux.shutdown)
 
-    # Keep python from exiting til the node stops
+    # Keep python from exiting until the node stops
     rospy.spin()
 
 if __name__ == '__main__':
