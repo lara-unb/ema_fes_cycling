@@ -6,5 +6,5 @@ initial_current: 0
 pulse_width: 500
 shift: 0
 stim_limit: 110
-stim_proportion: {Ch1: 1.0, Ch2: 1.0, Ch3: 0.0, Ch4: 0.0, Ch5: 0.0, Ch6: 0.0, Ch7: 0.0,
-  Ch8: 0.0}
+stim_proportion: {Ch1: 1.0, Ch2: 1.0, Ch3: 0.5, Ch4: 0.5, Ch5: 0.0, Ch6: 0.0, Ch7: 1.0,
+  Ch8: 1.0}

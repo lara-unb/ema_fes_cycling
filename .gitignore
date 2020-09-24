@@ -47,3 +47,4 @@ qtcreator-*
 CATKIN_IGNORE
 
 \.idea/
+scripts/quaternion.py

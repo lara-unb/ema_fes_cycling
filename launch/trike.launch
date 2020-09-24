@@ -4,6 +4,8 @@
     <!-- declare and load launch arguments-->
     <arg name="platform" value="rasp" doc="specify which platform to use: rasp/pc"/>
     <param name="platform" value="$(arg platform)"/>
+    <arg name="display_type" value="lcd" doc="specify display type connected: lcd/oled"/>
+    <param name="display_type" value="$(arg display_type)"/>
 
     <!-- load common config files-->
     <rosparam command="load" file="$(find yostlabs_3space_imu)/config/imu.yaml" ns="imu"/>
@@ -13,9 +15,8 @@
     <!-- launch common nodes -->
     <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/>
     <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/>
-    <node name="control" pkg="ema_fes_cycling" type="control_node.py" output="log" respawn="true" respawn_delay="5"/>
-    <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args="/ema/button/action /ema/control/angle 
-        /ema/control/stimsignal /ema/stimulator/ccl_update -o /home/ubuntu/bagfiles/ --split --max-splits 3 --duration 5m"/>
+    <node name="control" pkg="ema_fes_cycling" type="control_node.py" output="screen" respawn="true" respawn_delay="5"/>
+    <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args="/ema/button/action /ema/control/angle /ema/control/speed /ema/control/cadence /ema/control/distance /ema/control/stimsignal /ema/stimulator/ccl_update -o /home/ubuntu/bagfiles/ --split --max-splits 12 --duration 5m"/>
 
     <!-- launch pc-exclusive nodes -->
     <group if="$(eval platform == 'pc')">
@@ -24,7 +25,14 @@
 
     <!-- launch rasp-exclusive nodes -->
     <group if="$(eval platform == 'rasp')">
-    </group>
+      <node name="interface" pkg="ema_fes_cycling" type="interface_node.py" output="screen" respawn="true" respawn_delay="5"/>
+      <node name="button" pkg="ema_fes_cycling" type="button_node.py" output="screen" respawn="true" respawn_delay="5"/>
+      
+      <!-- launch lcd-exclusive node -->
+      <group if="$(eval display_type == 'lcd')">
+          <node name="display" pkg="ema_fes_cycling" type="display_node.py" output="screen" respawn="true" respawn_delay="5"/>
+      </group>
 
+    </group>
   </group>
 </launch>

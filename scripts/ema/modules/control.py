@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
+import numpy as np
 
 # stim channel mapping
 stim_order = [
@@ -27,8 +28,8 @@ class Control:
         # param_dict = rospy.get_param('/ema/server/')
         # dth = (speed/speed_ref)*param_dict['Shift']
         param_dict = self.config_dict['Ch'+str(min(n,m))+str(max(n,m))]
-        # dth = (speed/speed_ref)*self.config_dict['Shift']
-        dth = 0
+        dth = (speed/speed_ref)*self.config_dict['shift']
+        # dth = 0
 
         theta_min = param_dict[ch+"_Angle_Min"] - dth
         theta_max = param_dict[ch+"_Angle_Max"] - dth
