@@ -166,37 +166,37 @@ class Interface(object):
         # Connect to other services
         rospy.loginfo('Connecting to other services')
         try:
-            rospy.wait_for_service('imu/set_imu_number', timeout=1.0)
+            rospy.wait_for_service('imu/set_imu_number', timeout=30.0)
             self.services['set_imu_number'] = rospy.ServiceProxy(
                 'imu/set_imu_number', SetUInt16)
         except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
         try:
-            rospy.wait_for_service('control/set_pulse_width', timeout=1.0)
+            rospy.wait_for_service('control/set_pulse_width', timeout=30.0)
             self.services['set_pulse_width'] = rospy.ServiceProxy(
                 'control/set_pulse_width', SetUInt16)
         except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
         try:
-            rospy.wait_for_service('stimulator/set_frequency', timeout=1.0)
+            rospy.wait_for_service('stimulator/set_frequency', timeout=30.0)
             self.services['set_stim_freq'] = rospy.ServiceProxy(
                 'stimulator/set_frequency', SetUInt16)
         except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
         try:
-            rospy.wait_for_service('control/set_init_intensity', timeout=1.0)
+            rospy.wait_for_service('control/set_init_intensity', timeout=30.0)
             self.services['set_init_intensity'] = rospy.ServiceProxy(
                 'control/set_init_intensity', SetUInt16)
         except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
         try:
-            rospy.wait_for_service('control/change_intensity', timeout=1.0)
+            rospy.wait_for_service('control/change_intensity', timeout=30.0)
             self.services['intensity'] = rospy.ServiceProxy(
                 'control/change_intensity', SetBool, persistent=True)
         except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
         try:
-            rospy.wait_for_service('control/on_off', timeout=1.0)
+            rospy.wait_for_service('control/on_off', timeout=30.0)
             self.services['on_off'] = rospy.ServiceProxy(
                 'control/on_off', SetBool)
         except (rospy.ServiceException, rospy.ROSException) as e:
