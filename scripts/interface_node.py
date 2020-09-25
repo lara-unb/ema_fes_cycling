@@ -734,13 +734,13 @@ def main():
     rospy.loginfo('Creating auxiliary class')
     aux = Interface(menu_ref)
 
+    # Prepare function to be executed when shutting down
+    rospy.on_shutdown(aux.shutdown)
+
     # List provided services
     rospy.loginfo('Setting up services')
     services = {}
     services['kill_node'] = rospy.Service('interface/kill_node', Empty, kill_node_callback)
- 
-    # Call service to turn off control when stopping
-    rospy.on_shutdown(aux.shutdown)
 
     # Keep python from exiting until the node stops
     rospy.spin()

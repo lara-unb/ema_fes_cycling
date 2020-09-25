@@ -86,12 +86,9 @@ def kill_all_callback(req):
     nodes = rosnode.get_node_names('ema')  # List all nodes running
     nodes.remove(rospy.get_name())  # All nodes except this
     # Shutdown the nodes and rely on roslaunch respawn to restart
-    for name in nodes:
-        try:
-            rospy.wait_for_service(name+'/kill_node', timeout=1.0)
-            rospy.ServiceProxy(name+'/kill_node', Empty)()
-        except (rospy.ServiceException, rospy.ROSException) as e:
-            rospy.logerr(e)
+    success_list, fail_list = rosnode.kill_nodes(nodes)
+    if fail_list:
+        rospy.logerr('Shutdown all nodes: failed on %s', fail_list)
     rospy.loginfo('Node shutdown: service request')
     rospy.Timer(rospy.Duration(3), rospy.signal_shutdown, oneshot=True)
     return {}
