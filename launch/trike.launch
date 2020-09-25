@@ -16,7 +16,7 @@
     <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/>
     <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/>
     <node name="control" pkg="ema_fes_cycling" type="control_node.py" output="screen" respawn="true" respawn_delay="5"/>
-    <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args="/ema/button/action /ema/control/angle /ema/control/speed /ema/control/cadence /ema/control/distance /ema/control/stimsignal /ema/stimulator/ccl_update -o /home/ubuntu/bagfiles/ --split --max-splits 12 --duration 5m"/>
+    <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args="-a -o /home/ubuntu/bagfiles/ --split --max-splits 12 --duration 5m"/>
 
     <!-- launch pc-exclusive nodes -->
     <group if="$(eval platform == 'pc')">
