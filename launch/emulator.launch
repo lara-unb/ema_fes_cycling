@@ -16,7 +16,7 @@
     <node name="control" pkg="ema_fes_cycling" type="control_node.py" output="log" respawn="true" respawn_delay="5"/>
     <node name="display" pkg="ema_fes_cycling" type="display_emulator.py" output="log" respawn="true" respawn_delay="5"/>
     <node name="interface" pkg="ema_fes_cycling" type="interface_node.py" output="screen" respawn="true" respawn_delay="5"/>
-    <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args="-a -o /home/robond/bagfiles/ --split --max-splits 3 --duration 5m"/>
+    <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args="-a -o /home/ubuntu/bagfiles/ --split --max-splits 12 --duration 5m"/>
 
     
 
