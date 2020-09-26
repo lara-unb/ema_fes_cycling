@@ -322,11 +322,14 @@ def main():
             try: # Ignore ZeroDivisionError
                 new_cycle = True
                 cycles += 1  # Count turns
-                mean_cadence = sum(cycle_speed)/len(cycle_speed)  # Simple mean
+                # Simple mean and 6 for deg/s to rpm
+                mean_cadence = sum(cycle_speed)/(6*len(cycle_speed))
+                # One crankset turn is equivalent to 1.5 wheel turn, the
+                # tire diameter is 66cm(26in) and 100k for cm to km, so...
+                # pi*1.5*66[rpm] = 1[cm/min] and 60/100k[cm/min] = 1[km/h]
+                mean_cadence = pi*0.0594*mean_cadence  # rpm to km/h
                 cycle_speed = []  # Reset list for new cycle
-                # Fator 1.5 corresponde a volta da coroa em relacao ao pneu,
-                # 66cm(26pol) ao diametro do pneu e 100000 a conversao cm->km
-                distance_km = (cycles*3.14159*1.5*66)/100000
+                distance_km = (cycles*pi*1.5*66)/100000
                 rospy.logdebug('Cycle: %d, Cadence: %.2f, Distance: %.2f', cycles, mean_cadence, distance_km)
             except:
                 pass

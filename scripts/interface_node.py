@@ -35,6 +35,7 @@ with their own characteristcs:
 import rospy
 
 # Import ROS msgs
+from std_msgs.msg import Float64
 from std_msgs.msg import UInt8
 from std_srvs.srv import Empty
 from std_srvs.srv import SetBool
@@ -94,7 +95,7 @@ menu_ref = {
                 'msg':'Iniciar',
                 'submenus': {
                     'cycling': {
-                        'msg':'Corrente:\n0 mA',
+                        'msg':'0.0 km/h\n0 mA',
                         'submenus': {}
                     }
                 }
@@ -202,7 +203,8 @@ class Interface(object):
         except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
 
-        # Set the buttons topic
+        # Set the cadence and buttons topic
+        self.topics['sub']['cadence'] = rospy.Subscriber('control/cadence', Float64, self.cadence_callback)
         self.topics['sub']['buttons'] = rospy.Subscriber('button/action', UInt8, self.button_callback)
 
         # Get the initial value for imu number, current, pw, freq, etc...
@@ -279,7 +281,13 @@ class Interface(object):
 
         for k, v in screen_ref.items():
             if v:
-                param_now = ''.join(x for x in self.screens[k]['msg'] if x.isdigit())  # int in str
+                msg_now = self.screens[k]['msg']
+                # Cycling is special for having two numeric values
+                if k == 'cycling':
+                    split_lines = msg_now.split('\n')  # Split lines
+                    param_line = [idx for idx, s in enumerate(split_lines) if 'mA' in s][0]
+                    msg_now = split_lines[param_line]
+                param_now = ''.join(x for x in msg_now if x.isdigit())  # int in str
                 self.screens[k]['msg'] = self.screens[k]['msg'].replace(param_now,v)
             else:
                 line2_begin = self.screens[k]['msg'].index('\n')+1
@@ -318,6 +326,32 @@ class Interface(object):
         paddingR = (remainder/2)+(remainder%2)
         msg = (paddingL*' ')+msg+(paddingR*' ')
         return msg
+
+    def cadence_callback(self, data):
+        """ROS Topic callback to get the crankset cadence.
+
+        Attributes:
+            data (Float64): latest msg for cadence in km/h
+        """
+        param_new = data.data
+        if param_new < 0:
+            param_new = float(0)
+        try:
+            # Get cycling screen msg and isolate cadence in km/h
+            msg_now = self.screens['cycling']['msg']
+            split_lines = msg_now.split('\n')  # Split lines
+            param_line = [idx for idx, s in enumerate(split_lines) if 'km/h' in s][0]
+            temp_split = split_lines[param_line].split()
+            param_now = [x for x in temp_split if x.replace('.','',1).isdigit()][0]  # int/float in str
+        except IndexError as e:  # When 'km/h' isnt a substring
+            return
+        if str(round(param_new,1)) != param_now:  # Cadence changed
+            split_lines[param_line] = split_lines[param_line].replace(param_now,str(round(param_new,1)))
+            self.screens['cycling']['msg'] = '\n'.join(split_lines)
+            if self.screen_now['label'] == 'cycling':
+                # Update display
+                update = self.format_msg(split_lines[param_line], 0)
+                self.display_write(update, param_line, 0, False)
 
     def button_callback(self, data):
         """ROS Topic callback to classify button commands from the user
@@ -438,7 +472,7 @@ class Interface(object):
                     stat = 'OK'
             self.screen_now = self.screens[self.screen_now['parent']]
             self.display_write(self.format_msg(stat, 0), 1, 0, True)
-            rospy.sleep(5)  # Wait 2s
+            rospy.sleep(5)
             self.update_display()
 
     def change_pw(self, button):
@@ -483,7 +517,7 @@ class Interface(object):
                     stat = 'OK'
             self.screen_now = self.screens[self.screen_now['parent']]
             self.display_write(self.format_msg(stat, 0), 1, 0, True)
-            rospy.sleep(5)  # Wait 2s
+            rospy.sleep(5)
             self.update_display()
 
     def change_freq(self, button):
@@ -528,7 +562,7 @@ class Interface(object):
                     stat = 'OK'
             self.screen_now = self.screens[self.screen_now['parent']]
             self.display_write(self.format_msg(stat, 0), 1, 0, True)
-            rospy.sleep(5)  # Wait 2s
+            rospy.sleep(5)
             self.update_display()
 
     def change_current(self, button):
@@ -561,7 +595,6 @@ class Interface(object):
             if param_now:  # Param value exists
                 param_new = str(rospy.get_param('control/initial_current'))
                 self.screen_now['msg'] = msg_now.replace(param_now,param_new)
-                self.screens['cycling']['msg'] = self.screen_now['msg']
             self.screen_now = self.screens[self.screen_now['parent']]
             self.update_display()
         # Confirm modification
@@ -571,11 +604,20 @@ class Interface(object):
                 result = self.set_init_intensity(int(param_now))
                 if result:
                     self.screen_now['msg'] = msg_now.replace(param_now,result)
-                    self.screens['cycling']['msg'] = self.screen_now['msg']
                     stat = 'OK'
+                    try:
+                        # Replace on cycling screen as well
+                        cycling_msg = self.screens['cycling']['msg']
+                        split_lines = cycling_msg.split('\n')  # Split lines
+                        param_line = [idx for idx, s in enumerate(split_lines) if 'mA' in s][0]
+                        cycling_param = ''.join(x for x in split_lines[param_line] if x.isdigit())  # int in str
+                        split_lines[param_line] = split_lines[param_line].replace(cycling_param,result)
+                        self.screens['cycling']['msg'] = '\n'.join(split_lines)
+                    except IndexError as e:  # When 'mA' isnt a substring
+                        pass
             self.screen_now = self.screens[self.screen_now['parent']]
             self.display_write(self.format_msg(stat, 0), 1, 0, True)
-            rospy.sleep(5)  # Wait 2s
+            rospy.sleep(5)
             self.update_display()
 
     def cycling(self, button):
@@ -584,26 +626,34 @@ class Interface(object):
         Attributes:
             button (string): describes button event
         """
-        # Get present screen msg and isolate its present param
-        msg_now = self.screen_now['msg']
-        param_now = ''.join(x for x in msg_now if x.isdigit())  # int in str
         # Shutdown
         if button == 'both':
             self.display_write(self.format_msg('Desligando...', 0), 1, 0, True)
             self.on_off(False)
             self.kill_all()
             rospy.sleep(3)  # Avoid changing the display
+            return
         # Change the displayed value and request a change in intensity
         else:
+            try:
+                # Get screen msg and isolate intensity in mA
+                msg_now = self.screen_now['msg']
+                split_lines = msg_now.split('\n')  # Split lines
+                param_line = [idx for idx, s in enumerate(split_lines) if 'mA' in s][0]
+                param_now = ''.join(x for x in split_lines[param_line] if x.isdigit())  # int in str
+            except IndexError as e:  # When 'mA' isnt a substring
+                return
             if param_now:  # Param value exists
                 request = 0 if button in {'single_left', 'double_left'} else 1  # Drecease or increase
                 result = self.change_intensity(request)
+                # Replace param value and update display
                 if result:
                     param_new = result
-                    self.screen_now['msg'] = msg_now.replace(param_now,param_new)
-                    line2_begin = self.screen_now['msg'].index('\n')+1
-                    update = self.format_msg(self.screen_now['msg'][line2_begin:], 0)
-                    self.display_write(update, 1, 0, False)
+                    split_lines[param_line] = split_lines[param_line].replace(param_now,param_new)
+                    self.screen_now['msg'] = '\n'.join(split_lines)
+                    update = self.format_msg(split_lines[param_line], 0)
+                    self.display_write(update, param_line, 0, False)
+        return
 
     def kill_all(self):
         """Call a ROS Service to shutdown all nodes."""
