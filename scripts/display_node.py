@@ -18,7 +18,8 @@ global lcdi2c
 
 # initialize lcd display
 lcdi2c = display.Display()
-lcdi2c.lcd_display_string("Pronto para Uso", 1,1)
+lcdi2c.lcd_display_string("Ligando...", 1,3)
+lcdi2c.lcd_display_string("Aguarde", 2,4)
 # set initial value
 #current =-1
 def display_request(req):
