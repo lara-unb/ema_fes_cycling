@@ -21,7 +21,7 @@ the screens are stored in the self.screens dict of the Interface class
 with their own characteristcs:
     - label (string): the screen label
     - msg (string): the screen message to be displayed
-    - type (string): 
+    - type (string):
         . 'root' has no parent, 
         . 'menu' might have next and prev,
         . 'action' prompts to a parameter change and has no select screen
@@ -99,6 +99,15 @@ menu_ref = {
                         'submenus': {}
                     }
                 }
+            },
+            'reboot': {
+                'msg':'Religar',
+                'submenus': {
+                    'reboot_screen': {
+                        'msg':'Religar\nVoltar|Confirmar',
+                        'submenus': {}
+                    }
+                }
             }
         }
     }
@@ -143,6 +152,13 @@ class Interface(object):
             rospy.logerr(e)
             raise
         try:
+            rospy.wait_for_service('control/reboot')
+            self.services['reboot'] = rospy.ServiceProxy(
+                'control/reboot', Empty)
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logerr(e)
+            raise
+        try:
             rospy.wait_for_service('control/kill_all')
             self.services['kill_all'] = rospy.ServiceProxy(
                 'control/kill_all', Empty)
@@ -167,7 +183,7 @@ class Interface(object):
         # Connect to other services
         rospy.loginfo('Connecting to other services')
         try:
-            rospy.wait_for_service('imu/set_imu_number', timeout=30.0)
+            # rospy.wait_for_service('imu/set_imu_number', timeout=30.0)
             self.services['set_imu_number'] = rospy.ServiceProxy(
                 'imu/set_imu_number', SetUInt16)
         except (rospy.ServiceException, rospy.ROSException) as e:
@@ -179,7 +195,7 @@ class Interface(object):
         except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
         try:
-            rospy.wait_for_service('stimulator/set_frequency', timeout=30.0)
+            # rospy.wait_for_service('stimulator/set_frequency', timeout=30.0)
             self.services['set_stim_freq'] = rospy.ServiceProxy(
                 'stimulator/set_frequency', SetUInt16)
         except (rospy.ServiceException, rospy.ROSException) as e:
@@ -214,8 +230,8 @@ class Interface(object):
         rospy.loginfo('Ready!')
 
     def shutdown(self):
-        """Send a turn off command to the controller."""
-        self.on_off(False)
+        """Perform the shutdown procedures for the interface."""
+        self.on_off(False)  # Make sure controller is off
 
     def build_screen_group(self, structure_dict, parent=''):
         """Recursively transfer the structure from the dict to the class.
@@ -382,7 +398,7 @@ class Interface(object):
         """
         if self.screen_now['type'] == 'root':
             if action == 'both':
-                self.display_write(self.format_msg('Desligando...', 0), 1, 0, True)
+                self.display_write(self.format_msg('Aguarde...', 0), 1, 0, True)
                 self.kill_all()
                 rospy.sleep(3)  # Avoid changing the display
                 return
@@ -390,8 +406,8 @@ class Interface(object):
                 self.screen_now = self.screens[self.screen_now['select']]
         elif self.screen_now['type'] == 'menu':
             try:
-                if action == 'both':  # Shutdown
-                    self.display_write(self.format_msg('Desligando...', 0), 1, 0, True)
+                if action == 'both':  # Kill all nodes and rely on launch respawn
+                    self.display_write(self.format_msg('Aguarde...', 0), 1, 0, True)
                     self.kill_all()
                     rospy.sleep(3)  # Avoid changing the display
                 elif action == 'single_left':  # Previous same level menu
@@ -426,6 +442,8 @@ class Interface(object):
                 return
             elif self.screen_now['label'] == 'cycling':
                 self.cycling(action)
+            elif self.screen_now['label'] == 'reboot_screen':
+                self.reboot_screen(action)
                 return
         self.update_display()
         return
@@ -450,9 +468,9 @@ class Interface(object):
                     line2_begin = self.screen_now['msg'].index('\n')+1
                     update = self.format_msg(self.screen_now['msg'][line2_begin:], 0)
                     self.display_write(update, 1, 0, False)
-        # Shutdown
+        # Kill all nodes and rely on launch respawn
         elif button == 'both':
-            self.display_write(self.format_msg('Desligando...', 0), 1, 0, True)
+            self.display_write(self.format_msg('Aguarde...', 0), 1, 0, True)
             self.kill_all()
             rospy.sleep(3)  # Avoid changing the display
         # Check param and go to parent, previous upper level menu
@@ -495,9 +513,9 @@ class Interface(object):
                     line2_begin = self.screen_now['msg'].index('\n')+1
                     update = self.format_msg(self.screen_now['msg'][line2_begin:], 0)
                     self.display_write(update, 1, 0, False)
-        # Shutdown
+        # Kill all nodes and rely on launch respawn
         elif button == 'both':
-            self.display_write(self.format_msg('Desligando...', 0), 1, 0, True)
+            self.display_write(self.format_msg('Aguarde...', 0), 1, 0, True)
             self.kill_all()
             rospy.sleep(3)  # Avoid changing the display
         # Check param and go to parent, previous upper level menu
@@ -540,9 +558,9 @@ class Interface(object):
                     line2_begin = self.screen_now['msg'].index('\n')+1
                     update = self.format_msg(self.screen_now['msg'][line2_begin:], 0)
                     self.display_write(update, 1, 0, False)
-        # Shutdown
+        # Kill all nodes and rely on launch respawn
         elif button == 'both':
-            self.display_write(self.format_msg('Desligando...', 0), 1, 0, True)
+            self.display_write(self.format_msg('Aguarde...', 0), 1, 0, True)
             self.kill_all()
             rospy.sleep(3)  # Avoid changing the display
         # Check param and go to parent, previous upper level menu
@@ -585,9 +603,9 @@ class Interface(object):
                     line2_begin = self.screen_now['msg'].index('\n')+1
                     update = self.format_msg(self.screen_now['msg'][line2_begin:], 0)
                     self.display_write(update, 1, 0, False)
-        # Shutdown
+        # Kill all nodes and rely on launch respawn
         elif button == 'both':
-            self.display_write(self.format_msg('Desligando...', 0), 1, 0, True)
+            self.display_write(self.format_msg('Aguarde...', 0), 1, 0, True)
             self.kill_all()
             rospy.sleep(3)  # Avoid changing the display
         # Check param and go to parent, previous upper level menu
@@ -626,9 +644,9 @@ class Interface(object):
         Attributes:
             button (string): describes button event
         """
-        # Shutdown
+        # Kill all nodes and rely on launch respawn
         if button == 'both':
-            self.display_write(self.format_msg('Desligando...', 0), 1, 0, True)
+            self.display_write(self.format_msg('Aguarde...', 0), 1, 0, True)
             self.on_off(False)
             self.kill_all()
             rospy.sleep(3)  # Avoid changing the display
@@ -655,18 +673,29 @@ class Interface(object):
                     self.display_write(update, param_line, 0, False)
         return
 
-    def kill_all(self):
-        """Call a ROS Service to shutdown all nodes."""
-        try:
-            rospy.wait_for_service('control/kill_all')
-            self.services['kill_all']()
-            return True
-        except (rospy.ServiceException, rospy.ROSException) as e:
-            rospy.logerr(e)
-            # Shutdown itself
-            rospy.loginfo('Node shutdown: kill all failed')
-            rospy.Timer(rospy.Duration(1), rospy.signal_shutdown, oneshot=True)
-        return False
+    def reboot_screen(self, button):
+        """Deal with user action on the reboot screen.
+
+        Attributes:
+            button (string): describes button event
+        """
+        # Kill all nodes and rely on launch respawn
+        if button == 'both':
+            self.display_write(self.format_msg('Aguarde...', 0), 1, 0, True)
+            self.kill_all()
+            rospy.sleep(3)  # Avoid changing the display
+        # Go to parent, previous upper level menu
+        elif button in {'single_left', 'double_left'}:
+            self.screen_now = self.screens[self.screen_now['parent']]
+            self.update_display()
+        # Confirm reboot or display error msg
+        elif button in {'single_right', 'double_right'}:
+            result = self.reboot()
+            if not result:
+                self.screen_now = self.screens[self.screen_now['parent']]
+                self.display_write(self.format_msg('ERRO', 0), 1, 0, True)
+                rospy.sleep(5)
+                self.update_display()
 
     def display_write(self, msg, line, position, clear):
         """Call a ROS Service to write to the display.
@@ -686,6 +715,26 @@ class Interface(object):
                 Display, persistent=True)
             rospy.logerr(e)
         return
+
+    def reboot(self):
+        """Call a ROS Service to reboot the machine."""
+        try:
+            rospy.wait_for_service('control/reboot')
+            self.services['reboot']()
+            return True
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logerr(e)
+        return False
+
+    def kill_all(self):
+        """Call a ROS Service to shutdown all nodes."""
+        try:
+            rospy.wait_for_service('control/kill_all')
+            self.services['kill_all']()
+            return True
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logerr(e)
+        return False
 
     def set_imu_number(self, req):
         """Call a ROS Service to set a different IMU number.

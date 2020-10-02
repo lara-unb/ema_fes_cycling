@@ -16,6 +16,7 @@ from ema_common_msgs.srv import SetUInt16
 # Import utilities
 from tf import transformations
 from math import pi
+import os
 import yaml
 import rospkg
 import rosnode
@@ -75,6 +76,23 @@ stim_order = [
     'Ch5','Ch6',
     'Ch7','Ch8'
 ]
+
+def reboot_callback(data):
+    """ROS Service handler to reboot the machine.
+
+    Attributes:
+        req (Empty): empty input
+    """
+    rospy.loginfo('Reboot: service request')
+    # Attempt to shutdown all nodes except this
+    nodes = rosnode.get_node_names('ema')
+    nodes.remove(rospy.get_name())
+    success_list, fail_list = rosnode.kill_nodes(nodes)
+    if fail_list:
+        rospy.logerr('Reboot: failed on %s shutdown', fail_list)
+    rospy.loginfo('Rebooting machine...')
+    os.system('sudo reboot')
+    return {}
 
 def kill_all_callback(req):
     """ROS Service handler to shutdown all nodes.
@@ -278,6 +296,8 @@ def main():
     # List provided services
     rospy.loginfo('Setting up services')
     services = {}
+    services['reboot'] = rospy.Service('control/reboot',
+        Empty, reboot_callback)
     services['kill_all'] = rospy.Service('control/kill_all',
         Empty, kill_all_callback)
     services['kill_node'] = rospy.Service('control/kill_node',
