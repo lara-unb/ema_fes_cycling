@@ -37,6 +37,7 @@ import rospy
 # Import ROS msgs
 from std_msgs.msg import Float64
 from std_msgs.msg import UInt8
+from std_msgs.msg import Duration
 from std_srvs.srv import Empty
 from std_srvs.srv import SetBool
 from ema_common_msgs.srv import Display
@@ -233,12 +234,15 @@ class Interface(object):
             Float64, self.cadence_callback)
         self.topics['sub']['distance'] = rospy.Subscriber('control/distance',
             Float64, self.distance_callback)
+        self.topics['sub']['duration'] = rospy.Subscriber('control/elapsed',
+            Duration, self.duration_callback)
         self.topics['sub']['buttons'] = rospy.Subscriber('button/action',
             UInt8, self.button_callback)
 
         # Get the initial value for imu number, current, pw, freq, etc...
         rospy.loginfo('Loading parameter values')
         self.load_parameters()
+        self.set_status('off')  # Make sure controller is off
         self.display_write(self.format_msg('APERTE UM BOTAO', 0), 1, 0, False)
         rospy.loginfo('Ready!')
 
@@ -465,6 +469,26 @@ class Interface(object):
             # Update displayed value
             msg_now = self.screen_now['msg']
             msg_new, line = self.update_parameter(msg_now, param_new, 'km')
+            if line is not None:  # None if there was no change
+                self.screen_now['msg'] = msg_new
+                split_lines = msg_new.split('\n')
+                self.display_write(split_lines[line], line, 0, False)
+
+    def duration_callback(self, data):
+        """ROS Topic callback to get the cycling duration.
+
+        Attributes:
+            data (Duration): latest msg for elapsed time in rospy.Duration
+        """
+        if self.screen_now['label'] in {'cycling-C', 'cycling-T'}:
+            param_new = abs(data.data.to_sec())
+            t_min, t_sec = divmod(param_new, 60)
+            # Update displayed value
+            msg_now = self.screen_now['msg']
+            # Update for min and sec assuming they are on the same line
+            msg_new, line1 = self.update_parameter(msg_now, int(t_min), '\'')
+            msg_new, line2 = self.update_parameter(msg_new, int(t_sec), '"')
+            line = next((line for line in [line1, line2] if line is not None), None)
             if line is not None:  # None if there was no change
                 self.screen_now['msg'] = msg_new
                 split_lines = msg_new.split('\n')
