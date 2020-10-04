@@ -50,7 +50,25 @@ menu_ref = {
     'welcome': {
         'msg':'~ EMA Trike ~',
         'submenus': {
-            'config': {
+            '0-cycling': {
+                'msg':'Corrida',
+                'submenus': {
+                    'cycling-C': {
+                        'msg':'00.0km/h 00.00km\n 000mA   00\'00" ',
+                        'submenus': {}
+                    }
+                }
+            },
+            '1-cycling': {
+                'msg':'Treino',
+                'submenus': {
+                    'cycling-T': {
+                        'msg':'00.0km/h 00.00km\n 000mA   00\'00" ',
+                        'submenus': {}
+                    }
+                }
+            },
+            '2-config': {
                 'msg':'Config',
                 'submenus': {
                     'imu': {
@@ -91,16 +109,7 @@ menu_ref = {
                     }
                 }
             },
-            'init': {
-                'msg':'Iniciar',
-                'submenus': {
-                    'cycling': {
-                        'msg':'0.0 km/h\n0 mA',
-                        'submenus': {}
-                    }
-                }
-            },
-            'reboot': {
+            'X-reboot': {
                 'msg':'Religar',
                 'submenus': {
                     'reboot_screen': {
@@ -183,7 +192,7 @@ class Interface(object):
         # Connect to other services
         rospy.loginfo('Connecting to other services')
         try:
-            # rospy.wait_for_service('imu/set_imu_number', timeout=30.0)
+            rospy.wait_for_service('imu/set_imu_number', timeout=30.0)
             self.services['set_imu_number'] = rospy.ServiceProxy(
                 'imu/set_imu_number', SetUInt16)
         except (rospy.ServiceException, rospy.ROSException) as e:
@@ -195,7 +204,7 @@ class Interface(object):
         except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
         try:
-            # rospy.wait_for_service('stimulator/set_frequency', timeout=30.0)
+            rospy.wait_for_service('stimulator/set_frequency', timeout=30.0)
             self.services['set_stim_freq'] = rospy.ServiceProxy(
                 'stimulator/set_frequency', SetUInt16)
         except (rospy.ServiceException, rospy.ROSException) as e:
@@ -213,25 +222,29 @@ class Interface(object):
         except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
         try:
-            rospy.wait_for_service('control/on_off', timeout=30.0)
-            self.services['on_off'] = rospy.ServiceProxy(
-                'control/on_off', SetBool)
+            rospy.wait_for_service('control/set_status', timeout=30.0)
+            self.services['set_status'] = rospy.ServiceProxy(
+                'control/set_status', SetUInt16)
         except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
 
         # Set the cadence and buttons topic
-        self.topics['sub']['cadence'] = rospy.Subscriber('control/cadence', Float64, self.cadence_callback)
-        self.topics['sub']['buttons'] = rospy.Subscriber('button/action', UInt8, self.button_callback)
+        self.topics['sub']['cadence'] = rospy.Subscriber('control/cadence',
+            Float64, self.cadence_callback)
+        self.topics['sub']['distance'] = rospy.Subscriber('control/distance',
+            Float64, self.distance_callback)
+        self.topics['sub']['buttons'] = rospy.Subscriber('button/action',
+            UInt8, self.button_callback)
 
         # Get the initial value for imu number, current, pw, freq, etc...
         rospy.loginfo('Loading parameter values')
-        self.update_parameters()
+        self.load_parameters()
         self.display_write(self.format_msg('APERTE UM BOTAO', 0), 1, 0, False)
         rospy.loginfo('Ready!')
 
     def shutdown(self):
         """Perform the shutdown procedures for the interface."""
-        self.on_off(False)  # Make sure controller is off
+        self.set_status('off')  # Make sure controller is off
 
     def build_screen_group(self, structure_dict, parent=''):
         """Recursively transfer the structure from the dict to the class.
@@ -241,7 +254,7 @@ class Interface(object):
             parent (string): upper level parent screen
         """
         if structure_dict:
-            siblings = list(structure_dict)
+            siblings = sorted(structure_dict)  # Menus in alphabetical order
             for label, menu in structure_dict.items():
                 new_screen = {}
                 new_screen['label'] = label
@@ -274,14 +287,13 @@ class Interface(object):
 
                 self.build_screen_group(menu['submenus'], label)
 
-    def update_parameters(self):
+    def load_parameters(self):
         """Load parameters with their initial values."""
         screen_ref = {
             'change_imu': None,
             'change_pw': None,
             'change_freq': None,
-            'change_current': None,
-            'cycling': None
+            'change_current': None
         }
         # Check services availability
         if self.services.get('set_imu_number'):
@@ -291,20 +303,30 @@ class Interface(object):
         if self.services.get('set_stim_freq'):
             screen_ref['change_freq'] = str(rospy.get_param('stimulator/freq'))
         if self.services.get('set_init_intensity'):
-            screen_ref['change_current'] = str(rospy.get_param('control/initial_current'))
+            screen_ref['change_current'] = str(rospy.get_param('control/training_current'))
+        # Adapt for multiple cycling modes/screens
         if self.services.get('intensity'):
-            screen_ref['cycling'] = str(rospy.get_param('control/initial_current'))
-
+            for k, v in self.screens.items():
+                if k == 'cycling-C':
+                    screen_ref[k] = str(rospy.get_param('control/racing_current'))
+                elif k == 'cycling-T':
+                    screen_ref[k] = str(rospy.get_param('control/training_current'))
+        else:
+            for k, v in self.screens.items():
+                if k in {'cycling-C', 'cycling-T'}:
+                    screen_ref[k] = None
+        # Load the parameters to each screen msg
         for k, v in screen_ref.items():
             if v:
                 msg_now = self.screens[k]['msg']
-                # Cycling is special for having two numeric values
-                if k == 'cycling':
-                    split_lines = msg_now.split('\n')  # Split lines
-                    param_line = [idx for idx, s in enumerate(split_lines) if 'mA' in s][0]
-                    msg_now = split_lines[param_line]
-                param_now = ''.join(x for x in msg_now if x.isdigit())  # int in str
-                self.screens[k]['msg'] = self.screens[k]['msg'].replace(param_now,v)
+                # Adapt for multiple cycling modes/screens
+                if 'cycling' in k:
+                    param_new = float(v)
+                    msg_new, _ = self.update_parameter(msg_now, param_new, 'mA')
+                    self.screens[k]['msg'] = msg_new
+                else:
+                    param_now = ''.join(x for x in msg_now if x.isdigit())  # int in str
+                    self.screens[k]['msg'] = self.screens[k]['msg'].replace(param_now,v)
             else:
                 line2_begin = self.screens[k]['msg'].index('\n')+1
                 self.screens[k]['msg'] = self.screens[k]['msg'][:line2_begin]+'Indisponivel'
@@ -343,31 +365,110 @@ class Interface(object):
         msg = (paddingL*' ')+msg+(paddingR*' ')
         return msg
 
+    def update_parameter(self, string, param_new, unit=''):
+        """Identify a certain number by its unit, modify its value if
+        different and return updated string and changed line. The number
+        format is maintained and values greater than it allows are limited,
+        e.g. 99.9 if new is 100.1 and old was 99.8 
+
+        Attributes:
+            string (str): string to be searched and modified
+            param_new (int/float): updated parameter value
+            unit (str): unit of measurement
+        """
+        # Only non negative values
+        if param_new < 0:
+            param_new = 0
+        string_split = string.split()  # Split items
+        split_lines = string.split('\n')  # Split lines
+        # Get old value from string
+        if unit:
+            contains_unit = [item for item in string_split if unit in item]
+            if not contains_unit:
+                return string, None
+            idx = 0
+            # Deal with substrings and unit variants like km/h and km
+            if len(contains_unit) > 1:
+                for idx, item in enumerate(contains_unit):
+                    letters = ''.join([char for char in item if char.isalpha()])
+                    if letters == unit:
+                        break
+            param_string = contains_unit[idx]  # Old value with unit
+            param_string = param_string[:param_string.index(unit)+len(unit)]  # Strip mixed like 00'00"
+            temp = param_string.replace(unit,'')
+            temp = temp.replace('.','0')
+            try:
+                temp = [idx for idx, char in enumerate(temp) if not char.isdigit()]
+                param_string = param_string[temp[-1]+1:]
+            except IndexError as e:
+                pass
+            param_now = param_string.replace(unit,'')  # Old value only
+        else:  # Consider only one number in string
+            param_string = [x for x in string_split if x.replace('.','',1).isdigit()][0]
+            if not param_string:
+                return string, None
+            param_now = param_string  # Old value is the same as string
+        # Check if new value is valid and format it
+        if '.' in param_now:  # Decimal
+            left_format = len(param_now[:param_now.index('.')])  # Digits to the left of '.'
+            right_format = len(param_now[param_now.index('.')+1:])  # Digits to the right of '.'
+            # Format the new value as an attempt to replace
+            attempt = ('{:0'+str(left_format+1+right_format)+'.'+str(right_format)+'f}').format(param_new)
+            # No difference in value so no update
+            if attempt == param_now:
+                return string, None
+            limit = float(('9'*left_format)+'.'+('9'*right_format))  # Format limitation
+            param_new = str(limit) if param_new > limit else attempt
+        else:  # No decimal
+            param_new = int(round(param_new))
+            char_width = len(param_now)
+            # Format the new value as an attempt to replace
+            attempt = str(param_new).zfill(char_width)  # Leading zeros
+            # No difference in value so no update
+            if attempt == param_now:
+                return string, None
+            limit = int(char_width*'9')  # Format limitation
+            param_new = str(limit) if param_new > limit else attempt
+        # Return the updated string and the number of the changed line
+        changed_line = [idx for idx, s in enumerate(split_lines) if param_string in s][0]
+        updated_string = string.replace(param_string, param_new+unit)
+        return updated_string, changed_line
+
     def cadence_callback(self, data):
         """ROS Topic callback to get the crankset cadence.
 
         Attributes:
             data (Float64): latest msg for cadence in km/h
         """
-        param_new = data.data
-        if param_new < 0:
-            param_new = float(0)
-        try:
-            # Get cycling screen msg and isolate cadence in km/h
-            msg_now = self.screens['cycling']['msg']
-            split_lines = msg_now.split('\n')  # Split lines
-            param_line = [idx for idx, s in enumerate(split_lines) if 'km/h' in s][0]
-            temp_split = split_lines[param_line].split()
-            param_now = [x for x in temp_split if x.replace('.','',1).isdigit()][0]  # int/float in str
-        except IndexError as e:  # When 'km/h' isnt a substring
-            return
-        if str(round(param_new,1)) != param_now:  # Cadence changed
-            split_lines[param_line] = split_lines[param_line].replace(param_now,str(round(param_new,1)))
-            self.screens['cycling']['msg'] = '\n'.join(split_lines)
-            if self.screen_now['label'] == 'cycling':
-                # Update display
-                update = self.format_msg(split_lines[param_line], 0)
-                self.display_write(update, param_line, 0, False)
+        if self.screen_now['label'] in {'cycling-C', 'cycling-T'}:
+            param_new = data.data
+            if param_new < 0:
+                param_new = float(0)
+            # Update displayed value
+            msg_now = self.screen_now['msg']
+            msg_new, line = self.update_parameter(msg_now, param_new, 'km/h')
+            if line is not None:  # None if there was no change
+                self.screen_now['msg'] = msg_new
+                split_lines = msg_new.split('\n')
+                self.display_write(split_lines[line], line, 0, False)
+
+    def distance_callback(self, data):
+        """ROS Topic callback to get the estimated distance travelled.
+
+        Attributes:
+            data (Float64): latest msg for distance in km
+        """
+        if self.screen_now['label'] in {'cycling-C', 'cycling-T'}:
+            param_new = data.data
+            if param_new < 0:
+                param_new = float(0)
+            # Update displayed value
+            msg_now = self.screen_now['msg']
+            msg_new, line = self.update_parameter(msg_now, param_new, 'km')
+            if line is not None:  # None if there was no change
+                self.screen_now['msg'] = msg_new
+                split_lines = msg_new.split('\n')
+                self.display_write(split_lines[line], line, 0, False)
 
     def button_callback(self, data):
         """ROS Topic callback to classify button commands from the user
@@ -423,8 +524,10 @@ class Interface(object):
                     output_screen_name = self.screen_now['select']
                     self.screen_now = self.screens[output_screen_name]
                     # Turn control on when cycling screen is selected
-                    if self.screen_now['label'] == 'cycling':
-                        self.on_off(True)
+                    if self.screen_now['label'] == 'cycling-C':
+                        self.set_status('racing')  # Racing mode
+                    elif self.screen_now['label'] == 'cycling-T':
+                        self.set_status('training')  # Training mode
             except KeyError as e:  # e.g. the menu doesnt have a next
                 pass
         elif self.screen_now['type'] == 'action':
@@ -440,7 +543,7 @@ class Interface(object):
             elif self.screen_now['label'] == 'change_current':
                 self.change_current(action)
                 return
-            elif self.screen_now['label'] == 'cycling':
+            elif self.screen_now['label'] in {'cycling-C', 'cycling-T'}:
                 self.cycling(action)
             elif self.screen_now['label'] == 'reboot_screen':
                 self.reboot_screen(action)
@@ -488,6 +591,10 @@ class Interface(object):
                 if result:
                     self.screen_now['msg'] = msg_now.replace(param_now,result)
                     stat = 'OK'
+                else:
+                    # If error reset the value
+                    param_new = str(rospy.get_param('imu/wireless_id/pedal'))
+                    self.screen_now['msg'] = msg_now.replace(param_now,param_new)
             self.screen_now = self.screens[self.screen_now['parent']]
             self.display_write(self.format_msg(stat, 0), 1, 0, True)
             rospy.sleep(5)
@@ -533,6 +640,10 @@ class Interface(object):
                 if result:
                     self.screen_now['msg'] = msg_now.replace(param_now,result)
                     stat = 'OK'
+                else:
+                    # If error reset the value
+                    param_new = str(rospy.get_param('control/pulse_width'))
+                    self.screen_now['msg'] = msg_now.replace(param_now,param_new)
             self.screen_now = self.screens[self.screen_now['parent']]
             self.display_write(self.format_msg(stat, 0), 1, 0, True)
             rospy.sleep(5)
@@ -578,6 +689,10 @@ class Interface(object):
                 if result:
                     self.screen_now['msg'] = msg_now.replace(param_now,result)
                     stat = 'OK'
+                else:
+                    # If error reset the value
+                    param_new = str(rospy.get_param('stimulator/freq'))
+                    self.screen_now['msg'] = msg_now.replace(param_now,param_new)
             self.screen_now = self.screens[self.screen_now['parent']]
             self.display_write(self.format_msg(stat, 0), 1, 0, True)
             rospy.sleep(5)
@@ -611,7 +726,7 @@ class Interface(object):
         # Check param and go to parent, previous upper level menu
         elif button == 'double_left':
             if param_now:  # Param value exists
-                param_new = str(rospy.get_param('control/initial_current'))
+                param_new = str(rospy.get_param('control/training_current'))
                 self.screen_now['msg'] = msg_now.replace(param_now,param_new)
             self.screen_now = self.screens[self.screen_now['parent']]
             self.update_display()
@@ -623,16 +738,16 @@ class Interface(object):
                 if result:
                     self.screen_now['msg'] = msg_now.replace(param_now,result)
                     stat = 'OK'
-                    try:
-                        # Replace on cycling screen as well
-                        cycling_msg = self.screens['cycling']['msg']
-                        split_lines = cycling_msg.split('\n')  # Split lines
-                        param_line = [idx for idx, s in enumerate(split_lines) if 'mA' in s][0]
-                        cycling_param = ''.join(x for x in split_lines[param_line] if x.isdigit())  # int in str
-                        split_lines[param_line] = split_lines[param_line].replace(cycling_param,result)
-                        self.screens['cycling']['msg'] = '\n'.join(split_lines)
-                    except IndexError as e:  # When 'mA' isnt a substring
-                        pass
+                    # Replace on training screen as well
+                    cycling_msg = self.screens['cycling-T']['msg']
+                    param_new = int(result)
+                    msg_new, line = self.update_parameter(cycling_msg, param_new, 'mA')
+                    if line is not None:  # None if there was no change
+                        self.screens['cycling-T']['msg'] = msg_new
+                else:
+                    # If error reset the value
+                    param_new = str(rospy.get_param('control/training_current'))
+                    self.screen_now['msg'] = msg_now.replace(param_now,param_new)
             self.screen_now = self.screens[self.screen_now['parent']]
             self.display_write(self.format_msg(stat, 0), 1, 0, True)
             rospy.sleep(5)
@@ -647,30 +762,26 @@ class Interface(object):
         # Kill all nodes and rely on launch respawn
         if button == 'both':
             self.display_write(self.format_msg('Aguarde...', 0), 1, 0, True)
-            self.on_off(False)
+            self.set_status('off')  # Make sure controller is off
             self.kill_all()
             rospy.sleep(3)  # Avoid changing the display
             return
-        # Change the displayed value and request a change in intensity
+        # Request a change in intensity and modify the displayed value
         else:
-            try:
-                # Get screen msg and isolate intensity in mA
-                msg_now = self.screen_now['msg']
-                split_lines = msg_now.split('\n')  # Split lines
-                param_line = [idx for idx, s in enumerate(split_lines) if 'mA' in s][0]
-                param_now = ''.join(x for x in split_lines[param_line] if x.isdigit())  # int in str
-            except IndexError as e:  # When 'mA' isnt a substring
+            # Incapable of changing param
+            if 'Indisponivel' in self.screen_now['msg']:
                 return
-            if param_now:  # Param value exists
-                request = 0 if button in {'single_left', 'double_left'} else 1  # Drecease or increase
-                result = self.change_intensity(request)
-                # Replace param value and update display
-                if result:
-                    param_new = result
-                    split_lines[param_line] = split_lines[param_line].replace(param_now,param_new)
-                    self.screen_now['msg'] = '\n'.join(split_lines)
-                    update = self.format_msg(split_lines[param_line], 0)
-                    self.display_write(update, param_line, 0, False)
+            # Replace param value and update display
+            request = 0 if button in {'single_left', 'double_left'} else 1  # Drecease or increase
+            result = self.change_intensity(request)
+            if result:
+                msg_now = self.screen_now['msg']
+                param_new = int(result)
+                msg_new, line = self.update_parameter(msg_now, param_new, 'mA')
+                if line is not None:  # None if there was no change
+                    self.screen_now['msg'] = msg_new
+                    split_lines = msg_new.split('\n')
+                    self.display_write(split_lines[line], line, 0, False)
         return
 
     def reboot_screen(self, button):
@@ -691,7 +802,10 @@ class Interface(object):
         # Confirm reboot or display error msg
         elif button in {'single_right', 'double_right'}:
             result = self.reboot()
-            if not result:
+            if result:
+                self.display_write(self.format_msg('Aguarde...', 0), 1, 0, True)
+                rospy.sleep(3)  # Avoid changing the display
+            else:
                 self.screen_now = self.screens[self.screen_now['parent']]
                 self.display_write(self.format_msg('ERRO', 0), 1, 0, True)
                 rospy.sleep(5)
@@ -809,17 +923,18 @@ class Interface(object):
             rospy.logerr(e)
         return
 
-    def on_off(self, req):
-        """Call a ROS Service to turn control on/off.
+    def set_status(self, req):
+        """Call a ROS Service to change the cycling mode.
 
         Attributes:
-            req (bool): 0 to turn off and 1 to turn on
+            req (UInt16): 'off', 'training' or 'racing'
         """
+        enum = ['off','training','racing']
         try:
-            rospy.wait_for_service('control/on_off', timeout=1.0)
-            resp = self.services['on_off'](req)
-            return resp.message  # Return the control state (on/off)
-        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.wait_for_service('control/set_status', timeout=1.0)
+            resp = self.services['set_status'](enum.index(req))
+            return resp.message  # Return the mode
+        except (rospy.ServiceException, rospy.ROSException, IndexError) as e:
             rospy.logerr(e)
         return
 

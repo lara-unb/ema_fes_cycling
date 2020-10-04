@@ -1,44 +1,49 @@
-## Replacing the dynamic reconfigure server #
 #
-# initial current amplitude
-initial_current: 8
+# The YAML file is a lightweight markup language file that supports all
+# ROS parameter types. It's used by rosparam to load static parameters to
+# the Parameter Server, which are commonly used to initialize part of a
+# system and rarely change on run-time. Sometimes the user modifies this
+# file before starting a node. This file is usually in the /config subdirectory
+# of a package. Note that when dynamic reconfiguration is implemented for
+# a package, most parameters will be dynamic, making this file barely used.
+#
 
-# max current among all channels
+# Initial current amplitude for racing
+racing_current: 30
+# Initial current amplitude for training
+training_current: 8
+# Max current among all channels
 stim_limit: 110
-
-# speed angle shift parameter
+# Stimulation pulse width
+pulse_width: 500
+# Speed angle shift parameter
 shift: 0
-
-# current amplitude relation/multiplier
+# Current amplitude relation/multiplier
 stim_proportion: {
     'Ch1': 1.00, 'Ch2': 1.00,
     'Ch3': 0.00, 'Ch4': 0.00,
     'Ch5': 0.00, 'Ch6': 0.00,
     'Ch7': 0.00, 'Ch8': 0.00
 }
-
-# angle range for each stim channel
+# Angle range for each stim channel
 Ch12: {
   'Ch1_Angle_Min': 280,
   'Ch1_Angle_Max': 20,
   'Ch2_Angle_Min': 100,
   'Ch2_Angle_Max': 200
 }
-
 Ch34: {
   'Ch3_Angle_Min': 30,
   'Ch3_Angle_Max': 105,
   'Ch4_Angle_Min': 210,
   'Ch4_Angle_Max': 285
 }
-
 Ch56: {
   'Ch5_Angle_Min': 70,
   'Ch5_Angle_Max': 170,
   'Ch6_Angle_Min': 250,
   'Ch6_Angle_Max': 350
 }
-
 Ch78: {
   'Ch7_Angle_Min': 280,
   'Ch7_Angle_Max': 20,

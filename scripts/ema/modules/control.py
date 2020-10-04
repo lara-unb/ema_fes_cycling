@@ -124,7 +124,7 @@ class Control:
 
     def initialize(self, current_dict, pw_dict):
 
-        ini = self.config_dict['initial_current']
+        ini = self.config_dict['training_current']
         pw = self.config_dict['pulse_width']
         proportion = self.config_dict['stim_proportion']
 

@@ -7,6 +7,7 @@ import ema.modules.control as control
 from sensor_msgs.msg import Imu
 from std_msgs.msg import Float64
 from std_msgs.msg import UInt8
+from std_msgs.msg import String
 from std_msgs.msg import Int32MultiArray
 from std_srvs.srv import Empty
 from std_srvs.srv import SetBool
@@ -22,7 +23,7 @@ import rospkg
 import rosnode
 
 # Global variables
-global on_off # System on/off
+global status # 'off', 'training' or 'racing'
 global angle # List of pedal angles
 global speed # List of pedal angular speeds
 global speed_ref # Reference speed
@@ -38,7 +39,7 @@ global stim_pw # Stim pulse width for each channel
 global main_current # Reference current at the moment
 global current_limit # Maximum intensity
 
-on_off = False
+status = 'off'
 angle = [0,0]
 speed = [0,0]
 speed_ref = 300
@@ -122,24 +123,33 @@ def kill_node_callback(req):
     rospy.Timer(rospy.Duration(3), rospy.signal_shutdown, oneshot=True)
     return {}
 
-def on_off_callback(req):
-    """ROS Service handler to turn control on/off.
+def set_status_callback(req):
+    """ROS Service handler to change the cycling mode.
 
     Attributes:
-        req (bool): 0 to turn off and 1 to turn on
+        req (UInt16): 0 is off, 1 is training, 2 is racing
     """
-    global on_off
+    global status
     global main_current
 
-    rospy.loginfo('ON/OFF: service request')
-    if req.data:
-        on_off = True
-        main_current = rospy.get_param('control/initial_current')
-        return {'success':True, 'message':'on'}
-    else:
-        on_off = False
+    rospy.loginfo('Set status: service request')
+    enum = ['off','training','racing']
+    try:
+        status = enum[req.data]
+    except IndexError as e:
+        status = 'off'
+        rospy.logerr('Set status: failed, received %s', req.data)
+        return {'success':False, 'message':'off'}
+    # Change main current based on status
+    if status == 'off':
         main_current = 0
         return {'success':True, 'message':'off'}
+    elif status == 'training':
+        main_current = rospy.get_param('control/training_current')
+        return {'success':True, 'message':'training'}
+    elif status == 'racing':
+        main_current = rospy.get_param('control/racing_current')
+        return {'success':True, 'message':'racing'}
 
 def set_pulse_width_callback(req):
     """ROS Service handler to set the stim pulse width.
@@ -177,17 +187,17 @@ def set_init_intensity_callback(req):
         req (int): new initial intensity
     """
     rospy.loginfo('Set initial intensity: service request')
-    init_current = rospy.get_param('control/initial_current')
+    init_current = rospy.get_param('control/training_current')
     msg = str(init_current)
     if init_current != req.data:
         if req.data >= 0:
-            rospy.set_param('control/initial_current', req.data)  # Change the param server
+            rospy.set_param('control/training_current', req.data)  # Change the param server
             rospack = rospkg.RosPack()
             control_cfg_path = rospack.get_path('ema_fes_cycling')+'/config/control.yaml'
             # Change the config yaml file
             with open(control_cfg_path, 'r') as f:
                 control_file = yaml.safe_load(f)
-                control_file['initial_current'] = req.data
+                control_file['training_current'] = req.data
             with open(control_cfg_path, 'w') as f:
                 yaml.safe_dump(control_file, f)
             # Shutdown this node and rely on roslaunch respawn to restart
@@ -252,7 +262,7 @@ def pedal_callback(data):
     speed_err.append(speed_ref - speed[-1])
 
 def main():
-    global on_off # System on/off
+    global status # 'off', 'training' or 'racing'
     global cycles # Number of pedal turns
     global new_cycle # Flag when a new pedal turn happens
     global cycle_speed # List of current cycle speeds
@@ -275,6 +285,7 @@ def main():
     stimMsg.pulse_current = 8*[0]
 
     # Build general messages
+    statusMsg = String()
     angleMsg = Float64()
     speedMsg = Float64()
     cadenceMsg = Float64()
@@ -302,8 +313,8 @@ def main():
         Empty, kill_all_callback)
     services['kill_node'] = rospy.Service('control/kill_node',
         Empty, kill_node_callback)
-    services['on_off'] = rospy.Service('control/on_off',
-        SetBool, on_off_callback)
+    services['set_status'] = rospy.Service('control/set_status',
+        SetUInt16, set_status_callback)
     services['set_pulse_width'] = rospy.Service('control/set_pulse_width',
         SetUInt16, set_pulse_width_callback)
     services['set_init_intensity'] = rospy.Service('control/set_init_intensity',
@@ -319,6 +330,7 @@ def main():
     # List published topics
     pub = {}
     pub['control'] = rospy.Publisher('stimulator/ccl_update', Stimulator, queue_size=10)
+    pub['status'] = rospy.Publisher('control/status', String, queue_size=10)
     pub['angle'] = rospy.Publisher('control/angle', Float64, queue_size=10)
     pub['signal'] = rospy.Publisher('control/stimsignal', Int32MultiArray, queue_size=10)
     pub['speed'] = rospy.Publisher('control/speed', Float64, queue_size=10)
@@ -329,33 +341,49 @@ def main():
     # Define loop rate (in hz)
     rate = rospy.Rate(50)
 
+    # Define auxiliary loop variables
+    check_half_turn = False
+
     # Node loop
     while not rospy.is_shutdown():
-        # Check if controller is turned on
-        if on_off:
-            pass
-        else:
+        if status == 'off':
             main_current = 0
+        elif status == 'training':
+            # To do
+            pass
+        elif status == 'racing':
+            # To do
+            pass
 
         # Check for a new pedal turn
-        if angle[-2]-angle[-1] > 350:
-            try: # Ignore ZeroDivisionError
-                new_cycle = True
-                cycles += 1  # Count turns
-                # Simple mean and 6 for deg/s to rpm
-                mean_cadence = sum(cycle_speed)/(6*len(cycle_speed))
-                # One crankset turn is equivalent to 1.5 wheel turn, the
-                # tire diameter is 66cm(26in) and 100k for cm to km, so...
-                # pi*1.5*66[rpm] = 1[cm/min] and 60/100k[cm/min] = 1[km/h]
-                mean_cadence = pi*0.0594*mean_cadence  # rpm to km/h
-                cycle_speed = []  # Reset list for new cycle
-                distance_km = (cycles*pi*1.5*66)/100000
-                rospy.logdebug('Cycle: %d, Cadence: %.2f, Distance: %.2f', cycles, mean_cadence, distance_km)
-            except:
-                pass
-        else: # Gather speed while waiting for a new pedal cycle
-            new_cycle = False
-            cycle_speed.append(speed[-1])
+        if (angle[-1] > 160) and (angle[-1] < 200):  # Flag half-turn
+            check_half_turn = True
+        if check_half_turn:
+            # Get greater absolute difference between five consecutive angles
+            pack = angle[-5:]
+            pack_shifted = angle[-6:-1]
+            pack_diff = [item-pack_shifted[i] for i, item in enumerate(pack)]
+            greater_diff = max(pack_diff, key=abs)  # Greater absolute difference
+            # Account for angles past 360 deg
+            if abs(greater_diff) > 300:
+                check_half_turn = False  # Reset half-turn flag
+                try:
+                    # Simple mean and 6 for deg/s to rpm
+                    mean_cadence = sum(cycle_speed)/(6*len(cycle_speed))
+                    # One crankset turn is equivalent to 1.5 wheel turn, the
+                    # tire diameter is 66cm(26in) and 100k for cm to km, so...
+                    # pi*1.5*66[rpm] = 1[cm/min] and 60/100k[cm/min] = 1[km/h]
+                    mean_cadence = pi*0.0594*mean_cadence  # rpm to km/h
+                    cycle_speed = []  # Reset list for new cycle
+                    if greater_diff < 0:  # Moving forward
+                        cycles += 1  # Count turns
+                        distance_km = (cycles*pi*1.5*66)/100000
+                    rospy.logdebug('Cycle: %d, Cadence: %.2f, Distance: %.2f', 
+                        cycles, mean_cadence, distance_km)
+                except ZeroDivisionError as e:
+                    rospy.logerr(e)
+        # Gather speed while waiting for a new pedal turn
+        cycle_speed.append(speed[-1])
 
         # Calculate control signal
         stimfactors = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
@@ -371,6 +399,7 @@ def main():
             stimMsg.pulse_width[i] = stim_pw[ch]
             signalMsg.data[i+1] = stimMsg.pulse_current[i]  # [index] is the actual channel number
 
+        statusMsg.data = status
         angleMsg.data = angle[-1]
         speedMsg.data = speed[-1]
         cadenceMsg.data = mean_cadence
@@ -379,6 +408,8 @@ def main():
 
         # Send stimulator update
         pub['control'].publish(stimMsg)
+        # Send status update
+        pub['status'].publish(statusMsg)
         # Send angle update
         pub['angle'].publish(angleMsg)
         # Send signal update
