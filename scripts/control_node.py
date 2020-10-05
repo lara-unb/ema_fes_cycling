@@ -153,7 +153,7 @@ def set_status_callback(req):
         main_current = rospy.get_param('control/training_current')
         return {'success':True, 'message':'training'}
     elif status == 'racing':
-        start_time = rospy.Time.now()+rospy.Duration(30)
+        start_time = rospy.Time.now()+rospy.Duration(32)
         main_current = rospy.get_param('control/racing_current')
         return {'success':True, 'message':'racing'}
 

@@ -353,7 +353,7 @@ class Interface(object):
                     linemsg += '  '
             else:
                 linemsg = self.format_msg(linemsg, 0)
-            self.display_write(linemsg, idx, 0, (not idx))
+            self.display_write(linemsg, idx, 0, len(msg_lst)<2)
 
     def format_msg(self, msg, margin):
         """Format msg according to display size and desired margin.
@@ -453,8 +453,6 @@ class Interface(object):
             msg_new, line = self.update_parameter(msg_now, param_new, 'km/h')
             if line is not None:  # None if there was no change
                 self.screen_now['msg'] = msg_new
-                split_lines = msg_new.split('\n')
-                self.display_write(split_lines[line], line, 0, False)
 
     def distance_callback(self, data):
         """ROS Topic callback to get the estimated distance travelled.
@@ -471,8 +469,6 @@ class Interface(object):
             msg_new, line = self.update_parameter(msg_now, param_new, 'km')
             if line is not None:  # None if there was no change
                 self.screen_now['msg'] = msg_new
-                split_lines = msg_new.split('\n')
-                self.display_write(split_lines[line], line, 0, False)
 
     def duration_callback(self, data):
         """ROS Topic callback to get the cycling duration.
@@ -491,8 +487,8 @@ class Interface(object):
             line = next((line for line in [line1, line2] if line is not None), None)
             if line is not None:  # None if there was no change
                 self.screen_now['msg'] = msg_new
-                split_lines = msg_new.split('\n')
-                self.display_write(split_lines[line], line, 0, False)
+                # Update the display every second
+                self.update_display()  # Cadence and distance will be updated here as well 
 
     def button_callback(self, data):
         """ROS Topic callback to classify button commands from the user
@@ -569,6 +565,7 @@ class Interface(object):
                 return
             elif self.screen_now['label'] in {'cycling-C', 'cycling-T'}:
                 self.cycling(action)
+                return
             elif self.screen_now['label'] == 'reboot_screen':
                 self.reboot_screen(action)
                 return
