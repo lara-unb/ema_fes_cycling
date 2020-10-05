@@ -849,8 +849,6 @@ class Interface(object):
             resp = self.services['display'](message=msg, line=line,
                 position=position, clear=clear)
         except (rospy.ServiceException, rospy.ROSException) as e:
-            self.services['display'] = rospy.ServiceProxy('display/write',
-                Display, persistent=True)
             rospy.logerr(e)
         return
 
@@ -942,8 +940,6 @@ class Interface(object):
             resp = self.services['intensity'](req)
             return resp.message  # Return the intensity now as str
         except (rospy.ServiceException, rospy.ROSException) as e:
-            self.services['intensity'] = rospy.ServiceProxy('control/change_intensity',
-                SetBool, persistent=True)
             rospy.logerr(e)
         return
 
