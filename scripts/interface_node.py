@@ -2,8 +2,10 @@
 
 """
 
-Particularly, this code defines the user interface for the embedded
-system. The ROS node runs this code. It should make all the necessary
+Particularly, this code defines and manage the user interface for the
+embedded system.
+
+The ROS node runs this code. It should make all the necessary
 communication/interaction with ROS and it shouldn't deal with minor details.
 For example, it would be used to publish a filtered sensor measurement as
 a ROS message to other ROS nodes instead of stablishing the serial comm
@@ -144,6 +146,7 @@ class Interface(object):
         self.screen_now (dict): screen being displayed
         self.screens (dict): dict with all screens
         self.services (dict): dict with all ROS services
+        self.topics (dict): dict with all ROS topics
     """
     def __init__(self, ref_dict):
         rospy.loginfo('Initializing interface')
@@ -229,7 +232,7 @@ class Interface(object):
         except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
 
-        # Set the cadence and buttons topic
+        # Setup the topics
         self.topics['sub']['cadence'] = rospy.Subscriber('control/cadence',
             Float64, self.cadence_callback)
         self.topics['sub']['distance'] = rospy.Subscriber('control/distance',
@@ -242,6 +245,7 @@ class Interface(object):
         # Get the initial value for imu number, current, pw, freq, etc...
         rospy.loginfo('Loading parameter values')
         self.load_parameters()
+
         self.set_status('off')  # Make sure controller is off
         self.display_write(self.format_msg('APERTE UM BOTAO', 0), 1, 0, False)
         rospy.loginfo('Ready!')
@@ -268,27 +272,22 @@ class Interface(object):
                 new_screen['select'] = ''
                 new_screen['next'] = ''
                 new_screen['prev'] = ''
-
                 # Get prev/next screen on same level (nearest siblings):
                 position = siblings.index(label)
                 if position != len(siblings)-1:  # Last item doesn't have next
                     new_screen['next'] = siblings[position+1]
                 if position != 0:  # First item doesn't have previous
                     new_screen['prev'] = siblings[position-1]
-
                 # Get where to go when selected (first child):
                 if menu['submenus']:
                     new_screen['select'] = menu['submenus'].keys()[0]
                 else:
                     new_screen['type'] = 'action'
-
                 # Screen type is root:
                 if (not parent) and (len(siblings) == 1):
                     new_screen['type'] = 'root'
-
                 # Add screen to their group:
                 self.screens[label] = new_screen
-
                 self.build_screen_group(menu['submenus'], label)
 
     def load_parameters(self):
@@ -342,7 +341,6 @@ class Interface(object):
         for idx, linemsg in enumerate(msg_lst):
             if self.screen_now['type'] == 'menu':
                 linemsg = self.format_msg(linemsg, 2)
-
                 if self.screen_now['prev']:
                     linemsg = '< '+linemsg
                 else:

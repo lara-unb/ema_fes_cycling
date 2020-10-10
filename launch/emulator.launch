@@ -1,24 +1,32 @@
+<!--
+The launch file is an XML that specifies which parameters to set and ROS
+nodes to launch. It's used with a roslaunch command, which is responsible
+for doing the initial setup and starting the system. The launch file includes
+options to automatically respawn processes that have already died. This
+file is usually in the /launch subdirectory of a package. For a specification
+of this XML format, see:
+http://wiki.ros.org/roslaunch/XML
+-->
+
 <launch>
-  <group ns="ema">
+    <group ns="ema">
 
-    <!-- declare and load launch arguments-->
-    <arg name="platform" value="rasp" doc="specify which platform to use: rasp/pc"/>
-    <param name="platform" value="$(arg platform)"/>
+        <!-- declare and load launch arguments-->
+        <arg name="platform" value="rasp" doc="specify which platform to use: rasp/pc"/>
+        <param name="platform" value="$(arg platform)"/>
 
-    <!-- load common config files-->
-    <rosparam command="load" file="$(find yostlabs_3space_imu)/config/imu.yaml" ns="imu"/>
-    <rosparam command="load" file="$(find hasomed_rehastim_stimulator)/config/stim.yaml" ns="stimulator"/>
-    <rosparam command="load" file="$(find ema_fes_cycling)/config/control.yaml" ns="control"/>
+        <!-- load common config files-->
+        <rosparam command="load" file="$(find yostlabs_3space_imu)/config/imu.yaml" ns="imu"/>
+        <rosparam command="load" file="$(find hasomed_rehastim_stimulator)/config/stim.yaml" ns="stimulator"/>
+        <rosparam command="load" file="$(find ema_fes_cycling)/config/control.yaml" ns="control"/>
 
-    <!-- launch common nodes -->
-    <!-- <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/> -->
-    <!-- <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/> -->
-    <node name="control" pkg="ema_fes_cycling" type="control_node.py" output="log" respawn="true" respawn_delay="5"/>
-    <node name="display" pkg="ema_fes_cycling" type="display_emulator.py" output="log" respawn="true" respawn_delay="5"/>
-    <node name="interface" pkg="ema_fes_cycling" type="interface_node.py" output="screen" respawn="true" respawn_delay="5"/>
-    <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args="/ema/control/stimsignal /ema/control/cadence -o /home/ubuntu/bagfiles/ --split --max-splits 12 --duration 5m"/>
+        <!-- launch common nodes -->
+        <!-- <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/> -->
+        <!-- <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/> -->
+        <node name="control" pkg="ema_fes_cycling" type="control_node.py" output="log" respawn="true" respawn_delay="5"/>
+        <node name="display" pkg="ema_fes_cycling" type="display_emulator.py" output="log" respawn="true" respawn_delay="5"/>
+        <node name="interface" pkg="ema_fes_cycling" type="interface_node.py" output="screen" respawn="true" respawn_delay="5"/>
+        <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args="/ema/control/stimsignal /ema/control/cadence /ema/control/distance -o /home/ubuntu/bagfiles/ --split --max-splits 12 --duration 5m"/>
 
-    
-
-  </group>
+    </group>
 </launch>

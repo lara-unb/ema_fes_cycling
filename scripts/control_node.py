@@ -15,7 +15,7 @@ http://wiki.ros.org/Nodes
 """
 
 import rospy
-import ema.modules.control as control
+import modules.control as control
 
 # Import ROS msgs
 from sensor_msgs.msg import Imu
