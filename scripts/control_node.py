@@ -1,5 +1,19 @@
 #!/usr/bin/env python
 
+"""
+
+Particularly, this code is the main routine for the FES cycling application.
+It receives info from other nodes and acts accordingly upon the system.
+
+The ROS node runs this code. It should make all the necessary
+communication/interaction with ROS and it shouldn't deal with minor details.
+For example, it would be used to publish a filtered sensor measurement as
+a ROS message to other ROS nodes instead of establishing the serial comm
+and treating that raw measurement. For more info, check:
+http://wiki.ros.org/Nodes
+
+"""
+
 import rospy
 import ema.modules.control as control
 
@@ -81,6 +95,7 @@ stim_order = [
     'Ch7','Ch8'
 ]
 
+
 def reboot_callback(data):
     """ROS Service handler to reboot the machine.
 
@@ -136,7 +151,7 @@ def set_status_callback(req):
     global start_time
     global main_current
 
-    rospy.loginfo('Set status: service request')
+    rospy.logdebug('Set status: service request')
     enum = ['off','training','racing']
     try:
         status = enum[req.data]
@@ -219,18 +234,22 @@ def change_intensity_callback(req):
     Attributes:
         req (bool): 0 to decrease and 1 to increase
     """
+    global status
     global main_current
     global current_limit
 
-    rospy.loginfo('Change intensity: service request')
-    if req.data:  # Increase
-        main_current += 2
-        if main_current > current_limit: 
-            main_current = current_limit
-    else:  # Decrease
-        main_current -= 2
-        if main_current < 0:
-            main_current = 0
+    rospy.logdebug('Change intensity: service request')
+    if status == 'off':
+        main_current = 0
+    else:
+        if req.data:  # Increase
+            main_current += 2
+            if main_current > current_limit: 
+                main_current = current_limit
+        else:  # Decrease
+            main_current -= 2
+            if main_current < 0:
+                main_current = 0
     return {'success':True, 'message':str(main_current)}
 
 def pedal_callback(data):
@@ -393,6 +412,12 @@ def main():
 
             rospy.logdebug('Cycle: %d, Cadence: %.2f, Distance: %.2f',
                 cycles, mean_cadence, distance_km)
+            
+            if status == 'racing':
+                # Stop after 8 min or 1.2 km
+                if (elapsed_time.to_sec() > 8.0*60) or (distance_km > 1.2):
+                    status = 'off'
+                    main_current = 0
 
         # Calculate control signal
         stimfactors = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
