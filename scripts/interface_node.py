@@ -57,7 +57,7 @@ menu_ref = {
                 'msg':'Corrida',
                 'submenus': {
                     'cycling-C': {
-                        'msg':'00.0km/h 00.00km\n 000mA   00\'00" ',
+                        'msg':'00.0km/h\n000mA',
                         'submenus': {}
                     }
                 }
@@ -66,7 +66,7 @@ menu_ref = {
                 'msg':'Treino',
                 'submenus': {
                     'cycling-T': {
-                        'msg':'00.0km/h 00.00km\n 000mA   00\'00" ',
+                        'msg':'00.0km/h\n000mA',
                         'submenus': {}
                     }
                 }
@@ -196,7 +196,7 @@ class Interface(object):
         # Connect to other services
         rospy.loginfo('Connecting to other services')
         try:
-            rospy.wait_for_service('imu/set_imu_number', timeout=30.0)
+            # rospy.wait_for_service('imu/set_imu_number', timeout=30.0)
             self.services['set_imu_number'] = rospy.ServiceProxy(
                 'imu/set_imu_number', SetUInt16)
         except (rospy.ServiceException, rospy.ROSException) as e:
@@ -208,7 +208,7 @@ class Interface(object):
         except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
         try:
-            rospy.wait_for_service('stimulator/set_frequency', timeout=30.0)
+            # rospy.wait_for_service('stimulator/set_frequency', timeout=30.0)
             self.services['set_stim_freq'] = rospy.ServiceProxy(
                 'stimulator/set_frequency', SetUInt16)
         except (rospy.ServiceException, rospy.ROSException) as e:
@@ -235,10 +235,10 @@ class Interface(object):
         # Setup the topics
         self.topics['sub']['cadence'] = rospy.Subscriber('control/cadence',
             Float64, self.cadence_callback)
-        self.topics['sub']['distance'] = rospy.Subscriber('control/distance',
-            Float64, self.distance_callback)
-        self.topics['sub']['duration'] = rospy.Subscriber('control/elapsed',
-            Duration, self.duration_callback)
+        # self.topics['sub']['distance'] = rospy.Subscriber('control/distance',
+        #     Float64, self.distance_callback)
+        # self.topics['sub']['duration'] = rospy.Subscriber('control/elapsed',
+        #     Duration, self.duration_callback)
         self.topics['sub']['buttons'] = rospy.Subscriber('button/action',
             UInt8, self.button_callback)
 
@@ -451,6 +451,9 @@ class Interface(object):
             msg_new, line = self.update_parameter(msg_now, param_new, 'km/h')
             if line is not None:  # None if there was no change
                 self.screen_now['msg'] = msg_new
+                split_lines = msg_new.split('\n')
+                update = self.format_msg(split_lines[line], 0)
+                self.display_write(update, line, 0, False)
 
     def distance_callback(self, data):
         """ROS Topic callback to get the estimated distance travelled.
@@ -800,7 +803,8 @@ class Interface(object):
                 if line is not None:  # None if there was no change
                     self.screen_now['msg'] = msg_new
                     split_lines = msg_new.split('\n')
-                    self.display_write(split_lines[line], line, 0, False)
+                    update = self.format_msg(split_lines[line], 0)
+                    self.display_write(update, line, 0, False)
         return
 
     def reboot_screen(self, button):
