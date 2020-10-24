@@ -154,6 +154,9 @@ class Interface(object):
         self.screens = {}
         self.services = {}
         self.topics = {'pub': {},'sub': {}}
+        # Time to avoid excessive display update
+        self.display_t = rospy.Time.now()
+        self.display_dt = rospy.Duration(0.5)
 
         # Connect to vital services
         rospy.loginfo('Connecting to vital services')
@@ -196,7 +199,7 @@ class Interface(object):
         # Connect to other services
         rospy.loginfo('Connecting to other services')
         try:
-            # rospy.wait_for_service('imu/set_imu_number', timeout=30.0)
+            rospy.wait_for_service('imu/set_imu_number', timeout=30.0)
             self.services['set_imu_number'] = rospy.ServiceProxy(
                 'imu/set_imu_number', SetUInt16)
         except (rospy.ServiceException, rospy.ROSException) as e:
@@ -208,7 +211,7 @@ class Interface(object):
         except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
         try:
-            # rospy.wait_for_service('stimulator/set_frequency', timeout=30.0)
+            rospy.wait_for_service('stimulator/set_frequency', timeout=30.0)
             self.services['set_stim_freq'] = rospy.ServiceProxy(
                 'stimulator/set_frequency', SetUInt16)
         except (rospy.ServiceException, rospy.ROSException) as e:
@@ -453,7 +456,9 @@ class Interface(object):
                 self.screen_now['msg'] = msg_new
                 split_lines = msg_new.split('\n')
                 update = self.format_msg(split_lines[line], 0)
-                self.display_write(update, line, 0, False)
+                # Avoid excessive display update
+                if (rospy.Time.now()-self.display_t) > self.display_dt:
+                    self.display_write(update, line, 0, False)
 
     def distance_callback(self, data):
         """ROS Topic callback to get the estimated distance travelled.
@@ -847,6 +852,7 @@ class Interface(object):
             rospy.wait_for_service('display/write', timeout=1.0)
             resp = self.services['display'](message=msg, line=line,
                 position=position, clear=clear)
+            self.display_t = rospy.Time.now()
         except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
         return
