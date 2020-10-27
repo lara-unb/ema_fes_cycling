@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 """
 
@@ -15,10 +15,10 @@ http://wiki.ros.org/Nodes
 """
 
 # Python 2 and 3 compatibility
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from builtins import *
+# from __future__ import absolute_import
+# from __future__ import division
+# from __future__ import print_function
+# from builtins import *
 
 import rospy
 import modules.trike as trike
@@ -130,38 +130,32 @@ def pedal_callback(data):
     global speed_err
     global time
     # pi = 3.14159
-
-    # Get timestamp:
+    
+    # Get timestamp
     time.append(data.header.stamp)
 
-    # Get pedal IMU angles:
-    qx = data.orientation.x
-    qy = data.orientation.y
-    qz = data.orientation.z
-    qw = data.orientation.w
-    euler = transformations.euler_from_quaternion(
-                [qx, qy, qz, qw], axes='rzyx')
-    x = euler[2]
-    y = euler[1]
-
-    # Correct issues with more than one axis rotating:
-    if y >= 0:
-        y = (y/pi)*180
-        if abs(x) > (pi*0.5):
-            y = 180-y
+    # Get angle position
+    qx,qy,qz,qw = data.orientation.x,data.orientation.y,data.orientation.z,data.orientation.w
+    # rzxy - return (pitch, roll, yaw)
+    euler = transformations.euler_from_quaternion([qx, qy, qz, qw], axes='rzxy')
+    roll = euler[1]
+    yaw = euler[2]
+    # Correct issues with range and more than one axis rotating
+    if yaw >= 0:
+        yaw = (yaw/pi) * 180
+        if abs(roll) > (pi*0.5):
+            yaw = 180-yaw
     else:
-        y = (y/pi)*180
-        if abs(x) > (pi*0.5):
-            y = 180-y
+        yaw = (yaw/pi) * 180
+        if abs(roll) > (pi*0.5):
+            yaw = 180 - yaw
         else:
-            y = 360+y
-
-    angle.append(y)
-
-    # Get angular speed:
+            yaw = 360 + yaw
+    # Get yaw angle in degrees
+    angle.append(yaw)
+    # Get angular speed in degrees/s
     speed.append(data.angular_velocity.y*(180/pi))
-
-    # Get speed error for controller:
+    # Get angular speed error
     speed_err.append(speed_ref - speed[-1])
 
 

@@ -38,10 +38,10 @@ class Control(object):
             speed (double): pedal angular speed
             speed_ref (double): predefined reference speed
         """
-        ramp_degrees = 10.0
+        ramp_degrees = 15.0
 
         # dth = (speed/speed_ref)*param_dict['Shift']
-        dth = (speed/speed_ref)*self.config_dict['shift']
+        dth = (speed/speed_ref)*self.config_dict['Shift']
 
         # Shift disabled:
         # dth = 0

@@ -18,7 +18,7 @@ initial_current: 30  # Initial current amplitude
 
 stim_limit: 110  # Max current among all channels
 
-shift: 0  # Speed angle shift parameter
+Shift: 0  # Speed angle shift parameter
 
 # Current amplitude relation/multiplier
 stim_proportion: {
