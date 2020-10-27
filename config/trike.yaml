@@ -14,25 +14,28 @@
 # instead of dynamic parameters. If that's not the case, keep them commented.
 #
 
-initial_current: 30  # Initial current amplitude
+initial_current: 0  # Initial current amplitude
 
-stim_limit: 110  # Max current among all channels
+stim_limit: 90  # Max current among all channels
 
-Shift: 0  # Speed angle shift parameter
+ramp_end: 20.0
+ramp_start: 20.0
+
+Shift: 25  # Speed angle shift parameter
 
 # Current amplitude relation/multiplier
 stim_proportion: {
     'Ch1': 1.00, 'Ch2': 1.00,
-    'Ch3': 0.50, 'Ch4': 0.50,
+    'Ch3': 0.00, 'Ch4': 0.00,
     'Ch5': 0.00, 'Ch6': 0.00,
     'Ch7': 1.00, 'Ch8': 1.00
 }
 
 # Angle range for each stim channel
 Ch1AngleMin: 280
-Ch1AngleMax: 20
+Ch1AngleMax: 35
 Ch2AngleMin: 100
-Ch2AngleMax: 200
+Ch2AngleMax: 210
 
 Ch3AngleMin: 30
 Ch3AngleMax: 105
@@ -45,6 +48,6 @@ Ch6AngleMin: 250
 Ch6AngleMax: 350
 
 Ch7AngleMin: 280
-Ch7AngleMax: 20
+Ch7AngleMax: 35
 Ch8AngleMin: 100
-Ch8AngleMax: 200
+Ch8AngleMax: 210

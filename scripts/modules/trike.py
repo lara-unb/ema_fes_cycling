@@ -49,29 +49,32 @@ class Control(object):
         theta_min = self.config_dict[ch+"AngleMin"] - dth
         theta_max = self.config_dict[ch+"AngleMax"] - dth
 
+        ramp_start = self.config_dict['ramp_start']
+        ramp_end = self.config_dict['ramp_end']
+
         # Check if angle in range (theta_min, theta_max):
         if theta_min <= angle and angle <= theta_max:
-            if (angle-theta_min) <= ramp_degrees:
-                return (angle-theta_min)/ramp_degrees
-            elif (theta_max-angle) <= ramp_degrees:
-                return (theta_max-angle)/ramp_degrees
+            if (angle-theta_min) <= ramp_start:
+                return (angle-theta_min)/ramp_start
+            elif (theta_max-angle) <= ramp_end:
+                return (theta_max-angle)/ramp_end
             else:
                 return 1
         elif self.config_dict[ch+"AngleMin"] > self.config_dict[ch+"AngleMax"]:
             if angle <= theta_min and angle <= theta_max:
                 if theta_min <= angle + 360 and angle <= theta_max:
-                    if (angle+360-theta_min) <= ramp_degrees:
-                        return (angle+360-theta_min)/ramp_degrees
-                    elif (theta_max-angle) <= ramp_degrees:
-                        return (theta_max-angle)/ramp_degrees
+                    if (angle+360-theta_min) <= ramp_start:
+                        return (angle+360-theta_min)/ramp_start
+                    elif (theta_max-angle) <= ramp_end:
+                        return (theta_max-angle)/ramp_end
                     else:
                         return 1
             elif angle >= theta_min and angle >= theta_max:
                 if theta_min <= angle and angle <= theta_max + 360:
-                    if (theta_max+360-angle) <= ramp_degrees:
-                        return (theta_max+360-angle)/ramp_degrees
-                    elif (angle-theta_min) <= ramp_degrees:
-                        return (angle-theta_min)/ramp_degrees
+                    if (theta_max+360-angle) <= ramp_end:
+                        return (theta_max+360-angle)/ramp_end
+                    elif (angle-theta_min) <= ramp_start:
+                        return (angle-theta_min)/ramp_start
                     else:
                         return 1
 

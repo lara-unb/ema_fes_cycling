@@ -66,6 +66,8 @@ reverse_ref = {
     'Ch78Enable':      99007,
 
     'Shift':           99010,
+    'ramp_start':      99013,
+    'ramp_end':        99015,
     'MarkAssistance':  99020,
     'AutoCEnable':     99030,
     'AutoCShift':      99040,
@@ -360,6 +362,8 @@ callback_ref = {
     99007: {'name': 'Ch78Enable',      'flag': enableUpdated,     'prev': False},
 
     99010: {'name': 'Shift',           'flag': generalUpdated,    'prev':     0},
+    99013: {'name': 'ramp_start',      'flag': generalUpdated,    'prev':  15.0},
+    99015: {'name': 'ramp_end',        'flag': generalUpdated,    'prev':  10.0},
     99020: {'name': 'MarkAssistance',  'flag': generalUpdated,    'prev': False},
     99030: {'name': 'AutoCEnable',     'flag': generalUpdated,    'prev': False},
     99040: {'name': 'AutoCShift',      'flag': generalUpdated,    'prev':    10},
