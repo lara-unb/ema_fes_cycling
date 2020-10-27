@@ -34,7 +34,6 @@ class Control:
 ###############################################
 
     def fx(self, ch, angle, speed, speed_ref):
-        ramp_degrees = 10.0
         n = int(ch[2])
         m = (n-1)+(2*(n%2)) # if n=odd, m=even; if n=even, m=odd
 
@@ -44,32 +43,35 @@ class Control:
         dth = (speed/speed_ref)*self.config_dict['shift']
         # dth = 0
 
+        ramp_start = self.config_dict['ramp_start']
+        ramp_end = self.config_dict['ramp_end']
+
         theta_min = param_dict[ch+"_Angle_Min"] - dth
         theta_max = param_dict[ch+"_Angle_Max"] - dth
 
         # check if angle in range (theta_min, theta_max) 
         if theta_min <= angle and angle <= theta_max:
-            if (angle-theta_min) <= ramp_degrees:
-                return (angle-theta_min)/ramp_degrees
-            elif (theta_max-angle) <= ramp_degrees:
-                return (theta_max-angle)/ramp_degrees
+            if (angle-theta_min) <= ramp_start:
+                return (angle-theta_min)/ramp_start
+            elif (theta_max-angle) <= ramp_end:
+                return (theta_max-angle)/ramp_end
             else:
                 return 1
         elif param_dict[ch+"_Angle_Min"] > param_dict[ch+"_Angle_Max"]:
             if angle <= theta_min and angle <= theta_max:
                 if theta_min <= angle + 360 and angle <= theta_max:
-                    if (angle+360-theta_min) <= ramp_degrees:
-                        return (angle+360-theta_min)/ramp_degrees
-                    elif (theta_max-angle) <= ramp_degrees:
-                        return (theta_max-angle)/ramp_degrees
+                    if (angle+360-theta_min) <= ramp_start:
+                        return (angle+360-theta_min)/ramp_start
+                    elif (theta_max-angle) <= ramp_end:
+                        return (theta_max-angle)/ramp_end
                     else:
                         return 1
             elif angle >= theta_min and angle >= theta_max:
                 if theta_min <= angle and angle <= theta_max + 360:
-                    if (theta_max+360-angle) <= ramp_degrees:
-                        return (theta_max+360-angle)/ramp_degrees
-                    elif (angle-theta_min) <= ramp_degrees:
-                        return (angle-theta_min)/ramp_degrees
+                    if (theta_max+360-angle) <= ramp_end:
+                        return (theta_max+360-angle)/ramp_end
+                    elif (angle-theta_min) <= ramp_start:
+                        return (angle-theta_min)/ramp_start
                     else:
                         return 1
 

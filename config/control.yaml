@@ -4,6 +4,8 @@ Ch56: {Ch5_Angle_Max: 170, Ch5_Angle_Min: 70, Ch6_Angle_Max: 350, Ch6_Angle_Min:
 Ch78: {Ch7_Angle_Max: 20, Ch7_Angle_Min: 280, Ch8_Angle_Max: 200, Ch8_Angle_Min: 100}
 pulse_width: 500
 racing_current: 30
+ramp_end: 10.0
+ramp_start: 15.0
 shift: 15
 stim_limit: 110
 stim_proportion: {Ch1: 1.0, Ch2: 1.0, Ch3: 0.5, Ch4: 0.5, Ch5: 0.0, Ch6: 0.0, Ch7: 1.0,
