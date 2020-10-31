@@ -56,18 +56,28 @@ menu_ref = {
             '0-cycling': {
                 'msg':'Corrida',
                 'submenus': {
-                    'cycling-C': {
-                        'msg':'00.0km/h\n000mA',
-                        'submenus': {}
+                    'confirm-C': {
+                        'msg':'Iniciar?\nNao      Sim',
+                        'submenus': {
+                            'cycling-C': {
+                                'msg':'00.0km/h\n000mA',
+                                'submenus': {}
+                            }
+                        }
                     }
                 }
             },
             '1-cycling': {
                 'msg':'Treino',
                 'submenus': {
-                    'cycling-T': {
-                        'msg':'00.0km/h\n000mA',
-                        'submenus': {}
+                    'confirm-T': {
+                        'msg':'Iniciar?\nNao      Sim',
+                        'submenus': {
+                            'cycling-T': {
+                                'msg':'00.0km/h\n000mA',
+                                'submenus': {}
+                            }
+                        }
                     }
                 }
             },
@@ -116,7 +126,7 @@ menu_ref = {
                 'msg':'Religar',
                 'submenus': {
                     'reboot_screen': {
-                        'msg':'Religar\nVoltar|Confirmar',
+                        'msg':'Religar?\nNao      Sim',
                         'submenus': {}
                     }
                 }
@@ -824,11 +834,11 @@ class Interface(object):
             self.kill_all()
             rospy.sleep(3)  # Avoid changing the display
         # Go to parent, previous upper level menu
-        elif button in {'single_left', 'double_left'}:
+        elif button == 'double_left':
             self.screen_now = self.screens[self.screen_now['parent']]
             self.update_display()
         # Confirm reboot or display error msg
-        elif button in {'single_right', 'double_right'}:
+        elif button == 'double_right':
             result = self.reboot()
             if result:
                 self.display_write(self.format_msg('Aguarde...', 0), 1, 0, True)
