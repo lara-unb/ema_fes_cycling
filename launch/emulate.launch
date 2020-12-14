@@ -1,5 +1,4 @@
 <!--
-
 The launch file is an XML that specifies which parameters to set and ROS
 nodes to launch. It's used with a roslaunch command, which is responsible
 for doing the initial setup and starting the system. The launch file includes
@@ -7,7 +6,6 @@ options to automatically respawn processes that have already died. This
 file is usually in the /launch subdirectory of a package. For a specification
 of this XML format, see:
 http://wiki.ros.org/roslaunch/XML
-
 -->
 
 <launch>
@@ -16,8 +14,6 @@ http://wiki.ros.org/roslaunch/XML
         <!-- declare and load launch arguments-->
         <arg name="platform" value="pc" doc="specify which platform to use: rasp/pc"/>
         <param name="platform" value="$(arg platform)"/>
-        <arg name="display_type" value="lcd" doc="specify display type connected: lcd/oled"/>
-        <param name="display_type" value="$(arg display_type)"/>
 
         <!-- load common config files-->
         <rosparam command="load" file="$(find yostlabs_3space_imu)/config/imu.yaml" ns="imu"/>
@@ -25,30 +21,21 @@ http://wiki.ros.org/roslaunch/XML
         <rosparam command="load" file="$(find ema_fes_cycling)/config/trike.yaml" ns="trike"/>
 
         <!-- launch common nodes -->
-        <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/>
-        <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/>
-        <node name="trike" pkg="ema_fes_cycling" type="trike_node.py" output="log" respawn="true" respawn_delay="5"/>
+        <node name="trike" pkg="ema_fes_cycling" type="trike_node.py" output="screen" respawn="true" respawn_delay="5"/>
+        <node name="imu_emulator" pkg="ema_fes_cycling" type="imu_emulator.py" output="screen" respawn="true" respawn_delay="5"/>
 
         <!-- launch pc-exclusive nodes -->
         <group if="$(eval platform == 'pc')">
             <node name="trike_config" pkg="ema_fes_cycling" type="trike_server_node.py" output="screen" respawn="true" respawn_delay="5"/>
-            <node name="dashboard" pkg="rqt_gui" type="rqt_gui" output="log" args="--perspective-file $(find ema_fes_cycling)/perspective/EMA_Trike.perspective"/>
+            <node name="dashboard" pkg="rqt_gui" type="rqt_gui" output="screen" args="--perspective-file $(find ema_fes_cycling)/perspective/EMA_Trike.perspective"/>
         </group>
 
         <!-- launch rasp-exclusive nodes -->
         <group if="$(eval platform == 'rasp')">
+            <!-- <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/> -->
+            <!-- <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/> -->
+            <node name="display" pkg="ema_fes_cycling" type="display_emulator.py" output="screen" respawn="true" respawn_delay="5"/>
             <node name="interface" pkg="ema_fes_cycling" type="interface_node.py" output="screen" respawn="true" respawn_delay="5"/>
-            <node name="button" pkg="ema_fes_cycling" type="button_node.py" output="screen" respawn="true" respawn_delay="5"/>
-
-            <!-- launch lcd-exclusive node -->
-            <group if="$(eval display_type == 'lcd')">
-                <node name="display" pkg="ema_fes_cycling" type="display_node.py" output="screen" respawn="true" respawn_delay="5"/>
-            </group>
-
-            <!-- launch oled-exclusive node -->
-            <group if="$(eval display_type == 'oled')">
-                <node name="display" pkg="ema_fes_cycling" type="display_node.py" output="screen" respawn="true" respawn_delay="5"/>
-            </group>
         </group>
 
     </group>

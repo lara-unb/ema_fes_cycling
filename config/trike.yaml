@@ -1,53 +1,25 @@
-#
-# The YAML file is a lightweight markup language file that supports all
-# ROS parameter types. It's used by rosparam to load static parameters to
-# the Parameter Server, which are commonly used to initialize part of a
-# system and rarely change on run-time. Sometimes the user modifies this
-# file before starting a node. This file is usually in the /config subdirectory
-# of a package. Note that when dynamic reconfiguration is implemented for
-# a package, most parameters will be dynamic, making this file barely used.
-#
-#                    _________ NOTES _________
-#
-# These can be used to replace the dynamic reconfigure server in case the
-# system runs on a limited platform or for some other reason to have static
-# instead of dynamic parameters. If that's not the case, keep them commented.
-#
-
-initial_current: 0  # Initial current amplitude
-
-stim_limit: 90  # Max current among all channels
-
-ramp_end: 20.0
-ramp_start: 20.0
-
-Shift: 25  # Speed angle shift parameter
-
-# Current amplitude relation/multiplier
-stim_proportion: {
-    'Ch1': 1.00, 'Ch2': 1.00,
-    'Ch3': 0.00, 'Ch4': 0.00,
-    'Ch5': 0.00, 'Ch6': 0.00,
-    'Ch7': 1.00, 'Ch8': 1.00
-}
-
-# Angle range for each stim channel
-Ch1AngleMin: 280
-Ch1AngleMax: 35
-Ch2AngleMin: 100
-Ch2AngleMax: 210
-
-Ch3AngleMin: 30
-Ch3AngleMax: 105
-Ch4AngleMin: 210
-Ch4AngleMax: 285
-
-Ch5AngleMin: 70
-Ch5AngleMax: 170
-Ch6AngleMin: 250
-Ch6AngleMax: 350
-
-Ch7AngleMin: 280
-Ch7AngleMax: 35
-Ch8AngleMin: 100
-Ch8AngleMax: 210
+ch1_angle_max: 15
+ch1_angle_min: 280
+ch2_angle_max: 195
+ch2_angle_min: 100
+ch3_angle_max: 105
+ch3_angle_min: 30
+ch4_angle_max: 285
+ch4_angle_min: 210
+ch5_angle_max: 170
+ch5_angle_min: 70
+ch6_angle_max: 350
+ch6_angle_min: 250
+ch7_angle_max: 15
+ch7_angle_min: 280
+ch8_angle_max: 195
+ch8_angle_min: 100
+pulse_width: 500
+racing_current: 30
+ramp_end: 20
+ramp_start: 25
+shift: 45
+stim_limit: 100
+stim_proportion: {ch1: 1.0, ch2: 1.0, ch3: 0.0, ch4: 0.0, ch5: 0.0, ch6: 0.0, ch7: 1.0,
+  ch8: 1.0}
+training_current: 0

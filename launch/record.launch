@@ -14,7 +14,7 @@ http://wiki.ros.org/roslaunch/XML
     <group ns="ema">
 
         <!-- declare and load launch arguments-->
-        <arg name="platform" value="pc" doc="specify which platform to use: rasp/pc"/>
+        <arg name="platform" value="rasp" doc="specify which platform to use: rasp/pc"/>
         <param name="platform" value="$(arg platform)"/>
         <arg name="display_type" value="lcd" doc="specify display type connected: lcd/oled"/>
         <param name="display_type" value="$(arg display_type)"/>
@@ -33,6 +33,8 @@ http://wiki.ros.org/roslaunch/XML
         <group if="$(eval platform == 'pc')">
             <node name="trike_config" pkg="ema_fes_cycling" type="trike_server_node.py" output="screen" respawn="true" respawn_delay="5"/>
             <node name="dashboard" pkg="rqt_gui" type="rqt_gui" output="log" args="--perspective-file $(find ema_fes_cycling)/perspective/EMA_Trike.perspective"/>
+            <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args=" /ema/trike/angle /ema/trike/speed /ema/trike/cadence /ema/trike/distance
+                /ema/trike/stimsignal /ema/stimulator/ccl_update -o $(env HOME)/bagfiles/ema_fes_cycling/ --split --max-splits 12 --duration 5m"/>
         </group>
 
         <!-- launch rasp-exclusive nodes -->

@@ -1,0 +1,52 @@
+#
+# The YAML file is a lightweight markup language file that supports all
+# ROS parameter types. It's used by rosparam to load static parameters to
+# the Parameter Server, which are commonly used to initialize part of a
+# system and rarely change on run-time. Sometimes the user modifies this
+# file before starting a node. This file is usually in the /config subdirectory
+# of a package. Note that when dynamic reconfiguration is implemented for
+# a package, most parameters will be dynamic, making this file barely used.
+#
+#                    _________ NOTES _________
+#
+# These can be used to replace the dynamic reconfigure server in case the
+# system runs on a limited platform or for some other reason to have static
+# instead of dynamic parameters.
+# Below there's a description for the parameters.
+#
+# chX_angle_min:       Pedal angle where stimulation on channel X begins
+# chX_angle_max:       Pedal angle where stimulation channel X is over
+# pulse_width:       Stimulation pulse width
+# racing_current:    Initial current amplitude on racing mode
+# ramp_end:          Angle range for ending intensity ramp, plateau to zero
+# ramp_start:        Angle range for start intensity ramp, zero to plateau
+# shift:             Speed angle shift parameter
+# stim_limit:        Max current among all channels
+# stim_proportion:   Current amplitude ratio/multiplier for each channel
+# training_current:  Initial current amplitude on training mode
+
+ch1_angle_min: 280
+ch1_angle_max: 15
+ch2_angle_min: 100
+ch2_angle_max: 195
+ch3_angle_min: 30
+ch3_angle_max: 105
+ch4_angle_min: 210
+ch4_angle_max: 285
+ch5_angle_min: 70
+ch5_angle_max: 170
+ch6_angle_min: 250
+ch6_angle_max: 350
+ch7_angle_min: 280
+ch7_angle_max: 15
+ch8_angle_min: 100
+ch8_angle_max: 195
+pulse_width: 500
+racing_current: 30
+ramp_end: 20
+ramp_start: 25
+shift: 45
+stim_limit: 100
+stim_proportion: {ch1: 1.0, ch2: 1.0, ch3: 0.0, ch4: 0.0, ch5: 0.0, ch6: 0.0, ch7: 1.0,
+  ch8: 1.0}
+training_current: 0
