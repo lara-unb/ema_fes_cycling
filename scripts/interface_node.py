@@ -997,7 +997,8 @@ def main():
     # List provided services
     rospy.loginfo('Setting up services')
     services = {}
-    services['kill_node'] = rospy.Service('interface/kill_node', Empty, kill_node_callback)
+    services['kill_node'] = rospy.Service('interface/kill_node',
+        Empty, kill_node_callback)
 
     # Keep python from exiting until the node stops
     rospy.spin()

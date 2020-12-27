@@ -14,7 +14,7 @@ http://wiki.ros.org/Nodes
 
 """
 
-# Python 2 and 3 compatibility
+# # Python 2 and 3 compatibility
 # from __future__ import absolute_import
 # from __future__ import division
 # from __future__ import print_function
@@ -57,7 +57,7 @@ global start_time          # Instant when control is turned on
 global cycles              # Number of pedal turns
 global new_cycle           # Flag for every new pedal turn
 global cycle_speed         # List of current cycle speeds
-global mean_cadence        # Mean RPM speed of last cycle
+global mean_cadence        # Mean km/h speed of last cycle
 global distance_km         # Distance travelled in km
 global stim_current        # Stim current for each channel
 global stim_pw             # Stim pulse width for each channel
@@ -115,6 +115,17 @@ stim_order = [
 ]
 
 
+def kill_node_callback(req):
+    """ROS Service handler to shutdown this node.
+
+    Attributes:
+        req (Empty): empty input
+    """
+    # Shutdown this node and rely on roslaunch respawn to restart
+    rospy.loginfo('Node shutdown: service request')
+    rospy.Timer(rospy.Duration(1), rospy.signal_shutdown, oneshot=True)
+    return {}
+
 def reboot_callback(data):
     """ROS Service handler to reboot the machine.
 
@@ -145,17 +156,6 @@ def kill_all_callback(req):
     success_list, fail_list = rosnode.kill_nodes(nodes)
     if fail_list:
         rospy.logerr('Shutdown all nodes: failed on %s', fail_list)
-    rospy.loginfo('Node shutdown: service request')
-    rospy.Timer(rospy.Duration(3), rospy.signal_shutdown, oneshot=True)
-    return {}
-
-def kill_node_callback(req):
-    """ROS Service handler to shutdown this node.
-
-    Attributes:
-        req (Empty): empty input
-    """
-    # Shutdown this node and rely on roslaunch respawn to restart
     rospy.loginfo('Node shutdown: service request')
     rospy.Timer(rospy.Duration(3), rospy.signal_shutdown, oneshot=True)
     return {}
@@ -345,7 +345,7 @@ def main():
     stimMsg = Stimulator()
     stimMsg.channel = list(range(1,8+1))  # All the 8 channels
     stimMsg.mode = 8*['single']  # No doublets/triplets
-    stimMsg.pulse_width = 8*[0] # Initialize w/ zeros
+    stimMsg.pulse_width = 8*[0]  # Initialize w/ zeros
     stimMsg.pulse_current = 8*[0]
 
     # Build general messages
@@ -357,7 +357,7 @@ def main():
     intensityMsg = UInt8()
     elapsedMsg = Duration()
     signalMsg = Int32MultiArray()
-    signalMsg.data = 9*[0] # [index] is the actual channel number
+    signalMsg.data = 9*[0]  # [index] is the actual channel number
 
     # Get control config
     rospy.loginfo('Building manager class')
@@ -378,19 +378,21 @@ def main():
     pub['distance'] = rospy.Publisher('trike/distance', Float64, queue_size=10)
     pub['elapsed'] = rospy.Publisher('trike/elapsed', Duration, queue_size=10)
 
+    # List provided services
+    rospy.loginfo('Setting up services')
+    services = {}
+    services['kill_node'] = rospy.Service('trike/kill_node',
+        Empty, kill_node_callback)
+
     # Retrieve where the code is currently running (change in .launch)
     platform = rospy.get_param('platform')
     # Embedded system exclusive initialization
     if platform == 'rasp':
         # List provided services
-        rospy.loginfo('Setting up services')
-        services = {}
         services['reboot'] = rospy.Service('trike/reboot',
             Empty, reboot_callback)
         services['kill_all'] = rospy.Service('trike/kill_all',
             Empty, kill_all_callback)
-        services['kill_node'] = rospy.Service('trike/kill_node',
-            Empty, kill_node_callback)
         services['set_status'] = rospy.Service('trike/set_status',
             SetUInt16, set_status_callback)
         services['set_pulse_width'] = rospy.Service('trike/set_pulse_width',

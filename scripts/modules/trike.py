@@ -143,7 +143,7 @@ class Control(object):
             for ch in stim_order:
                 current_dict[ch] = round(ini*proportion[ch])
                 pw_dict[ch] = pw
-        except(KeyError):
+        except KeyError as e:
             ini = 0
             for ch in stim_order:
                 current_dict[ch], pw_dict[ch] = (0,0)

@@ -33,7 +33,7 @@ ch78: used with quadriceps (lateral), refers to stimulator channels 7 and 8
 
 """
 
-# Python 2 and 3 compatibility
+# # Python 2 and 3 compatibility
 # from __future__ import absolute_import
 # from __future__ import division
 # from __future__ import print_function

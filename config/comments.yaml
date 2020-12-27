@@ -12,7 +12,7 @@
 # These can be used to replace the dynamic reconfigure server in case the
 # system runs on a limited platform or for some other reason to have static
 # instead of dynamic parameters.
-# Below there's a description for the parameters.
+# Below there's a description of the parameters.
 #
 # chX_angle_min:       Pedal angle where stimulation on channel X begins
 # chX_angle_max:       Pedal angle where stimulation channel X is over
