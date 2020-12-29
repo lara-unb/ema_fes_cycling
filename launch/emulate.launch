@@ -1,4 +1,5 @@
 <!--
+
 The launch file is an XML that specifies which parameters to set and ROS
 nodes to launch. It's used with a roslaunch command, which is responsible
 for doing the initial setup and starting the system. The launch file includes
@@ -6,6 +7,7 @@ options to automatically respawn processes that have already died. This
 file is usually in the /launch subdirectory of a package. For a specification
 of this XML format, see:
 http://wiki.ros.org/roslaunch/XML
+
 -->
 
 <launch>

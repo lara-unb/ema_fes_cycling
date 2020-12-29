@@ -14,15 +14,15 @@
 # instead of dynamic parameters.
 # Below there's a description of the parameters.
 #
-# chX_angle_min:       Pedal angle where stimulation on channel X begins
-# chX_angle_max:       Pedal angle where stimulation channel X is over
-# pulse_width:       Stimulation pulse width
+# chX_angle_min:     Pedal angle where stimulation on channel X begins
+# chX_angle_max:     Pedal angle where stimulation on channel X ends
+# pulse_width:       Stimulation pulse width for all channels
 # racing_current:    Initial current amplitude on racing mode
-# ramp_end:          Angle range for ending intensity ramp, plateau to zero
-# ramp_start:        Angle range for start intensity ramp, zero to plateau
-# shift:             Speed angle shift parameter
-# stim_limit:        Max current among all channels
-# stim_proportion:   Current amplitude ratio/multiplier for each channel
+# ramp_end:          Angular range for the intensity ramp at the end
+# ramp_start:        Angular range for the intensity ramp at the beginning
+# shift:             Angular range to shift min and max angles based on speed
+# stim_limit:        Maximum current for all channels
+# stim_proportion:   Normalized ratio/multiplier for each current amplitude
 # training_current:  Initial current amplitude on training mode
 
 ch1_angle_min: 280

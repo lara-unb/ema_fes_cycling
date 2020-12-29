@@ -324,14 +324,14 @@ def angle_updated(config, item):
     if config['ch'+str(item.group)+'_link_angle']:
         item_dual = Param(callback_ref, item.dual)  # Linked channel
         diff = config[item.element]-prev
-        reseter = (config[item_dual.element]+diff) % 360
+        reseter = (config[item_dual.element]+diff)%360
         config[item_dual.element] = reseter  # Update dual
         callback_ref[item_dual.level]['prev'] = reseter  # Update previous value
         return set([item.element, item_dual.element])
     return set([item.element])
 
 
-# Dict w/ levels, elements, function handlers and previous value
+# Dict with levels, elements, function handlers and previous value
 callback_ref = {
     99001: {'name': 'ch12_enable',       'flag': enable_updated,       'prev': False},
     99003: {'name': 'ch34_enable',       'flag': enable_updated,       'prev': False},
