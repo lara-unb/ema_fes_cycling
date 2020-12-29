@@ -49,12 +49,10 @@ from std_msgs.msg import String
 import dynamic_reconfigure.server
 
 # Global variables
-global pub
 global reverse_ref
 global callback_ref
 
 # Set initial param values
-pub = {}
 reverse_ref = {}
 callback_ref = {}
 
@@ -403,7 +401,6 @@ def callback(config, level):
         config (dict): server dictionary with its parameters
         level (int): numerical identifier of changed parameter
     """
-    global pub
     global callback_ref
 
     changes_set = set()
@@ -412,23 +409,11 @@ def callback(config, level):
         p = Param(callback_ref, level)
         changes_set.update(callback_ref[level]['flag'](config, p))
 
-        # Confirm something changed
-        if changes_set:
-            updateMsg = String()
-            for s in changes_set:
-                updateMsg.data += (s+' ')
-            # Send updates
-            pub['update'].publish(updateMsg)
     return config
 
 def main():
-    global pub
-
     # Init dynamic reconfigure server node
     rospy.init_node('trike_config')
-
-    # List published topics
-    pub['update'] = rospy.Publisher('server/update', String, queue_size=10)
 
     srv = dynamic_reconfigure.server.Server(
             TrikeServerConfig, callback)  # cfgfilenameConfig, callbackname

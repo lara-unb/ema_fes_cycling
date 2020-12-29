@@ -1,0 +1,22 @@
+autocalibrate: false
+baudrate: 115200
+manual_calibration: true
+tare_calibration: {imu1: [-0.08303,-0.68177,-0.72074,-0.09250],
+                   imu2: [-0.03717,-0.69611,-0.71553,-0.04518],
+                   imu3: [-0.03892,-0.69695,-0.71520,-0.03521],
+                   imu4: [-0.15181,-0.66783,-0.71024,-0.16283],
+                   imu5: [-0.12033,-0.67836,-0.71320,-0.12918],
+                   imu7: [-0.19449,0.682940,0.682150,-0.17446],
+                   imu8: [-0.11651,-0.68053,-0.71276,-0.12357]}
+dev_names: [pc, pedal]
+dev_type: {pc: DNG, pedal: WL}
+imu_mode: {pedal: wireless}
+broadcast: false
+streaming: true
+streaming_interval: 0
+streaming_duration: unlimited
+streaming_delay: 0
+streaming_slots: {pedal: [getTaredOrientationAsQuaternion, getNormalizedGyroRate, getBatteryVoltage, getBatteryPercentRemaining]}
+wired_port: {pc: /dev/ttyACM0}
+wireless_dng: {pedal: pc}
+wireless_id: {pedal: 1}

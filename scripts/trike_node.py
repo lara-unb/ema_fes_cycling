@@ -46,67 +46,7 @@ import rosnode
 # Other imports
 import dynamic_reconfigure.client
 
-# Global variables
-global status              # 'off', 'training' or 'racing'
-global angle               # List of pedal angles
-global speed               # List of pedal angular speeds
-global speed_ref           # Reference speed
-global speed_err           # Speed error
-global time                # List of imu timestamps
-global start_time          # Instant when control is turned on
-global cycles              # Number of pedal turns
-global new_cycle           # Flag for every new pedal turn
-global cycle_speed         # List of current cycle speeds
-global mean_cadence        # Mean km/h speed of last cycle
-global distance_km         # Distance travelled in km
-global stim_current        # Stim current for each channel
-global stim_pw             # Stim pulse width for each channel
-global main_current        # Reference current at the moment
-global current_limit       # Maximum intensity
-global controller          # Auxiliary object
-# global auto_on           # Auto current adjust - on/off
-# global auto_max_current  # Auto current adjust - limit
-# global auto_minvel       # Auto current adjust - trigger speed
-# global auto_add_current  # Auto current adjust - add value
-
-# Set initial param values
-status = 'off'
-angle = [0,0]
-speed = [0,0]
-speed_ref = 300
-speed_err = [0,0]
-time = [0, 0]
-start_time = None
-cycles = 0
-new_cycle = False
-cycle_speed = [0,0]
-mean_cadence = 0
-distance_km = 0
-main_current = 0
-current_limit = 0
-controller = None
-# auto_on = False
-# auto_max_current = 0
-# auto_minvel = 0
-# auto_add_current = 0
-
-# Current amplitude container
-stim_current = {
-    'ch1': 0, 'ch2': 0,
-    'ch3': 0, 'ch4': 0,
-    'ch5': 0, 'ch6': 0,
-    'ch7': 0, 'ch8': 0
-}
-
-# Pulse width container
-stim_pw = {
-    'ch1': 500, 'ch2': 500,
-    'ch3': 500, 'ch4': 500,
-    'ch5': 500, 'ch6': 500,
-    'ch7': 500, 'ch8': 500
-}
-
-# Stim channel mapping
+# Stimulation channel mapping
 stim_order = [
     'ch1', 'ch2',
     'ch3', 'ch4',
@@ -126,380 +66,371 @@ def kill_node_callback(req):
     rospy.Timer(rospy.Duration(1), rospy.signal_shutdown, oneshot=True)
     return {}
 
-def reboot_callback(data):
-    """ROS Service handler to reboot the machine.
 
-    Attributes:
-        req (Empty): empty input
+class TrikeWrapper(object):
+    """A class used to wrap the trike functionalities and establish a ROS
+    interface for its module.
     """
-    rospy.loginfo('Reboot: service request')
-    # Attempt to shutdown all nodes except this
-    nodes = rosnode.get_node_names('ema')
-    nodes.remove(rospy.get_name())
-    success_list, fail_list = rosnode.kill_nodes(nodes)
-    if fail_list:
-        rospy.logerr('Reboot: failed on %s shutdown', fail_list)
-    rospy.loginfo('Rebooting machine...')
-    os.system('sudo reboot')
-    return {}
+    def __init__(self):
+        rospy.loginfo('Initializing trike')
+        self.trike = trike.Trike(rospy.get_param('trike'))  # Lower level class
+        self.platform = rospy.get_param('platform')  # Embedded/stationary platform running the code
+        self.paramserver = {}  # Interface with ROS parameters
+        self.services = {'prov': {},'req': {}}  # Dict with all ROS services - provided/requested
+        self.topics = {'pub': {},'sub': {}}  # Dict with all ROS topics - published/subscribed
+        self.msgs = {}  # Dict with exchanged msgs
+        self.time_start = None  # Instant when control is turned on
+        self.time_elapsed = None  # Elapsed time since control was turned on
+        # Perform initial build
+        rospy.loginfo('Setting up messages and topics')
+        self.build_msgs()
+        self.set_topics()
+        # Configure based on embedded/stationary platform
+        rospy.loginfo('Adapting to platform')
+        if self.platform == 'rasp':
+            self.platform_rasp_adapt()
+        elif self.platform == 'pc':
+            self.platform_pc_adapt()
 
-def kill_all_callback(req):
-    """ROS Service handler to shutdown all nodes.
+    def build_msgs(self):
+        """Prepare and build msgs according to their ROS Msg type."""
+        # Build stimulator msg
+        stim_msg = Stimulator()
+        stim_msg.channel = list(range(1,8+1))  # All the 8 channels
+        stim_msg.mode = 8*['single']  # No doublets/triplets
+        stim_msg.pulse_width = 8*[0]  # Initialize with zeros
+        stim_msg.pulse_current = 8*[0]
+        # Build intensity msg to publish instant stimulation current
+        intensity_msg = Int32MultiArray()
+        intensity_msg.data = 9*[0]  # [index] is the actual channel number
+        # Assign designated internal variables
+        self.msgs['stim'] = stim_msg
+        self.msgs['status'] = String()
+        self.msgs['angle'] = Float64()
+        self.msgs['intensity'] = intensity_msg
+        self.msgs['speed'] = Float64()
+        self.msgs['cadence'] = Float64()
+        self.msgs['distance'] = Float64()
+        self.msgs['elapsed'] = Duration()
 
-    Attributes:
-        req (Empty): empty input
-    """
-    rospy.loginfo('Shutdown all nodes: service request')
-    nodes = rosnode.get_node_names('ema')  # List all nodes running
-    nodes.remove(rospy.get_name())  # All nodes except this
-    # Shutdown the nodes and rely on roslaunch respawn to restart
-    success_list, fail_list = rosnode.kill_nodes(nodes)
-    if fail_list:
-        rospy.logerr('Shutdown all nodes: failed on %s', fail_list)
-    rospy.loginfo('Node shutdown: service request')
-    rospy.Timer(rospy.Duration(3), rospy.signal_shutdown, oneshot=True)
-    return {}
+    def set_topics(self):
+        """Declare the subscribed and published ROS Topics."""
+        # List subscribed topics
+        self.topics['sub']['pedal'] = rospy.Subscriber('imu/pedal', Imu, self.pedal_callback)
+        # List published topics
+        self.topics['pub']['stim'] = rospy.Publisher('stimulator/ccl_update', Stimulator, queue_size=10)
+        self.topics['pub']['status'] = rospy.Publisher('trike/status', String, queue_size=10)
+        self.topics['pub']['angle'] = rospy.Publisher('trike/angle', Float64, queue_size=10)
+        self.topics['pub']['intensity'] = rospy.Publisher('trike/intensity', Int32MultiArray, queue_size=10)
+        self.topics['pub']['speed'] = rospy.Publisher('trike/speed', Float64, queue_size=10)
+        self.topics['pub']['cadence'] = rospy.Publisher('trike/cadence', Float64, queue_size=10)
+        self.topics['pub']['distance'] = rospy.Publisher('trike/distance', Float64, queue_size=10)
+        self.topics['pub']['elapsed'] = rospy.Publisher('trike/elapsed', Duration, queue_size=10)
 
-def set_status_callback(req):
-    """ROS Service handler to change the cycling mode.
+    def platform_rasp_adapt(self):
+        """Adjust and add what's specific of embedded platform."""
+        # List provided services
+        self.services['prov']['reboot'] = rospy.Service('trike/reboot',
+            Empty, self.reboot_callback)
+        self.services['prov']['kill_all'] = rospy.Service('trike/kill_all',
+            Empty, self.kill_all_callback)
+        self.services['prov']['set_status'] = rospy.Service('trike/set_status',
+            SetUInt16, self.set_status_callback)
+        self.services['prov']['set_pulse_width'] = rospy.Service('trike/set_pulse_width',
+            SetUInt16, self.set_pulse_width_callback)
+        self.services['prov']['set_init_intensity'] = rospy.Service('trike/set_init_intensity',
+            SetUInt16, self.set_init_intensity_callback)
+        self.services['prov']['change_intensity'] = rospy.Service('trike/change_intensity',
+            SetBool, self.change_intensity_callback)
+        # Apply default pulse width for all channels
+        self.trike.update_stim_pw(rospy.get_param('trike/pulse_width'))
 
-    Attributes:
-        req (UInt16): 0 is off, 1 is training, 2 is racing
-    """
-    global status
-    global start_time
-    global main_current
+    def platform_pc_adapt(self):
+        """Adjust and add what's specific of stationary platform."""
+        # Communicate with the dynamic server
+        self.paramserver = dynamic_reconfigure.client.Client('trike_config',
+            config_callback=self.server_callback)  # 'server_node_name'
+        # Update config parameters with default values
+        config = self.paramserver.get_configuration()
+        self.trike.update_config(config)
+        # Update pulse width with default values
+        pw_dict = {k[:3]:config[k] for k in config if k[4:] == 'pulse_width'}
+        self.trike.update_stim_pw(pw_dict)
+        # Update other terms
+        self.trike.set_status('training')
+        self.time_start = rospy.Time.now()
 
-    rospy.logdebug('Set status: service request')
-    enum = ['off','training','racing']
-    try:
-        status = enum[req.data]
-    except IndexError as e:
-        status = 'off'
-        rospy.logerr('Set status: failed, received %s', req.data)
-        return {'success':False, 'message':'off'}
-    # Change main current based on status
-    if status == 'off':
-        main_current = 0
-        return {'success':True, 'message':'off'}
-    elif status == 'training':
-        start_time = rospy.Time.now()
-        main_current = rospy.get_param('trike/training_current')
-        return {'success':True, 'message':'training'}
-    elif status == 'racing':
-        start_time = rospy.Time.now()+rospy.Duration(32)
-        main_current = rospy.get_param('trike/racing_current')
-        return {'success':True, 'message':'racing'}
+    def pedal_callback(self, data):
+        """ROS Topic callback to process measurements from the pedal IMU.
 
-def set_pulse_width_callback(req):
-    """ROS Service handler to set the stim pulse width.
-
-    Attributes:
-        req (int): new pulse width
-    """
-    global stim_pw
-
-    rospy.loginfo('Set pulse width: service request')
-    pw_now = rospy.get_param('trike/pulse_width')
-    msg = str(pw_now)
-    if pw_now != req.data:
-        if req.data >= 0:
-            rospy.set_param('trike/pulse_width', req.data)  # Change the param server
-            rospack = rospkg.RosPack()
-            control_cfg_path = rospack.get_path('ema_fes_cycling')+'/config/trike.yaml'
-            # Change the config yaml file
-            with open(control_cfg_path, 'r') as f:
-                control_file = yaml.safe_load(f)
-                control_file['pulse_width'] = req.data
-            with open(control_cfg_path, 'w') as f:
-                yaml.safe_dump(control_file, f)
-            # Shutdown this node and rely on roslaunch respawn to restart
-            msg = str(req.data)
-            rospy.loginfo('Node shutdown: new pulse width')
-            rospy.Timer(rospy.Duration(1), rospy.signal_shutdown, oneshot=True)
-            return {'success':True, 'message':msg}
-    return {'success':False, 'message':msg}
-
-def set_init_intensity_callback(req):
-    """ROS Service handler to set the initial stim intensity.
-
-    Attributes:
-        req (int): new initial intensity
-    """
-    rospy.loginfo('Set initial intensity: service request')
-    init_current = rospy.get_param('trike/training_current')
-    msg = str(init_current)
-    if init_current != req.data:
-        if req.data >= 0:
-            rospy.set_param('trike/training_current', req.data)  # Change the param server
-            rospack = rospkg.RosPack()
-            control_cfg_path = rospack.get_path('ema_fes_cycling')+'/config/trike.yaml'
-            # Change the config yaml file
-            with open(control_cfg_path, 'r') as f:
-                control_file = yaml.safe_load(f)
-                control_file['training_current'] = req.data
-            with open(control_cfg_path, 'w') as f:
-                yaml.safe_dump(control_file, f)
-            # Shutdown this node and rely on roslaunch respawn to restart
-            msg = str(req.data)
-            rospy.loginfo('Node shutdown: new initial intensity')
-            rospy.Timer(rospy.Duration(1), rospy.signal_shutdown, oneshot=True)
-            return {'success':True, 'message':msg}
-    return {'success':False, 'message':msg}
-
-def change_intensity_callback(req):
-    """ROS Service handler to request a change in intensity.
-
-    Attributes:
-        req (bool): 0 to decrease and 1 to increase
-    """
-    global status
-    global main_current
-    global current_limit
-
-    rospy.logdebug('Change intensity: service request')
-    if status == 'off':
-        main_current = 0
-    else:
-        if req.data:  # Increase
-            main_current += 2
-            if main_current > current_limit: 
-                main_current = current_limit
-        else:  # Decrease
-            main_current -= 2
-            if main_current < 0:
-                main_current = 0
-    return {'success':True, 'message':str(main_current)}
-
-def server_callback(config):
-    """Assign the server parameters to the equivalent variables.
-
-    Attributes:
-        config (dict): server dictionary with its parameters
-    """
-    global stim_current
-    global stim_pw
-    global controller
-
-    controller.update_param(config)
-    for ch in stim_order:
-        stim_current[ch] = config[ch+'_current']
-        stim_pw[ch] = config[ch+'_pulse_width']
-
-def pedal_callback(data):
-    """Process measurements from the pedal IMU sensor.
-
-    Attributes:
-        data (Imu): msg from the pedal IMU sensor
-    """
-    global angle
-    global speed
-    global speed_err
-    global time
-
-    # Get timestamp
-    time.append(data.header.stamp)
-    # Get angle position
-    qx,qy,qz,qw = data.orientation.x,data.orientation.y,data.orientation.z,data.orientation.w
-    # rzxy - return (pitch, roll, yaw)
-    euler = transformations.euler_from_quaternion([qx, qy, qz, qw], axes='rzxy')
-    roll = euler[1]
-    yaw = euler[2]
-    # Correct issues with range and more than one axis rotating
-    if yaw >= 0:
-        yaw = (yaw/pi)*180
-        if abs(roll) > (pi*0.5):
-            yaw = 180-yaw
-    else:
-        yaw = (yaw/pi)*180
-        if abs(roll) > (pi*0.5):
-            yaw = 180-yaw
+        Attributes:
+            data (Imu): ROS Msg from the pedal IMU sensor
+        """
+        # Get quaternion components
+        qx = data.orientation.x
+        qy = data.orientation.y
+        qz = data.orientation.z
+        qw = data.orientation.w
+        # rzxy - return (pitch, roll, yaw)
+        euler = transformations.euler_from_quaternion([qx, qy, qz, qw], axes='rzxy')
+        roll = euler[1]
+        yaw = euler[2]
+        # Correct issues with range and more than one axis rotating
+        if yaw >= 0:
+            yaw = (yaw/pi)*180
+            if abs(roll) > (pi*0.5):
+                yaw = 180-yaw
         else:
-            yaw = 360+yaw
-    # Get yaw angle in degrees
-    angle.append(yaw)
-    # Get angular speed in degrees/s
-    speed.append(data.angular_velocity.y*(180/pi))
-    # Get angular speed error
-    speed_err.append(speed_ref-speed[-1])
+            yaw = (yaw/pi)*180
+            if abs(roll) > (pi*0.5):
+                yaw = 180-yaw
+            else:
+                yaw = 360+yaw
+        # Store received data
+        latest_time = data.header.stamp
+        latest_angle = yaw
+        latest_speed = data.angular_velocity.y*(180/pi)
+        self.trike.update_measurements(latest_time, latest_angle, latest_speed)
+
+    def server_callback(self, config):
+        """ROS dynamic reconfigure callback to assign the modified server
+        parameters to the equivalent variables.
+
+        Attributes:
+            config (dict): server dictionary with its parameters
+        """
+        # Focus on the changes and ignore the rest
+        del config['groups']  # Remove unused sub dict
+        prev = self.trike.config_dict
+        try:
+            modified = {k:config[k] for k in config if config[k] != prev[k]}
+        except KeyError as e:
+            return
+        for param, update in modified.items():
+            channel = ''
+            self.trike.update_config(param, update)
+            if param[4:] == 'current':
+                channel = int(param[2])
+                self.trike.update_stim_current(value=update, ch=channel)
+            elif param[4:] == 'pulse_width':
+                channel = int(param[2])
+                self.trike.update_stim_pw(value=update, ch=channel)
+
+    def refresh(self):
+        """Update based on present state."""
+        if self.trike.status == 'off':
+            self.trike.check_new_cycle()
+        else:
+            self.time_elapsed = rospy.Time.now()-self.time_start
+            if self.trike.status == 'racing':
+                # Stop after 8 min or 1.2 km
+                if (self.time_elapsed.to_sec() > 8.0*60) or (self.trike.distance > 1.2):
+                    self.trike.set_status('off')
+                    return
+            flag = ''
+            if self.time_elapsed.to_sec() <= 0:
+                # Don't count distance yet
+                flag = 'distance'
+            self.trike.check_new_cycle(ignored=flag)
+            self.trike.calculate()
+
+    def update_msgs(self):
+        """Modify ROS Msg variables according to their present value."""
+        # Debug data
+        cycles = self.trike.cycles
+        stim_pw = self.trike.stim_pw
+        stim_current = self.trike.stim_current
+        msg = 'CYCLES:{}\nPW:{}\nCURRENT:{}\n'.format(cycles, stim_pw, stim_current)
+        rospy.logdebug(msg)
+        # Get data and setup variables
+        _, angle, speed, _ = self.trike.get_latest_measurements()
+        status = self.trike.status
+        cadence = self.trike.cadence
+        distance = self.trike.distance
+        pw_dict = self.trike.stim_pw_now
+        current_dict = self.trike.stim_current_now
+        # Convert stimulation data from dict to list based on stim_order
+        pw_list = 8*[0]
+        current_list = 8*[0]
+        for i, channel in enumerate(stim_order):
+            pw_list[i] = pw_dict[channel]
+            current_list[i] = current_dict[channel]
+        # Update msgs
+        self.msgs['stim'].pulse_width = pw_list
+        self.msgs['stim'].pulse_current = current_list
+        self.msgs['status'] = status
+        self.msgs['angle'].data = angle
+        self.msgs['intensity'].data = [0]+current_list
+        self.msgs['speed'].data = speed
+        self.msgs['cadence'] = cadence
+        self.msgs['distance'] = distance
+        self.msgs['elapsed'] = self.time_elapsed
+
+    def publish_msgs(self):
+        """Publish on all ROS Topics."""
+        for name, tp in self.topics['pub'].items():
+            tp.publish(self.msgs[name])
+
+    def reboot_callback(self, data):
+        """ROS Service handler to reboot the machine.
+
+        Attributes:
+            req (Empty): empty input
+        """
+        rospy.loginfo('Reboot: service request')
+        # Attempt to shutdown all nodes except this
+        nodes = rosnode.get_node_names('ema')
+        nodes.remove(rospy.get_name())
+        success_list, fail_list = rosnode.kill_nodes(nodes)
+        if fail_list:
+            rospy.logerr('Reboot: failed on %s shutdown', fail_list)
+        rospy.loginfo('Rebooting machine...')
+        os.system('sudo reboot')
+        return {}
+
+    def kill_all_callback(self, req):
+        """ROS Service handler to shutdown all nodes.
+
+        Attributes:
+            req (Empty): empty input
+        """
+        rospy.loginfo('Shutdown all nodes: service request')
+        nodes = rosnode.get_node_names('ema')  # List all nodes running
+        nodes.remove(rospy.get_name())  # All nodes except this
+        # Shutdown the nodes and rely on roslaunch respawn to restart
+        success_list, fail_list = rosnode.kill_nodes(nodes)
+        if fail_list:
+            rospy.logerr('Shutdown all nodes: failed on %s', fail_list)
+        rospy.loginfo('Node shutdown: service request')
+        rospy.Timer(rospy.Duration(3), rospy.signal_shutdown, oneshot=True)
+        return {}
+
+    def set_status_callback(self, req):
+        """ROS Service handler to change the cycling mode.
+
+        Attributes:
+            req (UInt16): 0 is off, 1 is training, 2 is racing
+        """
+        rospy.logdebug('Set status: service request')
+        enum = ['off','training','racing']
+        try:
+            self.trike.set_status(enum[req.data])
+        except IndexError as e:
+            self.trike.set_status('off')
+            rospy.logerr('Set status: failed, received %s', req.data)
+            return {'success':False, 'message':self.trike.status}
+        # Change time and current based on status
+        stat = self.trike.status
+        if stat == 'off':
+            pass
+        elif stat == 'training':
+            self.time_elapsed = 0
+            self.time_start = rospy.Time.now()
+            self.trike.update_stim_current(value=rospy.get_param('trike/training_current'),
+                proportion=rospy.get_param('trike/stim_proportion'))
+        elif stat == 'racing':
+            self.time_elapsed = 0
+            self.time_start = rospy.Time.now()+rospy.Duration(30)
+            self.trike.update_stim_current(value=rospy.get_param('trike/racing_current'),
+                proportion=rospy.get_param('trike/stim_proportion'))
+        return {'success':True, 'message':stat}
+
+    def set_pulse_width_callback(self, req):
+        """ROS Service handler to set the stimulation pulse width.
+
+        Attributes:
+            req (int): new pulse width
+        """
+        global stim_pw
+
+        rospy.loginfo('Set pulse width: service request')
+        pw_now = rospy.get_param('trike/pulse_width')
+        msg = str(pw_now)
+        if pw_now != req.data:
+            if req.data >= 0:
+                rospy.set_param('trike/pulse_width', req.data)  # Change the param server
+                rospack = rospkg.RosPack()
+                file_path = rospack.get_path('ema_fes_cycling')+'/config/trike.yaml'
+                # Change the config yaml file
+                with open(file_path, 'r') as f:
+                    file_handler = yaml.safe_load(f)
+                    file_handler['pulse_width'] = req.data
+                with open(file_path, 'w') as f:
+                    yaml.safe_dump(file_handler, f)
+                # Shutdown this node and rely on roslaunch respawn to restart
+                msg = str(req.data)
+                rospy.loginfo('Node shutdown: new pulse width')
+                rospy.Timer(rospy.Duration(1), rospy.signal_shutdown, oneshot=True)
+                return {'success':True, 'message':msg}
+        return {'success':False, 'message':msg}
+
+    def set_init_intensity_callback(self, req):
+        """ROS Service handler to set the initial stimulation intensity.
+
+        Attributes:
+            req (int): new initial intensity
+        """
+        rospy.loginfo('Set initial intensity: service request')
+        init_current = rospy.get_param('trike/training_current')
+        msg = str(init_current)
+        if init_current != req.data:
+            if req.data >= 0:
+                rospy.set_param('trike/training_current', req.data)  # Change the param server
+                rospack = rospkg.RosPack()
+                file_path = rospack.get_path('ema_fes_cycling')+'/config/trike.yaml'
+                # Change the config yaml file
+                with open(file_path, 'r') as f:
+                    file_handler = yaml.safe_load(f)
+                    file_handler['training_current'] = req.data
+                with open(file_path, 'w') as f:
+                    yaml.safe_dump(file_handler, f)
+                # Shutdown this node and rely on roslaunch respawn to restart
+                msg = str(req.data)
+                rospy.loginfo('Node shutdown: new initial intensity')
+                rospy.Timer(rospy.Duration(1), rospy.signal_shutdown, oneshot=True)
+                return {'success':True, 'message':msg}
+        return {'success':False, 'message':msg}
+
+    def change_intensity_callback(self, req):
+        """ROS Service handler to request a change in intensity.
+
+        Attributes:
+            req (bool): 0 to decrease and 1 to increase
+        """
+        rospy.logdebug('Change intensity: service request')
+        if req.data:  # Increase
+            update = self.trike.stim_current_max+2
+            self.trike.update_stim_current(value=update,
+                proportion=rospy.get_param('trike/stim_proportion'))
+        else:  # Decrease
+            update = self.trike.stim_current_max-2
+            self.trike.update_stim_current(value=update,
+                proportion=rospy.get_param('trike/stim_proportion'))
+        return {'success':True, 'message':str(self.trike.stim_current_max)}
+
 
 def main():
-    global status              # 'off', 'training' or 'racing'
-    global start_time          # Instant when control is turned on
-    global cycles              # Number of pedal turns
-    global new_cycle           # Flag for every new pedal turn
-    global cycle_speed         # List of current cycle speeds
-    global mean_cadence        # Mean RPM speed of last cycle
-    global distance_km         # Distance travelled in km
-    global stim_current        # Stim current for each channel
-    global stim_pw             # Stim pulse width for each channel
-    global main_current        # Reference current at the moment
-    global current_limit       # Maximum intensity
-    global controller          # Auxiliary object
-
     # Init control node
     rospy.loginfo('Initializing node')
-    rospy.init_node('trike')  # Overwritten by launch file name
-
-    # Build basic stimulator msg
-    stimMsg = Stimulator()
-    stimMsg.channel = list(range(1,8+1))  # All the 8 channels
-    stimMsg.mode = 8*['single']  # No doublets/triplets
-    stimMsg.pulse_width = 8*[0]  # Initialize w/ zeros
-    stimMsg.pulse_current = 8*[0]
-
-    # Build general messages
-    statusMsg = String()
-    angleMsg = Float64()
-    speedMsg = Float64()
-    cadenceMsg = Float64()
-    distanceMsg = Float64()
-    intensityMsg = UInt8()
-    elapsedMsg = Duration()
-    signalMsg = Int32MultiArray()
-    signalMsg.data = 9*[0]  # [index] is the actual channel number
-
-    # Get control config
-    rospy.loginfo('Building manager class')
-    controller = trike.Control(rospy.get_param('trike'))
-
-    # List subscribed topics
-    rospy.loginfo('Setting up topics')
-    sub = {}
-    sub['pedal'] = rospy.Subscriber('imu/pedal', Imu, callback=pedal_callback)
-    # List published topics
-    pub = {}
-    pub['control'] = rospy.Publisher('stimulator/ccl_update', Stimulator, queue_size=10)
-    pub['status'] = rospy.Publisher('trike/status', String, queue_size=10)
-    pub['angle'] = rospy.Publisher('trike/angle', Float64, queue_size=10)
-    pub['signal'] = rospy.Publisher('trike/stimsignal', Int32MultiArray, queue_size=10)
-    pub['speed'] = rospy.Publisher('trike/speed', Float64, queue_size=10)
-    pub['cadence'] = rospy.Publisher('trike/cadence', Float64, queue_size=10)
-    pub['distance'] = rospy.Publisher('trike/distance', Float64, queue_size=10)
-    pub['elapsed'] = rospy.Publisher('trike/elapsed', Duration, queue_size=10)
-
+    rospy.init_node('trike')
+    # Create auxiliary class
+    rospy.loginfo('Creating auxiliary class')
+    aux = TrikeWrapper()
     # List provided services
     rospy.loginfo('Setting up services')
     services = {}
     services['kill_node'] = rospy.Service('trike/kill_node',
         Empty, kill_node_callback)
-
-    # Retrieve where the code is currently running (change in .launch)
-    platform = rospy.get_param('platform')
-    # Embedded system exclusive initialization
-    if platform == 'rasp':
-        # List provided services
-        services['reboot'] = rospy.Service('trike/reboot',
-            Empty, reboot_callback)
-        services['kill_all'] = rospy.Service('trike/kill_all',
-            Empty, kill_all_callback)
-        services['set_status'] = rospy.Service('trike/set_status',
-            SetUInt16, set_status_callback)
-        services['set_pulse_width'] = rospy.Service('trike/set_pulse_width',
-            SetUInt16, set_pulse_width_callback)
-        services['set_init_intensity'] = rospy.Service('trike/set_init_intensity',
-            SetUInt16, set_init_intensity_callback)
-        services['change_intensity'] = rospy.Service('trike/change_intensity',
-            SetBool, change_intensity_callback)
-        # Current maximum amplitude
-        current_limit = controller.current_limit()
-        # Init controller setup and stimulation parameters
-        main_current, stim_current, stim_pw = controller.initialize(stim_current, stim_pw)
-        # Additional published topics
-        pub['intensity'] = rospy.Publisher('trike/intensity', UInt8, queue_size=10)
-    # PC system exclusive initialization
-    elif platform == 'pc':
-        status = 'training'
-        start_time = rospy.Time.now()
-        # Communicate with the dynamic server
-        dyn_params = dynamic_reconfigure.client.Client('trike_config',
-                        config_callback=server_callback)  # 'server_node_name'
-
     # Define loop rate (in hz)
     rate = rospy.Rate(50)
-    # Define auxiliary loop variables
-    check_half_turn = False
-    elapsed_time = rospy.Duration(0)
     # Node loop
     while not rospy.is_shutdown():
-        # Check cycling mode
-        if status == 'off':
-            main_current = 0
-        else:
-            # Get duration since control was turned on
-            elapsed_time = rospy.Time.now()-start_time
-            # Check for a new pedal turn
-            if (angle[-1] > 160) and (angle[-1] < 200):  # Flag half-turn
-                check_half_turn = True
-            if check_half_turn:
-                # Get greater absolute difference between five consecutive angles
-                pack = angle[-5:]
-                pack_shifted = angle[-6:-1]
-                pack_diff = [item-pack_shifted[i] for i, item in enumerate(pack)]
-                greater_diff = max(pack_diff, key=abs)  # Greater absolute difference
-                # Account for angles past 360 deg
-                if abs(greater_diff) > 300:
-                    check_half_turn = False  # Reset half-turn flag
-                    try:
-                        # Simple mean and 6 for deg/s to rpm
-                        mean_cadence = sum(cycle_speed)/(6*len(cycle_speed))
-                        # One crankset turn is equivalent to 1.5 wheel turn, the
-                        # tire diameter is 66cm(26in) and 100k for cm to km, so...
-                        # pi*1.5*66[rpm] = 1[cm/min] and 60/100k[cm/min] = 1[km/h]
-                        mean_cadence = pi*0.0594*mean_cadence  # rpm to km/h
-                        cycle_speed = []  # Reset list for new cycle
-                        # Moving forward and passed warm up period
-                        if (greater_diff < 0) and (elapsed_time.to_sec() > 0):
-                            cycles += 1  # Count turns
-                            distance_km = (cycles*pi*1.5*66)/100000
-                    except ZeroDivisionError as e:
-                        rospy.logerr(e)
-            # Gather speed while waiting for a new pedal turn
-            cycle_speed.append(speed[-1])
-            rospy.logdebug('Cycle: %d, Cadence: %.2f, Distance: %.2f',
-                cycles, mean_cadence, distance_km)
-            if status == 'racing':
-                # Stop after 8 min or 1.2 km
-                if (elapsed_time.to_sec() > 8.0*60) or (distance_km > 1.2):
-                    status = 'off'
-                    main_current = 0
-
-        # Calculate control signal
-        stimfactors = controller.calculate(angle[-1], speed[-1], speed_ref, speed_err)
-        rospy.logdebug('Stimfactors: %s', stimfactors)
-        # Embedded system exclusive
-        if platform == 'rasp':
-            # Get the proportion for each channel
-            proportion = controller.multipliers()
-            intensityMsg.data = main_current
-            # Send intensity update
-            pub['intensity'].publish(intensityMsg)
-        # Update current and pw values
-        for i, ch in enumerate(stim_order):
-            # Embedded system exclusive
-            if platform == 'rasp':
-                stim_current[ch] = round(main_current*proportion[ch])
-            stimMsg.pulse_current[i] = round(stimfactors[i]*stim_current[ch])
-            stimMsg.pulse_width[i] = stim_pw[ch]
-            signalMsg.data[i+1] = stimMsg.pulse_current[i]  # [index] is the actual channel number
-
-        statusMsg.data = status
-        angleMsg.data = angle[-1]
-        speedMsg.data = speed[-1]
-        cadenceMsg.data = mean_cadence
-        distanceMsg.data = distance_km
-        intensityMsg.data = main_current
-        elapsedMsg.data = elapsed_time
-        # Send updates
-        pub['control'].publish(stimMsg)
-        pub['status'].publish(statusMsg)
-        pub['angle'].publish(angleMsg)
-        pub['signal'].publish(signalMsg)
-        pub['speed'].publish(speedMsg)
-        pub['cadence'].publish(cadenceMsg)
-        pub['distance'].publish(distanceMsg)
-        pub['elapsed'].publish(elapsedMsg)
-
+        # New interaction
+        aux.refresh()
+        # Redefine publisher msgs
+        aux.update_msgs()
+        # Send the msgs
+        aux.publish_msgs()
         # Wait for next loop
         rate.sleep()
 
