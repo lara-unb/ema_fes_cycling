@@ -1,29 +1,25 @@
-Ch1AngleMax: 20
-Ch1AngleMin: 280
-Ch2AngleMax: 200
-Ch2AngleMin: 100
-Ch3AngleMax: 105
-Ch3AngleMin: 30
-Ch4AngleMax: 285
-Ch4AngleMin: 210
-Ch5AngleMax: 170
-Ch5AngleMin: 70
-Ch6AngleMax: 350
-Ch6AngleMin: 250
-Ch7AngleMax: 20
-Ch7AngleMin: 280
-Ch8AngleMax: 200
-Ch8AngleMin: 100
-initial_current: 30
+ch1_angle_max: 15
+ch1_angle_min: 280
+ch2_angle_max: 195
+ch2_angle_min: 100
+ch3_angle_max: 105
+ch3_angle_min: 30
+ch4_angle_max: 285
+ch4_angle_min: 210
+ch5_angle_max: 170
+ch5_angle_min: 70
+ch6_angle_max: 350
+ch6_angle_min: 250
+ch7_angle_max: 15
+ch7_angle_min: 280
+ch8_angle_max: 195
+ch8_angle_min: 100
 pulse_width: 500
-shift: 0
-stim_limit: 110
-stim_proportion:
-  Ch1: 1.0
-  Ch2: 1.0
-  Ch3: 0.5
-  Ch4: 0.5
-  Ch5: 0.0
-  Ch6: 0.0
-  Ch7: 1.0
-  Ch8: 1.0
+racing_current: 30
+ramp_end: 20
+ramp_start: 25
+shift: 45
+stim_limit: 100
+stim_proportion: {ch1: 1.0, ch2: 1.0, ch3: 0.0, ch4: 0.0, ch5: 0.0, ch6: 0.0, ch7: 1.0,
+  ch8: 1.0}
+training_current: 0

@@ -3,7 +3,7 @@
 """
 
 Particularly, this code initializes the button interface, check for interaction
-with polling and asynchronously publishes a ROS message.
+with interrupts and asynchronously publishes a ROS message.
 
 The ROS node runs this code. It should make all the necessary
 communication/interaction with ROS and it shouldn't deal with minor details.
@@ -14,55 +14,109 @@ http://wiki.ros.org/Nodes
 
 """
 
-import rospy
+# Python 2 and 3 compatibility
+# from __future__ import absolute_import
+# from __future__ import division
+# from __future__ import print_function
+# from builtins import *
 
-# Import ROS msgs:
+import rospy
+import time
+# import ros msgs
 from std_msgs.msg import UInt8
 
-# Import utilities:
+# import utilities
 import RPi.GPIO as GPIO
 
+global pressed_time
+global current_button_value
+pressed_time = 0
+current_button_value = 0
+def button_callback(channel):
+    global pressed_time
+    global current_button_value
+    global button1
+    global button2
+    current = time.time()
+    if channel == button1:
+        if current_button_value == 0:
+            current_button_value = 1
+
+        elif current_button_value == 1:
+            current_button_value = 4 
+
+        elif current_button_value == 2:       
+            current_button_value = 3
+    elif channel == button2:
+        if current_button_value == 0:
+            current_button_value = 2
+
+        elif current_button_value == 2:
+            current_button_value = 5 
+
+        elif current_button_value == 1:       
+            current_button_value = 3
+    pressed_time = current
+
+def button2_callback(channel):
+    global pressed_time
+    global current_button_value
+    current = time.time()
+    if current_button_value == 0:
+        current_button_value = 2
+
+    elif current_button_value == 2:
+        current_button_value = 5 
+
+    elif current_button_value == 1:       
+        current_button_value = 3
+    pressed_time = current
+
+global button1
+global button2
+button1=11
+button2=13
 
 def main():
-    # Init button node:
+    global button1
+    global button2
+    global current_button_value
+    global pressed_time
+    # init button node
     rospy.init_node('button', anonymous=False)
 
-    # Init I/O config:
-    button1 = 11
-    button2 = 13
-
-    # Set GPIO mode reference to board pin order:
+    # init I/O config
+    
+    
+    # set GPIO mode reference to board pin order
     GPIO.setmode(GPIO.BOARD)
 
-    # Turn on GPIO pull down onboard resistors:
+    # turn on GPIO pull down onboard resistors 
     GPIO.setup(button1, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     GPIO.setup(button2, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
-    # List published topics:
+    bouncetime=210
+    wait_time=300
+
+    #Set on interrupt event in button ports
+    GPIO.add_event_detect(button1, GPIO.RISING, callback=button_callback, bouncetime=bouncetime)
+    GPIO.add_event_detect(button2, GPIO.RISING, callback=button_callback, bouncetime=bouncetime)
+    # list published topics
     pub = rospy.Publisher('button/action', UInt8, queue_size=10)
 
-    # Define loop rate (in hz):
-    rate = rospy.Rate(4)
+    # define loop rate (in hz)
+    rate = rospy.Rate(100)
 
-    # Node loop:
+    #Time to wait to publish when a button is pressed (Miliseconds) 
+    # node loop
     while not rospy.is_shutdown():
-        # Set button value to a byte:
-        button_value = 0b00000000
 
-        # Apply OR operation on byte if button is pressed.
-        if GPIO.input(button1):
-            button_value = button_value | 0b00000001
-        if GPIO.input(button2):
-            button_value = button_value | 0b00000010
-
-        # At least one button was pressed.
-        if button_value:
-            # Send button update:
-            pub.publish(UInt8(button_value))  # 1, 2 or 3
-
-        # Wait for next loop:
+        if current_button_value > 0:
+            if (time.time()-pressed_time) * 1000 > wait_time:     
+                pub.publish(UInt8(current_button_value))
+                current_button_value = 0
         rate.sleep()
-
+    GPIO.cleanup()
 
 if __name__ == '__main__':
     try:
