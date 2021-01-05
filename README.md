@@ -24,7 +24,7 @@ The _'master'_ branch is only for PC and embedded system stable versions, usuall
 
 **`roslaunch ema_fes_cycling trike.launch`**
 
-**`roslaunch ema_fes_cycling demo.launch`**
+**`roslaunch ema_fes_cycling emulate.launch`**
 
 ### Structure:
 

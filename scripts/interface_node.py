@@ -142,18 +142,6 @@ menu_ref = {
 }
 
 
-def kill_node_callback(req):
-    """ROS Service handler to shutdown this node.
-
-    Attributes:
-        req (Empty): empty input
-    """
-    # Shutdown this node and rely on roslaunch respawn to restart
-    rospy.loginfo('Node shutdown: service request')
-    rospy.Timer(rospy.Duration(1), rospy.signal_shutdown, oneshot=True)
-    return {}
-
-
 class Interface(object):
     """A class used to create the user interface menus.
 
@@ -993,12 +981,6 @@ def main():
 
     # Prepare function to be executed when shutting down
     rospy.on_shutdown(aux.shutdown)
-
-    # List provided services
-    rospy.loginfo('Setting up services')
-    services = {}
-    services['kill_node'] = rospy.Service('interface/kill_node',
-        Empty, kill_node_callback)
 
     # Keep python from exiting until the node stops
     rospy.spin()

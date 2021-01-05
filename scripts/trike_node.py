@@ -55,18 +55,6 @@ stim_order = [
 ]
 
 
-def kill_node_callback(req):
-    """ROS Service handler to shutdown this node.
-
-    Attributes:
-        req (Empty): empty input
-    """
-    # Shutdown this node and rely on roslaunch respawn to restart
-    rospy.loginfo('Node shutdown: service request')
-    rospy.Timer(rospy.Duration(1), rospy.signal_shutdown, oneshot=True)
-    return {}
-
-
 class TrikeWrapper(object):
     """A class used to wrap the trike functionalities and establish a ROS
     interface for its module.
@@ -416,11 +404,6 @@ def main():
     # Create auxiliary class
     rospy.loginfo('Creating auxiliary class')
     aux = TrikeWrapper()
-    # List provided services
-    rospy.loginfo('Setting up services')
-    services = {}
-    services['kill_node'] = rospy.Service('trike/kill_node',
-        Empty, kill_node_callback)
     # Define loop rate (in hz)
     rate = rospy.Rate(50)
     # Node loop
