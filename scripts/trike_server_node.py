@@ -18,8 +18,7 @@ Everytime a parameter changes, the callback is executed. The code identifies
 which parameter was changed by the level number. Levels are integers declared
 in the .cfg file to identify each parameter and is passed to the callback
 to express what was modified. Rules and restrictions are applied and some
-parameters are related to others. At last, the name of modified parameters
-are gathered to be published on a topic.
+parameters are related to others.
 
 Level identifies each parameter and consists of 5 numbers described here:
     - First 2: refer to its group
