@@ -143,7 +143,7 @@ class TrikeWrapper(object):
         self.services['prov']['change_intensity'] = rospy.Service('trike/change_intensity',
             SetBool, self.change_intensity_callback)
         # Apply default pulse width for all channels
-        self.trike.update_stim_pw(rospy.get_param('trike/pulse_width'))
+        self.trike.set_stim_pw(rospy.get_param('trike/pulse_width'))
 
     def platform_pc_adapt(self):
         """Adjust and add what's specific of stationary platform."""
@@ -152,10 +152,10 @@ class TrikeWrapper(object):
             config_callback=self.server_callback)  # 'server_node_name'
         # Update config parameters with default values
         config = self.paramserver.get_configuration()
-        self.trike.update_config(config)
+        self.trike.set_config(config)
         # Update pulse width with default values
         pw_dict = {k[:3]:config[k] for k in config if k[4:] == 'pulse_width'}
-        self.trike.update_stim_pw(pw_dict)
+        self.trike.set_stim_pw(pw_dict)
         # Update other terms
         self.trike.set_status('training')
         self.time_start = rospy.Time.now()
@@ -190,7 +190,7 @@ class TrikeWrapper(object):
         latest_time = data.header.stamp
         latest_angle = yaw
         latest_speed = data.angular_velocity.y*(180/pi)
-        self.trike.update_measurements(latest_time, latest_angle, latest_speed)
+        self.trike.set_latest_measurements(latest_time, latest_angle, latest_speed)
 
     def server_callback(self, config):
         """ROS dynamic reconfigure callback to assign the modified server
@@ -208,13 +208,13 @@ class TrikeWrapper(object):
             return
         for param, update in modified.items():
             channel = ''
-            self.trike.update_config(param, update)
+            self.trike.set_config(param, update)
             if param[4:] == 'current':
                 channel = int(param[2])
-                self.trike.update_stim_current(value=update, ch=channel)
+                self.trike.set_stim_current(value=update, ch=channel)
             elif param[4:] == 'pulse_width':
                 channel = int(param[2])
-                self.trike.update_stim_pw(value=update, ch=channel)
+                self.trike.set_stim_pw(value=update, ch=channel)
 
     def refresh(self):
         """Update based on present state."""
@@ -232,7 +232,7 @@ class TrikeWrapper(object):
                 # Don't count distance yet
                 flag = 'distance'
             self.trike.check_new_cycle(ignored=flag)
-            self.trike.calculate()
+            self.trike.update_stim_output()
 
     def update_msgs(self):
         """Modify ROS Msg variables according to their present value."""
@@ -247,14 +247,7 @@ class TrikeWrapper(object):
         status = self.trike.status
         cadence = self.trike.cadence
         distance = self.trike.distance
-        pw_dict = self.trike.stim_pw_now
-        current_dict = self.trike.stim_current_now
-        # Convert stimulation data from dict to list based on stim_order
-        pw_list = 8*[0]
-        current_list = 8*[0]
-        for i, channel in enumerate(stim_order):
-            pw_list[i] = pw_dict[channel]
-            current_list[i] = current_dict[channel]
+        pw_list, current_list = self.trike.get_stim_list()
         # Update msgs
         self.msgs['stim'].pulse_width = pw_list
         self.msgs['stim'].pulse_current = current_list
@@ -326,12 +319,12 @@ class TrikeWrapper(object):
         elif stat == 'training':
             self.time_elapsed = 0
             self.time_start = rospy.Time.now()
-            self.trike.update_stim_current(value=rospy.get_param('trike/training_current'),
+            self.trike.set_stim_current(value=rospy.get_param('trike/training_current'),
                 proportion=rospy.get_param('trike/stim_proportion'))
         elif stat == 'racing':
             self.time_elapsed = 0
             self.time_start = rospy.Time.now()+rospy.Duration(30)
-            self.trike.update_stim_current(value=rospy.get_param('trike/racing_current'),
+            self.trike.set_stim_current(value=rospy.get_param('trike/racing_current'),
                 proportion=rospy.get_param('trike/stim_proportion'))
         return {'success':True, 'message':stat}
 
@@ -400,11 +393,11 @@ class TrikeWrapper(object):
         rospy.logdebug('Change intensity: service request')
         if req.data:  # Increase
             update = self.trike.stim_current_max+2
-            self.trike.update_stim_current(value=update,
+            self.trike.set_stim_current(value=update,
                 proportion=rospy.get_param('trike/stim_proportion'))
         else:  # Decrease
             update = self.trike.stim_current_max-2
-            self.trike.update_stim_current(value=update,
+            self.trike.set_stim_current(value=update,
                 proportion=rospy.get_param('trike/stim_proportion'))
         return {'success':True, 'message':str(self.trike.stim_current_max)}
 
