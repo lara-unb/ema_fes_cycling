@@ -63,12 +63,14 @@ class TrikeWrapper(object):
         rospy.loginfo('Initializing trike')
         self.trike = trike.Trike(rospy.get_param('trike'))  # Lower level class
         self.platform = rospy.get_param('platform')  # Embedded/stationary platform running the code
+        self.loop_rate = rospy.get_param('rate')  # Loop rate in hertz
         self.paramserver = {}  # Interface with ROS parameters
         self.services = {'prov': {},'req': {}}  # Dict with all ROS services - provided/requested
         self.topics = {'pub': {},'sub': {}}  # Dict with all ROS topics - published/subscribed
         self.msgs = {}  # Dict with exchanged msgs
         self.time_start = None  # Instant when control is turned on
         self.time_elapsed = None  # Elapsed time since control was turned on
+        self.last_channel = 8  # Last stimulation channel activated
         # Perform initial build
         rospy.loginfo('Setting up messages and topics')
         self.build_msgs()
@@ -84,10 +86,6 @@ class TrikeWrapper(object):
         """Prepare and build msgs according to their ROS Msg type."""
         # Build stimulator msg
         stim_msg = Stimulator()
-        stim_msg.channel = list(range(1,8+1))  # All the 8 channels
-        stim_msg.mode = 8*['single']  # No doublets/triplets
-        stim_msg.pulse_width = 8*[0]  # Initialize with zeros
-        stim_msg.pulse_current = 8*[0]
         # Build intensity msg to publish instant stimulation current
         intensity_msg = Int32MultiArray()
         intensity_msg.data = 9*[0]  # [index] is the actual channel number
@@ -106,7 +104,7 @@ class TrikeWrapper(object):
         # List subscribed topics
         self.topics['sub']['pedal'] = rospy.Subscriber('imu/pedal', Imu, self.pedal_callback)
         # List published topics
-        self.topics['pub']['stim'] = rospy.Publisher('stimulator/ccl_update', Stimulator, queue_size=10)
+        self.topics['pub']['stim'] = rospy.Publisher('stimulator/single_pulse', Stimulator, queue_size=10)
         self.topics['pub']['status'] = rospy.Publisher('trike/status', String, queue_size=10)
         self.topics['pub']['angle'] = rospy.Publisher('trike/angle', Float64, queue_size=10)
         self.topics['pub']['intensity'] = rospy.Publisher('trike/intensity', Int32MultiArray, queue_size=10)
@@ -236,12 +234,30 @@ class TrikeWrapper(object):
         cadence = self.trike.cadence
         distance = self.trike.distance
         pw_list, current_list = self.trike.get_stim_list()
+        # Activate the next channel in the sequence
+        reorder = current_list[self.last_channel:]+current_list[:self.last_channel-1]
+        channel_now = None
+        int_list = 9*[0]
+        for idx, item in enumerate(reorder):
+            if item:
+                channel_now = 1+((self.last_channel+idx)%8)  # Next channel to be activated
+                current_list = [current_list[channel_now-1]]
+                pw_list = [pw_list[channel_now-1]]
+                self.last_channel = channel_now  # Update last channel
+                int_list[channel_now] = current_list[0]
+                break
+        if not channel_now:
+            channel_now = 1
+            current_list = [0]
+            pw_list = [0]
         # Update msgs
+        self.msgs['stim'].channel = [channel_now]
+        self.msgs['stim'].mode = ['single']
         self.msgs['stim'].pulse_width = pw_list
         self.msgs['stim'].pulse_current = current_list
         self.msgs['status'] = status
         self.msgs['angle'].data = angle
-        self.msgs['intensity'].data = [0]+current_list
+        self.msgs['intensity'].data = int_list
         self.msgs['speed'].data = speed
         self.msgs['cadence'] = cadence
         self.msgs['distance'] = distance
@@ -398,7 +414,7 @@ def main():
     rospy.loginfo('Creating auxiliary class')
     aux = TrikeWrapper()
     # Define loop rate (in hz)
-    rate = rospy.Rate(50)
+    rate = rospy.Rate(int(aux.loop_rate))
     # Node loop
     while not rospy.is_shutdown():
         # New interaction

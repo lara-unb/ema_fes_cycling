@@ -53,10 +53,6 @@ class Trike(object):
         self.passed_half_turn = False  # Flag 180 deg has passed
         self.cycle_speed = [0]  # List of current cycle speeds
 
-        # Additional statements
-        if 'stim_limit' not in self.config_dict:
-            self.config_dict['stim_limit'] = 110  # Current limit in mA
-
     def get_latest_measurements(self):
         """Return latest trike data."""
         return (self.time[-1], self.angle[-1], self.speed[-1], self.speed_err[-1])
@@ -146,7 +142,7 @@ class Trike(object):
             self.stim_current = dict.fromkeys(stim_order,0)
             return
         # Check safe limit
-        limit = self.config_dict['stim_limit']
+        limit = self.config_dict['stim_limit'] if 'stim_limit' in self.config_dict else 110
         if isinstance(value, dict):
             if values.keys() != self.stim_current.keys():
                 raise KeyError

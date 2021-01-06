@@ -25,11 +25,6 @@ Level identifies each parameter and consists of 5 numbers described here:
     - Next 2: refer to the element/parameter itself
     - Last: refer to the stimulator channel affected
 
-ch12: used with quadriceps (rectus), refers to stimulator channels 1 and 2
-ch34: used with hamstrings, refers to stimulator channels 3 and 4
-ch56: used with gluteal, refers to stimulator channels 5 and 6
-ch78: used with quadriceps (lateral), refers to stimulator channels 7 and 8
-
 """
 
 # # Python 2 and 3 compatibility
@@ -352,8 +347,8 @@ callback_ref = {
     12200: {'name': 'ch12_link_angle',   'flag': link_angle_updated,   'prev':  True},
     12211: {'name': 'ch1_angle_min',     'flag': angle_updated,        'prev':   280},
     12221: {'name': 'ch1_angle_max',     'flag': angle_updated,        'prev':    15},
-    12212: {'name': 'ch2_angle_min',     'flag': angle_updated,        'prev':   100},
-    12222: {'name': 'ch2_angle_max',     'flag': angle_updated,        'prev':   195},
+    12212: {'name': 'ch2_angle_min',     'flag': angle_updated,        'prev':   280},
+    12222: {'name': 'ch2_angle_max',     'flag': angle_updated,        'prev':    15},
 
     34100: {'name': 'ch34_link_current', 'flag': link_current_updated, 'prev':  True},
     34113: {'name': 'ch3_current',       'flag': current_updated,      'prev':     0},
@@ -362,10 +357,10 @@ callback_ref = {
     34124: {'name': 'ch4_pulse_width',   'flag': pulse_width_updated,  'prev':   500},
 
     34200: {'name': 'ch34_link_angle',   'flag': link_angle_updated,   'prev':  True},
-    34213: {'name': 'ch3_angle_min',     'flag': angle_updated,        'prev':    30},
-    34223: {'name': 'ch3_angle_max',     'flag': angle_updated,        'prev':   105},
-    34214: {'name': 'ch4_angle_min',     'flag': angle_updated,        'prev':   210},
-    34224: {'name': 'ch4_angle_max',     'flag': angle_updated,        'prev':   285},
+    34213: {'name': 'ch3_angle_min',     'flag': angle_updated,        'prev':   280},
+    34223: {'name': 'ch3_angle_max',     'flag': angle_updated,        'prev':    15},
+    34214: {'name': 'ch4_angle_min',     'flag': angle_updated,        'prev':   280},
+    34224: {'name': 'ch4_angle_max',     'flag': angle_updated,        'prev':    15},
 
     56100: {'name': 'ch56_link_current', 'flag': link_current_updated, 'prev':  True},
     56115: {'name': 'ch5_current',       'flag': current_updated,      'prev':     0},
@@ -374,10 +369,10 @@ callback_ref = {
     56126: {'name': 'ch6_pulse_width',   'flag': pulse_width_updated,  'prev':   500},
 
     56200: {'name': 'ch56_link_angle',   'flag': link_angle_updated,   'prev':  True},
-    56215: {'name': 'ch5_angle_min',     'flag': angle_updated,        'prev':    70},
-    56225: {'name': 'ch5_angle_max',     'flag': angle_updated,        'prev':   170},
-    56216: {'name': 'ch6_angle_min',     'flag': angle_updated,        'prev':   250},
-    56226: {'name': 'ch6_angle_max',     'flag': angle_updated,        'prev':   350},
+    56215: {'name': 'ch5_angle_min',     'flag': angle_updated,        'prev':   100},
+    56225: {'name': 'ch5_angle_max',     'flag': angle_updated,        'prev':   195},
+    56216: {'name': 'ch6_angle_min',     'flag': angle_updated,        'prev':   100},
+    56226: {'name': 'ch6_angle_max',     'flag': angle_updated,        'prev':   195},
 
     78100: {'name': 'ch78_link_current', 'flag': link_current_updated, 'prev':  True},
     78117: {'name': 'ch7_current',       'flag': current_updated,      'prev':     0},
@@ -386,8 +381,8 @@ callback_ref = {
     78128: {'name': 'ch8_pulse_width',   'flag': pulse_width_updated,  'prev':   500},
 
     78200: {'name': 'ch78_link_angle',   'flag': link_angle_updated,   'prev':  True},
-    78217: {'name': 'ch7_angle_min',     'flag': angle_updated,        'prev':   280},
-    78227: {'name': 'ch7_angle_max',     'flag': angle_updated,        'prev':    15},
+    78217: {'name': 'ch7_angle_min',     'flag': angle_updated,        'prev':   100},
+    78227: {'name': 'ch7_angle_max',     'flag': angle_updated,        'prev':   195},
     78218: {'name': 'ch8_angle_min',     'flag': angle_updated,        'prev':   100},
     78228: {'name': 'ch8_angle_max',     'flag': angle_updated,        'prev':   195},
 }
