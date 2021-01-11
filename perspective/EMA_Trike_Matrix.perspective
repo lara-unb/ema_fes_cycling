@@ -88,7 +88,7 @@
                 },
                 "topics": {
                   "type": "repr",
-                  "repr": "[u'/ema/trike/intensity/data[4]', u'/ema/trike/intensity/data[3]', u'/ema/trike/intensity/data[2]', u'/ema/trike/intensity/data[1]']"
+                  "repr": "[u'/ema/stimulator/activation/data[4]', u'/ema/stimulator/activation/data[3]', u'/ema/stimulator/activation/data[2]', u'/ema/stimulator/activation/data[1]']"
                 },
                 "y_limits": {
                   "type": "repr",
@@ -135,7 +135,7 @@
                 },
                 "topics": {
                   "type": "repr",
-                  "repr": "[u'/ema/trike/intensity/data[8]', u'/ema/trike/intensity/data[7]', u'/ema/trike/intensity/data[6]', u'/ema/trike/intensity/data[5]']"
+                  "repr": "[u'/ema/stimulator/activation/data[8]', u'/ema/stimulator/activation/data[7]', u'/ema/stimulator/activation/data[6]', u'/ema/stimulator/activation/data[5]']"
                 },
                 "y_limits": {
                   "type": "repr",
@@ -157,8 +157,8 @@
               "keys": {
                 "tree_widget_header_state": {
                   "type": "repr(QByteArray.hex)",
-                  "repr(QByteArray.hex)": "QtCore.QByteArray('000000ff00000000000000010000000000000000010000000000000000000000000000000000000385000000050101000100000000000000000500000064ffffffff0000008100000003000000050000015000000001000000030000011600000001000000030000006800000001000000030000003900000001000000030000007e0000000100000003000003e80000000064')",
-                  "pretty-print": "                              d         P           h     9     ~        "
+                  "repr(QByteArray.hex)": "QtCore.QByteArray('000000ff0000000000000001000000000000000001000000000000000000000000000000000000036b000000050101000100000000000000000500000064ffffffff000000810000000300000005000001500000000100000003000001160000000100000003000000680000000100000003000000390000000100000003000000640000000100000003000003e80000000064')",
+                  "pretty-print": "                              d         P           h     9     d        "
                 }
               },
               "groups": {}

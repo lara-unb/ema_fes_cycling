@@ -16,8 +16,8 @@ http://wiki.ros.org/roslaunch/XML
         <!-- declare and load launch arguments-->
         <arg name="platform" value="pc" doc="specify which platform to use: rasp/pc"/>
         <param name="platform" value="$(arg platform)"/>
-        <arg name="rate" value="16" doc="specify control loop rate in hertz"/>
-        <param name="rate" value="$(arg rate)"/>
+        <arg name="stimulator/matrix" value="48" doc="specify electrode matrix loop rate"/>
+        <param name="stimulator/matrix" value="$(arg stimulator/matrix)"/>
 
         <!-- load common config files-->
         <rosparam command="load" file="$(find yostlabs_3space_imu)/config/imu.yaml" ns="imu"/>
@@ -31,7 +31,7 @@ http://wiki.ros.org/roslaunch/XML
         <!-- launch pc-exclusive nodes -->
         <group if="$(eval platform == 'pc')">
             <node name="trike_config" pkg="ema_fes_cycling" type="trike_server_node.py" output="screen" respawn="true" respawn_delay="5"/>
-            <node name="dashboard" pkg="rqt_gui" type="rqt_gui" output="screen" args="--perspective-file $(find ema_fes_cycling)/perspective/EMA_Trike.perspective"/>
+            <node name="dashboard" pkg="rqt_gui" type="rqt_gui" output="screen" args="--perspective-file $(find ema_fes_cycling)/perspective/EMA_Trike_Matrix.perspective"/>
         </group>
 
         <!-- launch rasp-exclusive nodes -->

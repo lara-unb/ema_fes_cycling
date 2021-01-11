@@ -18,8 +18,8 @@ http://wiki.ros.org/roslaunch/XML
         <param name="platform" value="$(arg platform)"/>
         <arg name="display_type" value="lcd" doc="specify display type connected: lcd/oled"/>
         <param name="display_type" value="$(arg display_type)"/>
-        <arg name="rate" value="48" doc="specify control loop rate in hertz"/>
-        <param name="rate" value="$(arg rate)"/>
+        <arg name="stimulator/matrix" value="48" doc="specify electrode matrix loop rate"/>
+        <param name="stimulator/matrix" value="$(arg stimulator/matrix)"/>
 
         <!-- load common config files-->
         <rosparam command="load" file="$(find yostlabs_3space_imu)/config/imu.yaml" ns="imu"/>
