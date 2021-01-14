@@ -35,6 +35,7 @@ http://wiki.ros.org/roslaunch/XML
         <group if="$(eval platform == 'pc')">
             <node name="trike_config" pkg="ema_fes_cycling" type="trike_server_node.py" output="log" respawn="true" respawn_delay="5"/>
             <node name="dashboard" pkg="rqt_gui" type="rqt_gui" output="log" args="--perspective-file $(find ema_fes_cycling)/perspective/EMA_Trike_Matrix.perspective"/>
+            <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args=" -a -o $(env HOME)/bagfiles/matrix/ --split --duration 5m"/>
         </group>
 
         <!-- launch rasp-exclusive nodes -->
