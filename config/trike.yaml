@@ -1,7 +1,7 @@
-ch1_angle_max: 15
-ch1_angle_min: 280
-ch2_angle_max: 195
-ch2_angle_min: 100
+ch1_angle_max: 20
+ch1_angle_min: 275
+ch2_angle_max: 200
+ch2_angle_min: 95
 ch3_angle_max: 105
 ch3_angle_min: 30
 ch4_angle_max: 285
@@ -10,15 +10,15 @@ ch5_angle_max: 170
 ch5_angle_min: 70
 ch6_angle_max: 350
 ch6_angle_min: 250
-ch7_angle_max: 15
-ch7_angle_min: 280
-ch8_angle_max: 195
-ch8_angle_min: 100
+ch7_angle_max: 20
+ch7_angle_min: 275
+ch8_angle_max: 200
+ch8_angle_min: 95
 pulse_width: 500
 racing_current: 30
 ramp_end: 20
 ramp_start: 25
-shift: 45
+shift: 10
 stim_limit: 100
 stim_proportion: {ch1: 1.0, ch2: 1.0, ch3: 0.0, ch4: 0.0, ch5: 0.0, ch6: 0.0, ch7: 1.0,
   ch8: 1.0}

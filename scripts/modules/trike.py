@@ -31,12 +31,12 @@ class Trike(object):
     """
     def __init__(self, config_dict):
         self.config_dict = config_dict
-        self.stim_pw = dict.fromkeys(stim_order,0)  # Pulse width peak for each channel
-        self.stim_pw_now = dict.fromkeys(stim_order,0)  # Instant pulse width for each channel
-        self.stim_pw_max = 0  # Max from all values of stim_pw
         self.stim_current = dict.fromkeys(stim_order,0)  # Current peak for each channel
         self.stim_current_now = dict.fromkeys(stim_order,0)  # Instant current for each channel
         self.stim_current_max = 0  # Max from all values of stim_current
+        self.stim_pw = dict.fromkeys(stim_order,0)  # Pulse width peak for each channel
+        self.stim_pw_now = dict.fromkeys(stim_order,0)  # Instant pulse width for each channel
+        self.stim_pw_max = 0  # Max from all values of stim_pw
 
         # Other components
         self.status = 'off'  # 'off', 'training' or 'racing'
@@ -53,112 +53,36 @@ class Trike(object):
         self.passed_half_turn = False  # Flag 180 deg has passed
         self.cycle_speed = [0]  # List of current cycle speeds
 
-    def set_status(self, value):
-        """Change system status.
+    def get_latest_measurements(self):
+        """Return latest trike data."""
+        return (self.time[-1], self.angle[-1], self.speed[-1], self.speed_err[-1])
 
-        Attributes:
-            value (string): new system status
+    def get_stim_list(self):
+        """Return stimulation current and pulse width for all channels
+        as lists.
         """
-        if value in ('off','training','racing'):
-            # Reset cycling data
-            self.cycles = self.distance = 0
-            self.status = value
-            if self.status == 'off':
-                # Zero stimulation
-                self.stim_current = dict.fromkeys(stim_order,0)
-        else:
-            raise ValueError
+        current_list = 8*[0]
+        pw_list = 8*[0]
+        for i, channel in enumerate(stim_order):
+            current_list[i] = self.stim_current_now[channel]
+            pw_list[i] = self.stim_pw_now[channel]
+        return current_list, pw_list
 
-    def check_new_cycle(self, ignored=''):
-        """Check for pedal turns.
+    def set_latest_measurements(self, time, angle, speed):
+        """Update pedal data based on received measurements.
 
         Attributes:
-            ignored (string): 'cadence', 'cycles', 'distance' or a tuple
-                of those. When flagged the parameter is not updated.
-        """
-        if (self.angle[-1] > 160) and (self.angle[-1] < 200):  # Flag half-turn
-            self.passed_half_turn = True
-        if self.passed_half_turn:
-            # Get greater absolute difference between five consecutive angles
-            pack = self.angle[-5:]
-            pack_shifted = self.angle[-6:-1]
-            pack_diff = [item-pack_shifted[i] for i, item in enumerate(pack)]
-            greater_diff = max(pack_diff, key=abs)  # Greater absolute difference
-            # Account for angles past 360 deg
-            if abs(greater_diff) > 300:
-                self.passed_half_turn = False  # Reset half-turn flag
-                try:
-                    if 'cadence' not in ignored:
-                        # Simple mean and 6 for deg/s to rpm
-                        self.cadence = sum(self.cycle_speed)/(6*len(self.cycle_speed))
-                        # One crankset turn is equivalent to 1.5 wheel
-                        # turn, the tire diameter is 66cm(26in) and 100k
-                        # for cm to km, so pi*1.5*66[rpm] = 1[cm/min] and
-                        # 60/100k[cm/min] = 1[km/h]
-                        self.cadence = 3.1415*0.0594*self.cadence  # rpm to km/h
-                    self.cycle_speed = []  # Reset list for new cycle
-                    # Moving forward
-                    if (greater_diff < 0):
-                        if 'distance' not in ignored:
-                            self.distance = (self.cycles*3.1415*1.5*66)/100000
-                            if 'cycles' not in ignored:
-                                self.cycles += 1  # Count turns
-                except ZeroDivisionError as e:
-                    rospy.logerr(e)
-
-    def calculate(self):
-        """Update stimulation attributes according to latest measurements."""
-        self.stim_pw_now = self.stim_pw.copy()
-        if self.status == 'off':
-            self.stim_current = dict.fromkeys(stim_order,0)
-        else:
-            for channel, current in self.stim_current.items():
-                action = self.control_action(channel, self.angle[-1], self.speed[-1], self.speed_ref)
-                self.stim_current_now[channel] = round(action*current)
-
-    def control_action(self, ch, angle, speed, speed_ref):
-        """Return the control action according to specified inputs.
-
-        Attributes:
-            ch (string): 'chX' where X is the stimulation channel
+            time (double): sensor timestamp
             angle (double): pedal angle
             speed (double): pedal angular speed
-            speed_ref (double): predefined reference speed
         """
-        # Get the parameters from dict
-        ramp_start = self.config_dict['ramp_start']
-        ramp_end = self.config_dict['ramp_end']
-        dth = (speed/speed_ref)*self.config_dict['shift']
-        theta_min = self.config_dict[ch+"_angle_min"]-dth
-        theta_max = self.config_dict[ch+"_angle_max"]-dth
-        # Check if angle in range (theta_min, theta_max)
-        if theta_min <= angle and angle <= theta_max:
-            if (angle-theta_min) <= ramp_start:
-                return (angle-theta_min)/ramp_start
-            elif (theta_max-angle) <= ramp_end:
-                return (theta_max-angle)/ramp_end
-            else:
-                return 1
-        elif theta_min > theta_max:
-            if angle <= theta_min and angle <= theta_max:
-                if theta_min <= angle + 360 and angle <= theta_max:
-                    if (angle+360-theta_min) <= ramp_start:
-                        return (angle+360-theta_min)/ramp_start
-                    elif (theta_max-angle) <= ramp_end:
-                        return (theta_max-angle)/ramp_end
-                    else:
-                        return 1
-            elif angle >= theta_min and angle >= theta_max:
-                if theta_min <= angle and angle <= theta_max + 360:
-                    if (theta_max+360-angle) <= ramp_end:
-                        return (theta_max+360-angle)/ramp_end
-                    elif (angle-theta_min) <= ramp_start:
-                        return (angle-theta_min)/ramp_start
-                    else:
-                        return 1
-        return 0
+        self.time.append(time)
+        self.angle.append(angle)
+        self.speed.append(speed)
+        self.speed_err.append(self.speed_ref-speed)
+        self.cycle_speed.append(speed)
 
-    def update_stim_current(self, value, ch=None, proportion=None):
+    def set_stim_current(self, value, ch=None, proportion=None):
         """Change the stimulation current. When value is an int, ch or
         proportion are used to update a specific or all channels.
 
@@ -217,7 +141,7 @@ class Trike(object):
                     self.stim_current_max = max(self.stim_current.values())
         return
 
-    def update_stim_pw(self, value, ch=None):
+    def set_stim_pw(self, value, ch=None):
         """Change the stimulation pulse width. When value is an int, ch
         is used to update a specific channel, when None all channels get
         the same value.
@@ -262,7 +186,23 @@ class Trike(object):
                 self.stim_pw_max = value
                 self.stim_pw = dict.fromkeys(stim_order,value)
 
-    def update_config(self, param, value=None):
+    def set_status(self, value):
+        """Change system status.
+
+        Attributes:
+            value (string): new system status
+        """
+        if value in ('off','training','racing'):
+            # Reset cycling data
+            self.cycles = self.distance = 0
+            self.status = value
+            if self.status == 'off':
+                # Zero stimulation
+                self.stim_current = dict.fromkeys(stim_order,0)
+        else:
+            raise ValueError
+
+    def set_config(self, param, value=None):
         """Change configuration parameters. Param can be a new configuration
         dictionary or a specific parameter with its new value in value.
 
@@ -276,23 +216,95 @@ class Trike(object):
             self.config_dict[param] = value
         return
 
-    def update_measurements(self, time, angle, speed):
-        """Update pedal data based on received measurements.
+    def check_new_cycle(self, ignored=''):
+        """Check for pedal turns.
 
         Attributes:
-            time (double): sensor timestamp
+            ignored (string): 'cadence', 'cycles', 'distance' or a tuple
+                of those. When flagged the parameter is not updated.
+        """
+        if (self.angle[-1] > 160) and (self.angle[-1] < 200):  # Flag half-turn
+            self.passed_half_turn = True
+        if self.passed_half_turn:
+            # Get greater absolute difference between five consecutive angles
+            pack = self.angle[-5:]
+            pack_shifted = self.angle[-6:-1]
+            pack_diff = [item-pack_shifted[i] for i, item in enumerate(pack)]
+            greater_diff = max(pack_diff, key=abs)  # Greater absolute difference
+            # Account for angles past 360 deg
+            if abs(greater_diff) > 300:
+                self.passed_half_turn = False  # Reset half-turn flag
+                try:
+                    if 'cadence' not in ignored:
+                        # Simple mean and 6 for deg/s to rpm
+                        self.cadence = sum(self.cycle_speed)/(6*len(self.cycle_speed))
+                        # One crankset turn is equivalent to 1.5 wheel
+                        # turn, the tire diameter is 66cm(26in) and 100k
+                        # for cm to km, so pi*1.5*66[rpm] = 1[cm/min] and
+                        # 60/100k[cm/min] = 1[km/h]
+                        self.cadence = 3.1415*0.0594*self.cadence  # rpm to km/h
+                    self.cycle_speed = []  # Reset list for new cycle
+                    # Moving forward
+                    if (greater_diff < 0):
+                        if 'distance' not in ignored:
+                            self.distance = (self.cycles*3.1415*1.5*66)/100000
+                            if 'cycles' not in ignored:
+                                self.cycles += 1  # Count turns
+                except ZeroDivisionError as e:
+                    rospy.logerr(e)
+
+    def update_stim_output(self):
+        """Update stimulation attributes according to latest measurements."""
+        self.stim_pw_now = self.stim_pw.copy()
+        if self.status == 'off':
+            self.stim_current = dict.fromkeys(stim_order,0)
+        else:
+            for channel, current in self.stim_current.items():
+                action = self.calculate_control_action(channel, self.angle[-1],
+                    self.speed[-1], self.speed_ref)
+                self.stim_current_now[channel] = round(action*current)
+
+    def calculate_control_action(self, ch, angle, speed, speed_ref):
+        """Return the control action according to specified inputs.
+
+        Attributes:
+            ch (string): 'chX' where X is the stimulation channel
             angle (double): pedal angle
             speed (double): pedal angular speed
+            speed_ref (double): predefined reference speed
         """
-        self.time.append(time)
-        self.angle.append(angle)
-        self.speed.append(speed)
-        self.speed_err.append(self.speed_ref-speed)
-        self.cycle_speed.append(speed)
-
-    def get_latest_measurements(self):
-        """Return latest trike data."""
-        return (self.time[-1], self.angle[-1], self.speed[-1], self.speed_err[-1])
+        # Get the parameters from dict
+        ramp_start = self.config_dict['ramp_start']
+        ramp_end = self.config_dict['ramp_end']
+        dth = (speed/speed_ref)*self.config_dict['shift']
+        theta_min = self.config_dict[ch+"_angle_min"]-dth
+        theta_max = self.config_dict[ch+"_angle_max"]-dth
+        # Check if angle in range (theta_min, theta_max)
+        if theta_min <= angle and angle <= theta_max:
+            if (angle-theta_min) <= ramp_start:
+                return (angle-theta_min)/ramp_start
+            elif (theta_max-angle) <= ramp_end:
+                return (theta_max-angle)/ramp_end
+            else:
+                return 1
+        elif theta_min > theta_max:
+            if angle <= theta_min and angle <= theta_max:
+                if theta_min <= angle + 360 and angle <= theta_max:
+                    if (angle+360-theta_min) <= ramp_start:
+                        return (angle+360-theta_min)/ramp_start
+                    elif (theta_max-angle) <= ramp_end:
+                        return (theta_max-angle)/ramp_end
+                    else:
+                        return 1
+            elif angle >= theta_min and angle >= theta_max:
+                if theta_min <= angle and angle <= theta_max + 360:
+                    if (theta_max+360-angle) <= ramp_end:
+                        return (theta_max+360-angle)/ramp_end
+                    elif (angle-theta_min) <= ramp_start:
+                        return (angle-theta_min)/ramp_start
+                    else:
+                        return 1
+        return 0
 
     def g(self, error):
         """PI speed controller logic.

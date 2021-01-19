@@ -69,6 +69,7 @@ reverse_ref = {
     'autoC_enable':      99030,
     'autoC_shift':       99040,
     'autoC_velocity':    99050,
+    'all_link_current':  99060,
 
     'ch12_link_current': 12100,
     'ch1_current':       12111,
@@ -281,12 +282,36 @@ def current_updated(config, item):
     if (config[item.element]-prev) > 2:  # Check for how much it changed
         config[item.element] = prev+2
     callback_ref[item.level]['prev'] = config[item.element]  # Update previous value
-    # Modifies the current as a pair
-    if config['ch'+str(item.group)+'_link_current']:
-        item_dual = Param(callback_ref, item.dual)  # Linked channel
-        config[item_dual.element] = config[item.element]  # Update dual
-        callback_ref[item_dual.level]['prev'] = config[item_dual.element]  # Update previous value
-        return set([item.element, item_dual.element])
+    # Modifies the current for all active channels
+    if config['all_link_current']:
+        retset = set([item.element])
+        # Get enabled channels
+        active = [i for i in config if 'enable' in i]
+        active = [v[2:4] for v in active if config[v]]
+        # Ignore if there're no active channels
+        if active:
+            active = ''.join(active)
+            # Find the current minimum
+            value = min([config['ch'+t+'_current'] for t in active])
+            # Prevents the user from abruptly increasing the current
+            if (config[item.element]-value) > 2:  # Check for how much it changed
+                config[item.element] = value+2
+            callback_ref[item.level]['prev'] = config[item.element]  # Update previous value
+            active.replace(str(item.channel),'')
+            # Change the current for all other active channels
+            for channel in active:
+                c1 = Param(callback_ref, reverse_ref['ch'+channel+'_current'])
+                config[c1.element] = config[item.element]
+                callback_ref[c1.level]['prev'] = config[c1.element]  # Update previous value
+                retset.update([c1.element])
+        return retset
+    else:
+        # Modifies the current as a pair
+        if config['ch'+str(item.group)+'_link_current']:
+            item_dual = Param(callback_ref, item.dual)  # Linked channel
+            config[item_dual.element] = config[item.element]  # Update dual
+            callback_ref[item_dual.level]['prev'] = config[item_dual.element]  # Update previous value
+            return set([item.element, item_dual.element])
     return set([item.element])
 
 def pulse_width_updated(config, item):
@@ -335,13 +360,14 @@ callback_ref = {
     99005: {'name': 'ch56_enable',       'flag': enable_updated,       'prev': False},
     99007: {'name': 'ch78_enable',       'flag': enable_updated,       'prev': False},
 
-    99010: {'name': 'shift',             'flag': general_updated,      'prev':    45},
+    99010: {'name': 'shift',             'flag': general_updated,      'prev':    10},
     99013: {'name': 'ramp_start',        'flag': general_updated,      'prev':    25},
     99015: {'name': 'ramp_end',          'flag': general_updated,      'prev':    20},
     99020: {'name': 'mark_assistance',   'flag': general_updated,      'prev': False},
     99030: {'name': 'autoC_enable',      'flag': general_updated,      'prev': False},
     99040: {'name': 'autoC_shift',       'flag': general_updated,      'prev':    10},
     99050: {'name': 'autoC_velocity',    'flag': general_updated,      'prev':    48},
+    99060: {'name': 'all_link_current',  'flag': general_updated,      'prev': False},
 
     12100: {'name': 'ch12_link_current', 'flag': link_current_updated, 'prev':  True},
     12111: {'name': 'ch1_current',       'flag': current_updated,      'prev':     0},
@@ -350,10 +376,10 @@ callback_ref = {
     12122: {'name': 'ch2_pulse_width',   'flag': pulse_width_updated,  'prev':   500},
 
     12200: {'name': 'ch12_link_angle',   'flag': link_angle_updated,   'prev':  True},
-    12211: {'name': 'ch1_angle_min',     'flag': angle_updated,        'prev':   280},
-    12221: {'name': 'ch1_angle_max',     'flag': angle_updated,        'prev':    15},
-    12212: {'name': 'ch2_angle_min',     'flag': angle_updated,        'prev':   100},
-    12222: {'name': 'ch2_angle_max',     'flag': angle_updated,        'prev':   195},
+    12211: {'name': 'ch1_angle_min',     'flag': angle_updated,        'prev':   275},
+    12221: {'name': 'ch1_angle_max',     'flag': angle_updated,        'prev':    20},
+    12212: {'name': 'ch2_angle_min',     'flag': angle_updated,        'prev':    95},
+    12222: {'name': 'ch2_angle_max',     'flag': angle_updated,        'prev':   200},
 
     34100: {'name': 'ch34_link_current', 'flag': link_current_updated, 'prev':  True},
     34113: {'name': 'ch3_current',       'flag': current_updated,      'prev':     0},
@@ -386,10 +412,10 @@ callback_ref = {
     78128: {'name': 'ch8_pulse_width',   'flag': pulse_width_updated,  'prev':   500},
 
     78200: {'name': 'ch78_link_angle',   'flag': link_angle_updated,   'prev':  True},
-    78217: {'name': 'ch7_angle_min',     'flag': angle_updated,        'prev':   280},
-    78227: {'name': 'ch7_angle_max',     'flag': angle_updated,        'prev':    15},
-    78218: {'name': 'ch8_angle_min',     'flag': angle_updated,        'prev':   100},
-    78228: {'name': 'ch8_angle_max',     'flag': angle_updated,        'prev':   195},
+    78217: {'name': 'ch7_angle_min',     'flag': angle_updated,        'prev':   275},
+    78227: {'name': 'ch7_angle_max',     'flag': angle_updated,        'prev':    20},
+    78218: {'name': 'ch8_angle_min',     'flag': angle_updated,        'prev':    95},
+    78228: {'name': 'ch8_angle_max',     'flag': angle_updated,        'prev':   200},
 }
 
 
