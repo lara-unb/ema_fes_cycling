@@ -323,12 +323,41 @@ def pulse_width_updated(config, item):
     """
     global callback_ref
 
+    prev = callback_ref[item.level]['prev']  # Value before update
+    # Prevents the user from abruptly increasing the pulse width
+    if (config[item.element]-prev) > 10:  # Check for how much it changed
+        config[item.element] = prev+10
     callback_ref[item.level]['prev'] = config[item.element]  # Update previous value
-    if config['ch'+str(item.group)+'_link_current']:
-        item_dual = Param(callback_ref, item.dual)  # Linked channel
-        config[item_dual.element] = config[item.element]  # Update dual
-        callback_ref[item_dual.level]['prev'] = config[item_dual.element]  # Update previous value
-        return set([item.element, item_dual.element])
+    # Modifies the pulse width for all active channels
+    if config['all_link_current']:
+        retset = set([item.element])
+        # Get enabled channels
+        active = [i for i in config if 'enable' in i]
+        active = [v[2:4] for v in active if config[v]]
+        # Ignore if there're no active channels
+        if active:
+            active = ''.join(active)
+            # Find the pulse width minimum
+            value = min([config['ch'+t+'_pulse_width'] for t in active])
+            # Prevents the user from abruptly increasing the pulse width
+            if (config[item.element]-value) > 10:  # Check for how much it changed
+                config[item.element] = value+10
+            callback_ref[item.level]['prev'] = config[item.element]  # Update previous value
+            active.replace(str(item.channel),'')
+            # Change the pulse width for all other active channels
+            for channel in active:
+                c1 = Param(callback_ref, reverse_ref['ch'+channel+'_pulse_width'])
+                config[c1.element] = config[item.element]
+                callback_ref[c1.level]['prev'] = config[c1.element]  # Update previous value
+                retset.update([c1.element])
+        return retset
+    else:
+        # Modifies the pulse width as a pair
+        if config['ch'+str(item.group)+'_link_current']:
+            item_dual = Param(callback_ref, item.dual)  # Linked channel
+            config[item_dual.element] = config[item.element]  # Update dual
+            callback_ref[item_dual.level]['prev'] = config[item_dual.element]  # Update previous value
+            return set([item.element, item_dual.element])
     return set([item.element])
 
 def angle_updated(config, item):
