@@ -31,12 +31,12 @@ class Trike(object):
     """
     def __init__(self, config_dict):
         self.config_dict = config_dict
-        self.stim_pw = dict.fromkeys(stim_order,0)  # Pulse width peak for each channel
-        self.stim_pw_now = dict.fromkeys(stim_order,0)  # Instant pulse width for each channel
-        self.stim_pw_max = 0  # Max from all values of stim_pw
         self.stim_current = dict.fromkeys(stim_order,0)  # Current peak for each channel
         self.stim_current_now = dict.fromkeys(stim_order,0)  # Instant current for each channel
         self.stim_current_max = 0  # Max from all values of stim_current
+        self.stim_pw = dict.fromkeys(stim_order,0)  # Pulse width peak for each channel
+        self.stim_pw_now = dict.fromkeys(stim_order,0)  # Instant pulse width for each channel
+        self.stim_pw_max = 0  # Max from all values of stim_pw
 
         # Other components
         self.status = 'off'  # 'off', 'training' or 'racing'
@@ -61,12 +61,12 @@ class Trike(object):
         """Return stimulation current and pulse width for all channels
         as lists.
         """
-        pw_list = 8*[0]
         current_list = 8*[0]
+        pw_list = 8*[0]
         for i, channel in enumerate(stim_order):
-            pw_list[i] = self.stim_pw_now[channel]
             current_list[i] = self.stim_current_now[channel]
-        return pw_list, current_list
+            pw_list[i] = self.stim_pw_now[channel]
+        return current_list, pw_list
 
     def set_latest_measurements(self, time, angle, speed):
         """Update pedal data based on received measurements.
@@ -81,51 +81,6 @@ class Trike(object):
         self.speed.append(speed)
         self.speed_err.append(self.speed_ref-speed)
         self.cycle_speed.append(speed)
-
-    def set_stim_pw(self, value, ch=None):
-        """Change the stimulation pulse width. When value is an int, ch
-        is used to update a specific channel, when None all channels get
-        the same value.
-
-        Attributes:
-            value (int/dict): pulse width ampitude/s.
-            ch (int): respective stimulation channel.
-        """
-        # Check safe limit
-        limit = 500
-        # Every pulse width amplitude specified
-        if isinstance(value, dict):
-            if value.keys() != self.stim_pw.keys():
-                raise KeyError
-            else:
-                for v in value.values():
-                    if not isinstance(v, int):
-                        raise TypeError
-                    if v > limit:
-                        v = limit
-                    if v < 0:
-                        v = 0
-                self.stim_pw = value
-                self.stim_pw_max = max(self.stim_pw.values())
-        elif isinstance(value, int):
-            # Force safe limit
-            if value > limit:
-                value = limit
-            # Don't accept negative values
-            if value < 0:
-                value = 0
-            # Modify only one channel
-            if ch:
-                k = 'ch'+str(ch)
-                if k not in self.stim_pw:
-                    raise KeyError
-                else:
-                    self.stim_pw[k] = value
-                    self.stim_pw_max = max(self.stim_pw.values())
-            # All channels at once
-            else:
-                self.stim_pw_max = value
-                self.stim_pw = dict.fromkeys(stim_order,value)
 
     def set_stim_current(self, value, ch=None, proportion=None):
         """Change the stimulation current. When value is an int, ch or
@@ -185,6 +140,51 @@ class Trike(object):
                     self.stim_current = value
                     self.stim_current_max = max(self.stim_current.values())
         return
+
+    def set_stim_pw(self, value, ch=None):
+        """Change the stimulation pulse width. When value is an int, ch
+        is used to update a specific channel, when None all channels get
+        the same value.
+
+        Attributes:
+            value (int/dict): pulse width ampitude/s.
+            ch (int): respective stimulation channel.
+        """
+        # Check safe limit
+        limit = 500
+        # Every pulse width amplitude specified
+        if isinstance(value, dict):
+            if value.keys() != self.stim_pw.keys():
+                raise KeyError
+            else:
+                for v in value.values():
+                    if not isinstance(v, int):
+                        raise TypeError
+                    if v > limit:
+                        v = limit
+                    if v < 0:
+                        v = 0
+                self.stim_pw = value
+                self.stim_pw_max = max(self.stim_pw.values())
+        elif isinstance(value, int):
+            # Force safe limit
+            if value > limit:
+                value = limit
+            # Don't accept negative values
+            if value < 0:
+                value = 0
+            # Modify only one channel
+            if ch:
+                k = 'ch'+str(ch)
+                if k not in self.stim_pw:
+                    raise KeyError
+                else:
+                    self.stim_pw[k] = value
+                    self.stim_pw_max = max(self.stim_pw.values())
+            # All channels at once
+            else:
+                self.stim_pw_max = value
+                self.stim_pw = dict.fromkeys(stim_order,value)
 
     def set_status(self, value):
         """Change system status.

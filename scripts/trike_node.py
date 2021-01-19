@@ -213,16 +213,16 @@ class TrikeWrapper(object):
         """Modify ROS Msg variables according to their present value."""
         # Debug data
         cycles = self.trike.cycles
-        stim_pw = self.trike.stim_pw
         stim_current = self.trike.stim_current
-        msg = 'CYCLES:{}\nPW:{}\nCURRENT:{}\n'.format(cycles, stim_pw, stim_current)
+        stim_pw = self.trike.stim_pw
+        msg = 'CYCLES:{}\nCURRENT:{}\nPW:{}\n'.format(cycles, stim_current, stim_pw)
         rospy.logdebug(msg)
         # Get data and setup variables
         _, angle, speed, _ = self.trike.get_latest_measurements()
         status = self.trike.status
         cadence = self.trike.cadence
         distance = self.trike.distance
-        pw_list, current_list = self.trike.get_stim_list()
+        current_list, pw_list = self.trike.get_stim_list()
         # Update msgs
         self.msgs['status'] = status
         self.msgs['angle'].data = angle

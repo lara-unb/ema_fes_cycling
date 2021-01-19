@@ -88,7 +88,7 @@
                 },
                 "topics": {
                   "type": "repr",
-                  "repr": "[u'/ema/stimulator/matrix/activation/data[2]', u'/ema/stimulator/matrix/activation/data[3]', u'/ema/stimulator/matrix/activation/data[1]', u'/ema/stimulator/matrix/activation/data[4]']"
+                  "repr": "[u'/ema/stimulator/matrix/activation/data[1]', u'/ema/stimulator/matrix/activation/data[2]', u'/ema/stimulator/matrix/activation/data[3]', u'/ema/stimulator/matrix/activation/data[4]']"
                 },
                 "y_limits": {
                   "type": "repr",
@@ -135,7 +135,7 @@
                 },
                 "topics": {
                   "type": "repr",
-                  "repr": "[u'/ema/stimulator/matrix/activation/data[5]', u'/ema/stimulator/matrix/activation/data[8]', u'/ema/stimulator/matrix/activation/data[6]', u'/ema/stimulator/matrix/activation/data[7]']"
+                  "repr": "[u'/ema/stimulator/matrix/activation/data[5]', u'/ema/stimulator/matrix/activation/data[6]', u'/ema/stimulator/matrix/activation/data[7]', u'/ema/stimulator/matrix/activation/data[8]']"
                 },
                 "y_limits": {
                   "type": "repr",
@@ -157,8 +157,8 @@
               "keys": {
                 "tree_widget_header_state": {
                   "type": "repr(QByteArray.hex)",
-                  "repr(QByteArray.hex)": "QtCore.QByteArray('000000ff0000000000000001000000000000000001000000050000000000000003000000040000000100000002000000050000000000000003000000040000000100000002000000000000000000000393000000050101000100000000000000000500000064ffffffff0000008100000003000000050000012900000001000000030000002a00000001000000030000005c0000000100000003000000f30000000100000003000000f10000000100000003000003e800')",
-                  "pretty-print": "                                                  d         )     *     \\                  "
+                  "repr(QByteArray.hex)": "QtCore.QByteArray('000000ff0000000000000001000000000000000001000000050000000000000003000000040000000200000001000000050000000000000004000000030000000100000002000000000000000000000393000000050101000100000000000000000500000064ffffffff0000008100000003000000050000012900000001000000030000005c00000001000000030000002a0000000100000003000000f30000000100000003000000f10000000100000003000003e800')",
+                  "pretty-print": "                                                  d         )     \\     *                  "
                 }
               },
               "groups": {}
@@ -215,7 +215,7 @@
                 },
                 "selected_nodes": {
                   "type": "repr",
-                  "repr": "[u'/ema/trike_config']"
+                  "repr": "[u'/ema/']"
                 },
                 "_splitter": {
                   "type": "repr(QByteArray.hex)",

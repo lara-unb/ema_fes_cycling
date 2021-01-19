@@ -283,20 +283,22 @@ def current_updated(config, item):
         # Get enabled channels
         active = [i for i in config if 'enable' in i]
         active = [v[2:4] for v in active if config[v]]
-        active = ''.join(active)
-        # Find the current minimum
-        value = min([config['ch'+t+'_current'] for t in active])
-        # Prevents the user from abruptly increasing the current
-        if (config[item.element]-value) > 2:  # Check for how much it changed
-            config[item.element] = value+2
-        callback_ref[item.level]['prev'] = config[item.element]  # Update previous value
-        active.replace(str(item.channel),'')
-        # Change the current for all other active channels
-        for channel in active:
-            c1 = Param(callback_ref, reverse_ref['ch'+channel+'_current'])
-            config[c1.element] = config[item.element]
-            callback_ref[c1.level]['prev'] = config[c1.element]  # Update previous value
-            retset.update([c1.element])
+        # Ignore if there're no active channels
+        if active:
+            active = ''.join(active)
+            # Find the current minimum
+            value = min([config['ch'+t+'_current'] for t in active])
+            # Prevents the user from abruptly increasing the current
+            if (config[item.element]-value) > 2:  # Check for how much it changed
+                config[item.element] = value+2
+            callback_ref[item.level]['prev'] = config[item.element]  # Update previous value
+            active.replace(str(item.channel),'')
+            # Change the current for all other active channels
+            for channel in active:
+                c1 = Param(callback_ref, reverse_ref['ch'+channel+'_current'])
+                config[c1.element] = config[item.element]
+                callback_ref[c1.level]['prev'] = config[c1.element]  # Update previous value
+                retset.update([c1.element])
         return retset
     else:
         # Modifies the current as a pair
@@ -353,7 +355,7 @@ callback_ref = {
     99005: {'name': 'ch56_enable',       'flag': enable_updated,       'prev': False},
     99007: {'name': 'ch78_enable',       'flag': enable_updated,       'prev': False},
 
-    99010: {'name': 'shift',             'flag': general_updated,      'prev':    45},
+    99010: {'name': 'shift',             'flag': general_updated,      'prev':    10},
     99013: {'name': 'ramp_start',        'flag': general_updated,      'prev':    25},
     99015: {'name': 'ramp_end',          'flag': general_updated,      'prev':    20},
     99020: {'name': 'mark_assistance',   'flag': general_updated,      'prev': False},
@@ -369,10 +371,10 @@ callback_ref = {
     12122: {'name': 'ch2_pulse_width',   'flag': pulse_width_updated,  'prev':   500},
 
     12200: {'name': 'ch12_link_angle',   'flag': link_angle_updated,   'prev':  True},
-    12211: {'name': 'ch1_angle_min',     'flag': angle_updated,        'prev':   280},
-    12221: {'name': 'ch1_angle_max',     'flag': angle_updated,        'prev':    15},
-    12212: {'name': 'ch2_angle_min',     'flag': angle_updated,        'prev':   280},
-    12222: {'name': 'ch2_angle_max',     'flag': angle_updated,        'prev':    15},
+    12211: {'name': 'ch1_angle_min',     'flag': angle_updated,        'prev':   275},
+    12221: {'name': 'ch1_angle_max',     'flag': angle_updated,        'prev':    20},
+    12212: {'name': 'ch2_angle_min',     'flag': angle_updated,        'prev':   275},
+    12222: {'name': 'ch2_angle_max',     'flag': angle_updated,        'prev':    20},
 
     34100: {'name': 'ch34_link_current', 'flag': link_current_updated, 'prev':  True},
     34113: {'name': 'ch3_current',       'flag': current_updated,      'prev':     0},
@@ -381,10 +383,10 @@ callback_ref = {
     34124: {'name': 'ch4_pulse_width',   'flag': pulse_width_updated,  'prev':   500},
 
     34200: {'name': 'ch34_link_angle',   'flag': link_angle_updated,   'prev':  True},
-    34213: {'name': 'ch3_angle_min',     'flag': angle_updated,        'prev':   280},
-    34223: {'name': 'ch3_angle_max',     'flag': angle_updated,        'prev':    15},
-    34214: {'name': 'ch4_angle_min',     'flag': angle_updated,        'prev':   280},
-    34224: {'name': 'ch4_angle_max',     'flag': angle_updated,        'prev':    15},
+    34213: {'name': 'ch3_angle_min',     'flag': angle_updated,        'prev':   275},
+    34223: {'name': 'ch3_angle_max',     'flag': angle_updated,        'prev':    20},
+    34214: {'name': 'ch4_angle_min',     'flag': angle_updated,        'prev':   275},
+    34224: {'name': 'ch4_angle_max',     'flag': angle_updated,        'prev':    20},
 
     56100: {'name': 'ch56_link_current', 'flag': link_current_updated, 'prev':  True},
     56115: {'name': 'ch5_current',       'flag': current_updated,      'prev':     0},
@@ -393,10 +395,10 @@ callback_ref = {
     56126: {'name': 'ch6_pulse_width',   'flag': pulse_width_updated,  'prev':   500},
 
     56200: {'name': 'ch56_link_angle',   'flag': link_angle_updated,   'prev':  True},
-    56215: {'name': 'ch5_angle_min',     'flag': angle_updated,        'prev':   100},
-    56225: {'name': 'ch5_angle_max',     'flag': angle_updated,        'prev':   195},
-    56216: {'name': 'ch6_angle_min',     'flag': angle_updated,        'prev':   100},
-    56226: {'name': 'ch6_angle_max',     'flag': angle_updated,        'prev':   195},
+    56215: {'name': 'ch5_angle_min',     'flag': angle_updated,        'prev':    95},
+    56225: {'name': 'ch5_angle_max',     'flag': angle_updated,        'prev':   200},
+    56216: {'name': 'ch6_angle_min',     'flag': angle_updated,        'prev':    95},
+    56226: {'name': 'ch6_angle_max',     'flag': angle_updated,        'prev':   200},
 
     78100: {'name': 'ch78_link_current', 'flag': link_current_updated, 'prev':  True},
     78117: {'name': 'ch7_current',       'flag': current_updated,      'prev':     0},
@@ -405,10 +407,10 @@ callback_ref = {
     78128: {'name': 'ch8_pulse_width',   'flag': pulse_width_updated,  'prev':   500},
 
     78200: {'name': 'ch78_link_angle',   'flag': link_angle_updated,   'prev':  True},
-    78217: {'name': 'ch7_angle_min',     'flag': angle_updated,        'prev':   100},
-    78227: {'name': 'ch7_angle_max',     'flag': angle_updated,        'prev':   195},
-    78218: {'name': 'ch8_angle_min',     'flag': angle_updated,        'prev':   100},
-    78228: {'name': 'ch8_angle_max',     'flag': angle_updated,        'prev':   195},
+    78217: {'name': 'ch7_angle_min',     'flag': angle_updated,        'prev':    95},
+    78227: {'name': 'ch7_angle_max',     'flag': angle_updated,        'prev':   200},
+    78218: {'name': 'ch8_angle_min',     'flag': angle_updated,        'prev':    95},
+    78228: {'name': 'ch8_angle_max',     'flag': angle_updated,        'prev':   200},
 }
 
 
