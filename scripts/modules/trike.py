@@ -259,9 +259,11 @@ class Trike(object):
         if self.status == 'off':
             self.stim_current = dict.fromkeys(stim_order,0)
         else:
+            # Avoid unexpected changes inside the loop
+            angle_now = self.angle[-1]
+            speed_now = self.speed[-1]
             for channel, current in self.stim_current.items():
-                action = self.calculate_control_action(channel, self.angle[-1],
-                    self.speed[-1], self.speed_ref)
+                action = self.calculate_control_action(channel, angle_now, speed_now, self.speed_ref)
                 self.stim_current_now[channel] = round(action*current)
 
     def calculate_control_action(self, ch, angle, speed, speed_ref):

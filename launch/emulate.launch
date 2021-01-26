@@ -26,6 +26,7 @@ http://wiki.ros.org/roslaunch/XML
 
         <!-- launch common nodes -->
         <node name="imu_emulator" pkg="ema_fes_cycling" type="imu_emulator.py" output="log" respawn="true" respawn_delay="5"/>
+        <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/>
         <node name="trike" pkg="ema_fes_cycling" type="trike_node.py" output="log" respawn="true" respawn_delay="5"/>
 
         <!-- launch pc-exclusive nodes -->
