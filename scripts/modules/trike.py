@@ -27,31 +27,46 @@ class Trike(object):
     """A class used to control the stimulation.
 
     Attributes:
-        config_dict (dict): stores the static config parameters
+        self.config_dict (dict): stores the static config parameters
+        self.stim_current (dict): current peak for each channel
+        self.stim_current_now (dict): instant current for each channel
+        self.stim_current_max (int): max from all values of stim_current
+        self.stim_pw (dict): pulse width peak for each channel
+        self.stim_pw_now (dict): instant pulse width for each channel
+        self.stim_pw_max (int): max from all values of stim_pw
+        self.status (string): 'off', 'training' or 'racing'
+        self.angle (list): appended pedal angles
+        self.speed (list): appended angular speeds
+        self.speed_err (list): appended speed errors
+        self.time (list): appended sensor timestamps
+        self.cycles (int): total number of pedal turns
+        self.cadence (float): mean km/h speed of last cycle
+        self.distance (float): total distance travelled in km
+        self.speed_ref (int): reference speed
+        self.passed_half_turn (bool): flag if 180 deg has passed
+        self.cycle_speed (list): appended angular speeds from latest cycle
     """
     def __init__(self, config_dict):
         self.config_dict = config_dict
-        self.stim_current = dict.fromkeys(stim_order,0)  # Current peak for each channel
-        self.stim_current_now = dict.fromkeys(stim_order,0)  # Instant current for each channel
-        self.stim_current_max = 0  # Max from all values of stim_current
-        self.stim_pw = dict.fromkeys(stim_order,0)  # Pulse width peak for each channel
-        self.stim_pw_now = dict.fromkeys(stim_order,0)  # Instant pulse width for each channel
-        self.stim_pw_max = 0  # Max from all values of stim_pw
-
+        self.stim_current = dict.fromkeys(stim_order,0)
+        self.stim_current_now = dict.fromkeys(stim_order,0)
+        self.stim_current_max = 0
+        self.stim_pw = dict.fromkeys(stim_order,0)
+        self.stim_pw_now = dict.fromkeys(stim_order,0)
+        self.stim_pw_max = 0
         # Other components
-        self.status = 'off'  # 'off', 'training' or 'racing'
-        self.angle = 5*[0]  # List of pedal angles
-        self.speed = 5*[0]  # List of pedal angular speeds
-        self.speed_err = 5*[0]  # List of speed error
-        self.time = 5*[0]  # List of sensor timestamps
-        self.cycles = 0  # Number of pedal turns
-        self.cadence = 0  # Mean km/h speed of last cycle
-        self.distance = 0  # Distance travelled in km
-
+        self.status = 'off'
+        self.angle = 5*[0]
+        self.speed = 5*[0]
+        self.speed_err = 5*[0]
+        self.time = 5*[0]
+        self.cycles = 0
+        self.cadence = 0
+        self.distance = 0
         # Support components
-        self.speed_ref = 300  # Reference speed
-        self.passed_half_turn = False  # Flag 180 deg has passed
-        self.cycle_speed = [0]  # List of current cycle speeds
+        self.speed_ref = 300
+        self.passed_half_turn = False
+        self.cycle_speed = [0]
 
     def get_latest_measurements(self):
         """Return latest trike data."""
