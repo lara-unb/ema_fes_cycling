@@ -49,17 +49,27 @@ import dynamic_reconfigure.client
 class TrikeWrapper(object):
     """A class used to wrap the trike functionalities and establish a ROS
     interface for its module.
+
+    Attributes:
+        self.trike (object): lower level class
+        self.platform (string): embedded/stationary platform running the code
+        self.paramserver (object): interface with ROS parameters
+        self.services (dict): ROS services - provided/requested
+        self.topics (dict): ROS topics - published/subscribed
+        self.msgs (dict): exchanged msgs
+        self.time_start (object): instant when control is turned on
+        self.time_elapsed (object): elapsed time since control was turned on
     """
     def __init__(self):
         rospy.loginfo('Initializing trike')
-        self.trike = trike.Trike(rospy.get_param('trike'))  # Lower level class
-        self.platform = rospy.get_param('platform')  # Embedded/stationary platform running the code
-        self.paramserver = {}  # Interface with ROS parameters
-        self.services = {'prov': {},'req': {}}  # Dict with all ROS services - provided/requested
-        self.topics = {'pub': {},'sub': {}}  # Dict with all ROS topics - published/subscribed
-        self.msgs = {}  # Dict with exchanged msgs
-        self.time_start = None  # Instant when control is turned on
-        self.time_elapsed = None  # Elapsed time since control was turned on
+        self.trike = trike.Trike(rospy.get_param('trike'))
+        self.platform = rospy.get_param('platform')
+        self.paramserver = {}
+        self.services = {'prov': {},'req': {}}
+        self.topics = {'pub': {},'sub': {}}
+        self.msgs = {}
+        self.time_start = None
+        self.time_elapsed = None
         # Perform initial build
         rospy.loginfo('Setting up messages and topics')
         self.build_msgs()

@@ -148,9 +148,11 @@ class Interface(object):
     Attributes:
         ref_dict (dict): screen structure
         self.screen_now (dict): screen being displayed
-        self.screens (dict): dict with all screens
-        self.services (dict): dict with all ROS services
-        self.topics (dict): dict with all ROS topics
+        self.screens (dict): organized screens
+        self.services (dict): ROS services - provided/requested
+        self.topics (dict): ROS topics - published/subscribed
+        self.display_t (object): current time
+        self.display_dt (object): minimum display update interval
     """
     def __init__(self, ref_dict):
         rospy.loginfo('Initializing interface')
