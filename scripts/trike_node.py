@@ -32,6 +32,7 @@ from std_msgs.msg import Int32MultiArray
 from std_srvs.srv import Empty
 from std_srvs.srv import SetBool
 from sensor_msgs.msg import Imu
+from ema_common_msgs.msg import Stimulator
 from ema_common_msgs.srv import SetUInt16
 
 # Import utilities
@@ -53,6 +54,7 @@ class TrikeWrapper(object):
     Attributes:
         self.trike (object): lower level class
         self.platform (string): embedded/stationary platform running the code
+        self.matrix_on (int): loop rate in hz if using matrix
         self.paramserver (object): interface with ROS parameters
         self.services (dict): ROS services - provided/requested
         self.topics (dict): ROS topics - published/subscribed
@@ -64,6 +66,7 @@ class TrikeWrapper(object):
         rospy.loginfo('Initializing trike')
         self.trike = trike.Trike(rospy.get_param('trike'))
         self.platform = rospy.get_param('platform')
+        self.matrix_on = rospy.get_param('stimulator/matrix', False)
         self.paramserver = {}
         self.services = {'prov': {},'req': {}}
         self.topics = {'pub': {},'sub': {}}
@@ -83,6 +86,14 @@ class TrikeWrapper(object):
 
     def build_msgs(self):
         """Prepare and build msgs according to their ROS Msg type."""
+        if not self.matrix_on:  # When using conventional electrode
+            # Build stimulator msg
+            stim_msg = Stimulator()
+            stim_msg.channel = list(range(1,8+1))  # All the 8 channels
+            stim_msg.mode = 8*['single']  # No doublets/triplets
+            stim_msg.pulse_current = 8*[0]
+            stim_msg.pulse_width = 8*[0]  # Initialize with zeros
+            self.msgs['stim'] = stim_msg
         # Build intensity msg to publish instant stimulation signal
         current_msg = Int32MultiArray()
         current_msg.data = 9*[0]  # [index] is the actual channel number
@@ -103,6 +114,8 @@ class TrikeWrapper(object):
         # List subscribed topics
         self.topics['sub']['pedal'] = rospy.Subscriber('imu/pedal', Imu, self.pedal_callback)
         # List published topics
+        if not self.matrix_on:  # When using conventional electrode
+            self.topics['pub']['stim'] = rospy.Publisher('stimulator/ccl_update', Stimulator, queue_size=10)
         self.topics['pub']['status'] = rospy.Publisher('trike/status', String, queue_size=10)
         self.topics['pub']['angle'] = rospy.Publisher('trike/angle', Float64, queue_size=10)
         self.topics['pub']['current'] = rospy.Publisher('stimulator/current', Int32MultiArray, queue_size=10)
@@ -234,6 +247,9 @@ class TrikeWrapper(object):
         distance = self.trike.distance
         current_list, pw_list = self.trike.get_stim_list()
         # Update msgs
+        if not self.matrix_on:  # When using conventional electrode
+            self.msgs['stim'].pulse_current = current_list
+            self.msgs['stim'].pulse_width = pw_list
         self.msgs['status'] = status
         self.msgs['angle'].data = angle
         self.msgs['current'].data = [0]+current_list
@@ -394,7 +410,7 @@ def main():
     rospy.loginfo('Creating auxiliary class')
     aux = TrikeWrapper()
     # Define loop rate (in hz)
-    rate = rospy.Rate(50)
+    rate = rospy.Rate(48)
     # Node loop
     while not rospy.is_shutdown():
         # New interaction

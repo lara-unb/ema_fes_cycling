@@ -21,7 +21,7 @@ http://wiki.ros.org/roslaunch/XML
 
         <!-- load common config files-->
         <rosparam command="load" file="$(find yostlabs_3space_imu)/config/imu.yaml" ns="imu"/>
-        <rosparam command="load" file="$(find hasomed_rehastim_stimulator)/config/stim.yaml" ns="stimulator"/>
+        <rosparam command="load" file="$(find hasomed_rehastim_stimulator)/config/CCL18F48.yaml" ns="stimulator"/>
         <rosparam command="load" file="$(find ema_fes_cycling)/config/trike.yaml" ns="trike"/>
 
         <!-- launch common nodes -->
@@ -32,7 +32,8 @@ http://wiki.ros.org/roslaunch/XML
         <!-- launch pc-exclusive nodes -->
         <group if="$(eval platform == 'pc')">
             <node name="trike_config" pkg="ema_fes_cycling" type="trike_server_node.py" output="log" respawn="true" respawn_delay="5"/>
-            <node name="dashboard" pkg="rqt_gui" type="rqt_gui" output="log" args="--perspective-file $(find ema_fes_cycling)/perspective/EMA_Trike.perspective"/>
+            <node name="dashboard" pkg="rqt_gui" type="rqt_gui" output="log" args="--perspective-file $(find ema_fes_cycling)/perspective/EMA_Trike_Cadence.perspective"/>
+            <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args=" -a -o $(env HOME)/bagfiles/matrix/ --split --duration 5m"/>
         </group>
 
         <!-- launch rasp-exclusive nodes -->
