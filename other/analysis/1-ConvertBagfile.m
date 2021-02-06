@@ -17,7 +17,7 @@ end
 for w = 1:length(Files)
     %% Import bagfile
     Filename = Files{w};
-    fprintf('\n\nImporting "%s" bagfile...\n', Filename);
+    fprintf('\n\nImporting "%s" bagfile...\n',Filename);
     RawBag = rosbag(Filename);
     Filename = Files{w}(1:end-4);
 
@@ -84,7 +84,7 @@ for w = 1:length(Files)
 
     %% Save data to file
     disp('Saving mat file...');
-    save(Filename,'StimPulseWidthRaw', 'StimMatrixRaw', 'StimCurrentRaw', 'SpeedRaw',...
-        'PedalAngleRaw', 'Filename', 'DistanceRaw', 'CadenceRaw');
+    save(Filename,'StimPulseWidthRaw','StimMatrixRaw','StimCurrentRaw','SpeedRaw',...
+        'PedalAngleRaw','Filename','DistanceRaw','CadenceRaw');
 
 end

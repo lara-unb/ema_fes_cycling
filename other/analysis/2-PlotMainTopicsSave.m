@@ -17,13 +17,13 @@ end
 for w = 1:length(Files)
     %% Import bag file
     Filename = Files{w};
-    fprintf('\n\nImporting "%s" mat file...\n', Filename);
+    fprintf('\n\nImporting "%s" mat file...\n',Filename);
     load(Filename);
     Filename = Files{w}(1:end-4);
 
     %% Plot
-    Toffset = min([CadenceRaw.Time(1), DistanceRaw.Time(1), PedalAngleRaw.Time(1), SpeedRaw.Time(1),...
-        StimCurrentRaw.Time(1), StimMatrixRaw.Time(1), StimPulseWidthRaw.Time(1)]);
+    Toffset = min([CadenceRaw.Time(1),DistanceRaw.Time(1),PedalAngleRaw.Time(1),SpeedRaw.Time(1),...
+        StimCurrentRaw.Time(1),StimMatrixRaw.Time(1),StimPulseWidthRaw.Time(1)]);
 
     figure
     subplot(4,1,1)
