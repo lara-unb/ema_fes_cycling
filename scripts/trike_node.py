@@ -410,7 +410,7 @@ def main():
     rospy.loginfo('Creating auxiliary class')
     aux = TrikeWrapper()
     # Define loop rate (in hz)
-    rate = rospy.Rate(48)
+    rate = rospy.Rate(64)
     # Node loop
     while not rospy.is_shutdown():
         # New interaction

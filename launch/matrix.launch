@@ -18,7 +18,7 @@ http://wiki.ros.org/roslaunch/XML
         <param name="platform" value="$(arg platform)"/>
         <arg name="display_type" value="lcd" doc="specify display type connected: lcd/oled"/>
         <param name="display_type" value="$(arg display_type)"/>
-        <arg name="stimulator/matrix" value="48" doc="specify electrode matrix loop rate"/>
+        <arg name="stimulator/matrix" value="64" doc="specify electrode matrix loop rate"/>
         <param name="stimulator/matrix" value="$(arg stimulator/matrix)"/>
 
         <!-- load common config files-->
