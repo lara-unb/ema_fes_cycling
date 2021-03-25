@@ -38,8 +38,17 @@ for w = 1:length(Files)
     plot(SpeedRaw.Time-Toffset,SpeedRaw.Data); hold off
     ylabel('Speed (deg/s)')
     subplot(4,1,3)
-    plot(DistanceRaw.Time-Toffset,DistanceRaw.Data)
-    ylabel('Distance (km)')
+    plot(StimPulseWidthRaw.Time-Toffset,StimPulseWidthRaw.ch1); hold on
+    plot(StimPulseWidthRaw.Time-Toffset,StimPulseWidthRaw.ch2)
+    plot(StimPulseWidthRaw.Time-Toffset,StimPulseWidthRaw.ch3)
+    plot(StimPulseWidthRaw.Time-Toffset,StimPulseWidthRaw.ch4)
+    plot(StimPulseWidthRaw.Time-Toffset,StimPulseWidthRaw.ch5)
+    plot(StimPulseWidthRaw.Time-Toffset,StimPulseWidthRaw.ch6)
+    plot(StimPulseWidthRaw.Time-Toffset,StimPulseWidthRaw.ch7)
+    plot(StimPulseWidthRaw.Time-Toffset,StimPulseWidthRaw.ch8); hold off
+    legend('ch1','ch2','ch3','ch4','ch5','ch6','ch7','ch8','Location','north',...
+        'Orientation','horizontal')
+    ylabel('Largura de Pulso (µs)')
     subplot(4,1,4)
     plot(StimMatrixRaw.Time-Toffset,StimMatrixRaw.ch1); hold on
     plot(StimMatrixRaw.Time-Toffset,StimMatrixRaw.ch2)

@@ -67,9 +67,9 @@ for w = 1:length(Files)
     DistanceRaw = timeseries(DistanceTopicFromBag);
 
     %% Separate elapsed time data
-    % disp('Extracting elapsed time data from bagfile...');
-    % PedalAngleTopicFromBag = select(RawBag,'Topic','/ema/trike/angle');
-    % PedalAngleRaw = timeseries(PedalAngleTopicFromBag);
+    disp('Extracting elapsed time data from bagfile...');
+    ElapsedTopicFromBag = select(RawBag,'Topic','/ema/trike/elapsed');
+    ElapsedRaw = timeseries(ElapsedTopicFromBag);
 
     %% Separate speed data
     disp('Extracting speed data from bagfile...');
@@ -85,6 +85,6 @@ for w = 1:length(Files)
     %% Save data to file
     disp('Saving mat file...');
     save(Filename,'StimPulseWidthRaw','StimMatrixRaw','StimCurrentRaw','SpeedRaw',...
-        'PedalAngleRaw','Filename','DistanceRaw','CadenceRaw');
+        'PedalAngleRaw','Filename','DistanceRaw','ElapsedRaw','CadenceRaw');
 
 end
