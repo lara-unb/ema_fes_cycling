@@ -21,7 +21,7 @@ http://wiki.ros.org/roslaunch/XML
 
         <!-- load common config files-->
         <rosparam command="load" file="$(find yostlabs_3space_imu)/config/imu.yaml" ns="imu"/>
-        <rosparam command="load" file="$(find hasomed_rehastim_stimulator)/config/CCL18F48.yaml" ns="stimulator"/>
+        <rosparam command="load" file="$(find hasomed_rehastim_stimulator)/config/CCL18F64.yaml" ns="stimulator"/>
         <rosparam command="load" file="$(find ema_fes_cycling)/config/trike.yaml" ns="trike"/>
 
         <!-- launch common nodes -->
