@@ -201,19 +201,26 @@ class Trike(object):
                 self.stim_pw_max = value
                 self.stim_pw = dict.fromkeys(stim_order,value)
 
-    def set_status(self, value):
+    def set_status(self, value, zero_distance=True):
         """Change system status.
 
         Attributes:
             value (string): new system status
+            zero_distance (bool): flag to reset distance
         """
-        if value in ('off','training','racing'):
-            # Reset cycling data
-            self.cycles = self.distance = 0
+        if value in ('off','training','racing','autopw'):
+            if zero_distance:
+                # Reset cycling data
+                self.cycles = self.distance = 0
             self.status = value
             if self.status == 'off':
                 # Zero stimulation
+                self.stim_current_max = 0
                 self.stim_current = dict.fromkeys(stim_order,0)
+            elif self.status == 'autopw':
+                # Zero pulse width
+                self.stim_pw_max = 0
+                self.stim_pw = dict.fromkeys(stim_order,0)
         else:
             raise ValueError
 
@@ -272,6 +279,7 @@ class Trike(object):
         """Update stimulation attributes according to latest measurements."""
         self.stim_pw_now = self.stim_pw.copy()
         if self.status == 'off':
+            self.stim_current_max = 0
             self.stim_current = dict.fromkeys(stim_order,0)
         else:
             # Avoid unexpected changes inside the loop

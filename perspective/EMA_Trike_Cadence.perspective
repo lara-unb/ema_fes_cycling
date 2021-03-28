@@ -167,7 +167,7 @@
                 },
                 "dock_widget_title": {
                   "type": "repr",
-                  "repr": "u'Angular Velocity (deg/s)'"
+                  "repr": "u'Stimulation Pulse Width Ch1&2 (µs)'"
                 }
               },
               "groups": {}
@@ -184,15 +184,15 @@
                 },
                 "topics": {
                   "type": "repr",
-                  "repr": "u'/ema/trike/speed/data'"
+                  "repr": "[u'/ema/stimulator/pulse_width/data[1]', u'/ema/stimulator/pulse_width/data[2]']"
                 },
                 "y_limits": {
                   "type": "repr",
-                  "repr": "[0.0, 2.0]"
+                  "repr": "[0.0, 100.0]"
                 },
                 "x_limits": {
                   "type": "repr",
-                  "repr": "[0.0, 10.0]"
+                  "repr": "[0.0, 300.0]"
                 }
               },
               "groups": {}
@@ -214,7 +214,7 @@
                 },
                 "dock_widget_title": {
                   "type": "repr",
-                  "repr": "u'Estimated Cadence (km/h)'"
+                  "repr": "u'Angular Velocity (deg/s)'"
                 }
               },
               "groups": {}
@@ -231,7 +231,7 @@
                 },
                 "topics": {
                   "type": "repr",
-                  "repr": "u'/ema/trike/cadence/data'"
+                  "repr": "u'/ema/trike/speed/data'"
                 },
                 "y_limits": {
                   "type": "repr",
