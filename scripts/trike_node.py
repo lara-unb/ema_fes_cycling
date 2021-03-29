@@ -219,6 +219,9 @@ class TrikeWrapper(object):
                     self.time_elapsed = 0
                     self.time_start = rospy.Time.now()
                 else:  # Back to training status keeping the distance stored
+                    # Update the pulse width on the server
+                    for k, v in self.trike.stim_pw.items():
+                        self.paramserver.update_configuration({k+'_pulse_width':v})
                     self.trike.set_status('training', zero_distance=False)
 
     def refresh(self):
@@ -291,6 +294,7 @@ class TrikeWrapper(object):
         interval = 50  # Constant pulse width values are multiples of this
         pw_now = self.trike.stim_pw_max  # Instant max pulse width from all channels
         time_elapsed = self.time_elapsed.to_sec()  # Elapsed time since sequence started
+        pw_updated = 0  # Used to calculate the new pulse width value
         # Check if it's still going on
         if (not autopw_on) or (pw_now == max_pw):
             return
@@ -304,7 +308,6 @@ class TrikeWrapper(object):
             ramp_start = pw_now-(pw_now%interval)  # Pulse width value when ramp started
             ramp_slope = (ramp_end-ramp_start)/time_ramp
             pw_updated = int(ramp_start+time_served*ramp_slope)
-            self.trike.set_stim_pw(pw_updated)
         else:  # On constant phase
             # Confirm the constant value was reached
             cons_now = (1+int(time_elapsed/period))*interval
@@ -313,10 +316,10 @@ class TrikeWrapper(object):
             if (pw_now == cons_now):
                 return
             else:
-                self.trike.set_stim_pw(cons_now)
-        # Update the pulse width dictionary on the server
-        for k, v in self.trike.stim_pw.items():
-            self.paramserver.update_configuration({k+'_pulse_width':v})
+                pw_updated = cons_now
+        # Avoid unecessary updates
+        if pw_updated != pw_now:
+            self.trike.set_stim_pw(pw_updated)
 
     def reboot_callback(self, data):
         """ROS Service handler to reboot the machine.
