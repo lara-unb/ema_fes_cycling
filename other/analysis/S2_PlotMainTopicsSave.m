@@ -1,9 +1,9 @@
 % 
 % MATLAB code - EMA Matrix Experiments
-% 2021-01-23
+% 2021-03-29
 % Lucas de Macedo Pinheiro
 % 
-%   Convert bagfiles to mat with specific topics.
+%   Plot the main topics in a figure with subplots.
 %
 
 % Open window for file selection
@@ -15,77 +15,91 @@ end
 
 %%
 for w = 1:length(Files)
-    %% Import bag file
-    Filename = Files{w};
-    fprintf('\n\nImporting "%s" mat file...\n',Filename);
-    load(Filename);
-    Filename = Files{w}(1:end-4);
+    %% Import file
+    CurrentFileName = Files{w};
+    fprintf('\n\nImporting "%s" mat file...\n',CurrentFileName);
+    D = load(CurrentFileName);
+    CurrentFileName = CurrentFileName(1:end-4);
 
     %% Plot
-    % Time offset to start with zero - uncomment these for MTRX
-%     Toffset = min([CadenceRaw.Time(1),DistanceRaw.Time(1),PedalAngleRaw.Time(1),SpeedRaw.Time(1),...
-%         StimCurrentRaw.Time(1),StimMatrixRaw.Time(1),StimPulseWidthRaw.Time(1)]);
+    try  % Check if D.StimMatrixRaw is present, if not it is not a matrix dataset
+        % Time offset to start with zero
+        TimeOffset = min([D.CadenceRaw.Time(1),D.DistanceRaw.Time(1),...
+            D.PedalAngleRaw.Time(1),D.SpeedRaw.Time(1),D.StimCurrentRaw.Time(1),...
+            D.StimMatrixRaw.Time(1),D.StimPulseWidthRaw.Time(1)]);
+    catch e  % Carry on considering a conventional dataset
+        if strcmp(e.identifier,'MATLAB:nonExistentField')
+            % Time offset to start with zero
+            TimeOffset = min([D.CadenceRaw.Time(1),D.DistanceRaw.Time(1),...
+                D.PedalAngleRaw.Time(1),D.SpeedRaw.Time(1),D.StimCurrentRaw.Time(1),...
+                D.StimPulseWidthRaw.Time(1)]);
+        else  % Pass on the error
+            rethrow(e)
+        end
+    end
 
-    % Time offset to start with zero - uncomment these for CONV
-    Toffset = min([CadenceRaw.Time(1),DistanceRaw.Time(1),PedalAngleRaw.Time(1),SpeedRaw.Time(1),...
-        StimCurrentRaw.Time(1),StimPulseWidthRaw.Time(1)]);
-
-    figure
+    Fig = figure;
     subplot(4,1,1)
-    plot(PedalAngleRaw.Time-Toffset,PedalAngleRaw.Data)
-    ylabel('Angle (deg)')
-    title(Filename(2:end), 'Interpreter', 'none')
+    plot(D.PedalAngleRaw.Time-TimeOffset,D.PedalAngleRaw.Data)
+    ylabel('Angulo (graus)')
+    title(CurrentFileName(2:end), 'Interpreter', 'none')
     subplot(4,1,2)
     yyaxis left
-    plot(CadenceRaw.Time-Toffset,CadenceRaw.Data); hold on
-    ylabel('Cadence (km/h)')
+    plot(D.CadenceRaw.Time-TimeOffset,D.CadenceRaw.Data); hold on
+    ylabel('Cadencia (km/h)')
     yyaxis right
-    plot(SpeedRaw.Time-Toffset,SpeedRaw.Data); hold off
-    ylabel('Speed (deg/s)')
+    plot(D.SpeedRaw.Time-TimeOffset,D.SpeedRaw.Data); hold off
+    ylabel('Velocidade (graus/s)')
     subplot(4,1,3)
-    plot(StimPulseWidthRaw.Time-Toffset,StimPulseWidthRaw.ch1); hold on
-    plot(StimPulseWidthRaw.Time-Toffset,StimPulseWidthRaw.ch2)
-    plot(StimPulseWidthRaw.Time-Toffset,StimPulseWidthRaw.ch3)
-    plot(StimPulseWidthRaw.Time-Toffset,StimPulseWidthRaw.ch4)
-    plot(StimPulseWidthRaw.Time-Toffset,StimPulseWidthRaw.ch5)
-    plot(StimPulseWidthRaw.Time-Toffset,StimPulseWidthRaw.ch6)
-    plot(StimPulseWidthRaw.Time-Toffset,StimPulseWidthRaw.ch7)
-    plot(StimPulseWidthRaw.Time-Toffset,StimPulseWidthRaw.ch8); hold off
+    plot(D.StimPulseWidthRaw.Time-TimeOffset,D.StimPulseWidthRaw.ch1); hold on
+    plot(D.StimPulseWidthRaw.Time-TimeOffset,D.StimPulseWidthRaw.ch2)
+    plot(D.StimPulseWidthRaw.Time-TimeOffset,D.StimPulseWidthRaw.ch3)
+    plot(D.StimPulseWidthRaw.Time-TimeOffset,D.StimPulseWidthRaw.ch4)
+    plot(D.StimPulseWidthRaw.Time-TimeOffset,D.StimPulseWidthRaw.ch5)
+    plot(D.StimPulseWidthRaw.Time-TimeOffset,D.StimPulseWidthRaw.ch6)
+    plot(D.StimPulseWidthRaw.Time-TimeOffset,D.StimPulseWidthRaw.ch7)
+    plot(D.StimPulseWidthRaw.Time-TimeOffset,D.StimPulseWidthRaw.ch8); hold off
     legend('ch1','ch2','ch3','ch4','ch5','ch6','ch7','ch8','Location','north',...
         'Orientation','horizontal')
-    ylabel('Largura de Pulso (?s)')
+    ylabel(['Largura de Pulso (',char(181),'s)'])
 
-    % Matrix Activation - uncomment these for MTRX
-%     subplot(4,1,4)
-%     plot(StimMatrixRaw.Time-Toffset,StimMatrixRaw.ch1); hold on
-%     plot(StimMatrixRaw.Time-Toffset,StimMatrixRaw.ch2)
-%     plot(StimMatrixRaw.Time-Toffset,StimMatrixRaw.ch3)
-%     plot(StimMatrixRaw.Time-Toffset,StimMatrixRaw.ch4)
-%     plot(StimMatrixRaw.Time-Toffset,StimMatrixRaw.ch5)
-%     plot(StimMatrixRaw.Time-Toffset,StimMatrixRaw.ch6)
-%     plot(StimMatrixRaw.Time-Toffset,StimMatrixRaw.ch7)
-%     plot(StimMatrixRaw.Time-Toffset,StimMatrixRaw.ch8); hold off
-%     legend('ch1','ch2','ch3','ch4','ch5','ch6','ch7','ch8','Location','north',...
-%         'Orientation','horizontal')
-%     ylabel('Current (mA)')
-%     xlabel('Time (s)')
-
-    % Stim Current - uncomment these for CONV
-    subplot(4,1,4)
-    plot(StimCurrentRaw.Time-Toffset,StimCurrentRaw.ch1); hold on
-    plot(StimCurrentRaw.Time-Toffset,StimCurrentRaw.ch2)
-    plot(StimCurrentRaw.Time-Toffset,StimCurrentRaw.ch3)
-    plot(StimCurrentRaw.Time-Toffset,StimCurrentRaw.ch4)
-    plot(StimCurrentRaw.Time-Toffset,StimCurrentRaw.ch5)
-    plot(StimCurrentRaw.Time-Toffset,StimCurrentRaw.ch6)
-    plot(StimCurrentRaw.Time-Toffset,StimCurrentRaw.ch7)
-    plot(StimCurrentRaw.Time-Toffset,StimCurrentRaw.ch8); hold off
-    legend('ch1','ch2','ch3','ch4','ch5','ch6','ch7','ch8','Location','north',...
-        'Orientation','horizontal')
-    ylabel('Current (mA)')
-    xlabel('Time (s)')
+    try  % Check if D.StimMatrixRaw is present, if not it is not a matrix dataset
+        % Matrix Activation
+        subplot(4,1,4)
+        plot(D.StimMatrixRaw.Time-TimeOffset,D.StimMatrixRaw.ch1); hold on
+        plot(D.StimMatrixRaw.Time-TimeOffset,D.StimMatrixRaw.ch2)
+        plot(D.StimMatrixRaw.Time-TimeOffset,D.StimMatrixRaw.ch3)
+        plot(D.StimMatrixRaw.Time-TimeOffset,D.StimMatrixRaw.ch4)
+        plot(D.StimMatrixRaw.Time-TimeOffset,D.StimMatrixRaw.ch5)
+        plot(D.StimMatrixRaw.Time-TimeOffset,D.StimMatrixRaw.ch6)
+        plot(D.StimMatrixRaw.Time-TimeOffset,D.StimMatrixRaw.ch7)
+        plot(D.StimMatrixRaw.Time-TimeOffset,D.StimMatrixRaw.ch8); hold off
+        legend('ch1','ch2','ch3','ch4','ch5','ch6','ch7','ch8',...
+            'Location','north','Orientation','horizontal')
+        ylabel('Corrente (mA)')
+        xlabel('Tempo (s)')
+    catch e  % Carry on considering a conventional dataset
+        if strcmp(e.identifier,'MATLAB:nonExistentField')
+            % Plain Stim Current
+            subplot(4,1,4)
+            plot(D.StimCurrentRaw.Time-TimeOffset,D.StimCurrentRaw.ch1); hold on
+            plot(D.StimCurrentRaw.Time-TimeOffset,D.StimCurrentRaw.ch2)
+            plot(D.StimCurrentRaw.Time-TimeOffset,D.StimCurrentRaw.ch3)
+            plot(D.StimCurrentRaw.Time-TimeOffset,D.StimCurrentRaw.ch4)
+            plot(D.StimCurrentRaw.Time-TimeOffset,D.StimCurrentRaw.ch5)
+            plot(D.StimCurrentRaw.Time-TimeOffset,D.StimCurrentRaw.ch6)
+            plot(D.StimCurrentRaw.Time-TimeOffset,D.StimCurrentRaw.ch7)
+            plot(D.StimCurrentRaw.Time-TimeOffset,D.StimCurrentRaw.ch8); hold off
+            legend('ch1','ch2','ch3','ch4','ch5','ch6','ch7','ch8',...
+                'Location','north','Orientation','horizontal')
+            ylabel('Corrente (mA)')
+            xlabel('Tempo (s)')
+        else  % Pass on the error
+            rethrow(e)
+        end
+    end
 
     %% Save figure
-    savefig(Filename);
+    saveas(Fig, CurrentFileName, 'fig');  % savefig() was giving wrong filenames
 
 end

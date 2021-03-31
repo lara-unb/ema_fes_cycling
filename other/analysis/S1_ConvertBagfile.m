@@ -15,7 +15,7 @@ end
 
 %%
 for w = 1:length(Files)
-    %% Import bagfile
+    %% Import file
     Filename = Files{w};
     fprintf('\n\nImporting "%s" bagfile...\n',Filename);
     RawBag = rosbag(Filename);
