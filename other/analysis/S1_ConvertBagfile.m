@@ -21,16 +21,6 @@ for w = 1:length(Files)
     RawBag = rosbag(Filename);
     Filename = Files{w}(1:end-4);
 
-    %% Separate matrix activation data - uncomment this section for MTRX
-%     disp('Extracting matrix activation data from bagfile...');
-%     StimMatrixTopicFromBag = select(RawBag,'Topic','/ema/stimulator/matrix/activation');
-%     StimMatrixRaw = cell2table(readMessages(StimMatrixTopicFromBag));
-%     StimMatrixRaw = cell2mat({StimMatrixRaw.Var1.Data})';
-%     StimMatrixRaw = table(StimMatrixRaw(:,2),StimMatrixRaw(:,3),StimMatrixRaw(:,4),...
-%         StimMatrixRaw(:,5),StimMatrixRaw(:,6),StimMatrixRaw(:,7),StimMatrixRaw(:,8),...
-%         StimMatrixRaw(:,9),'VariableNames',{'ch1','ch2','ch3','ch4','ch5','ch6','ch7','ch8'});
-%     StimMatrixRaw.Time = StimMatrixTopicFromBag.MessageList.Time;
-
     %% Separate stim current data
     disp('Extracting stim current data from bagfile...');
     StimCurrentTopicFromBag = select(RawBag,'Topic','/ema/stimulator/current');
@@ -82,13 +72,25 @@ for w = 1:length(Files)
     % StatusRaw = cell2table(readMessages(StatusTopicFromBag));
     % StatusRaw.Time = StatusTopicFromBag.MessageList.Time;
 
-    %% Save data to file - uncomment this section for MTRX
-%     disp('Saving mat file...');
-%     save(Filename,'StimPulseWidthRaw','StimMatrixRaw','StimCurrentRaw','SpeedRaw',...
-%         'PedalAngleRaw','Filename','DistanceRaw','ElapsedRaw','CadenceRaw');
-
-    %% Save data to file - uncomment this section for CONV
-    disp('Saving mat file...');
-    save(Filename,'StimPulseWidthRaw','StimCurrentRaw','SpeedRaw',...
-        'PedalAngleRaw','Filename','DistanceRaw','ElapsedRaw','CadenceRaw');
+    %% Separate matrix activation data
+    % Check if matrix topic is present, if not it is not a matrix dataset
+    if ismember('/ema/stimulator/matrix/activation',RawBag.AvailableTopics.Properties.RowNames)
+        StimMatrixTopicFromBag = select(RawBag,'Topic','/ema/stimulator/matrix/activation');
+        disp('Extracting matrix activation data from bagfile...');
+        StimMatrixRaw = cell2table(readMessages(StimMatrixTopicFromBag));
+        StimMatrixRaw = cell2mat({StimMatrixRaw.Var1.Data})';
+        StimMatrixRaw = table(StimMatrixRaw(:,2),StimMatrixRaw(:,3),StimMatrixRaw(:,4),...
+            StimMatrixRaw(:,5),StimMatrixRaw(:,6),StimMatrixRaw(:,7),StimMatrixRaw(:,8),...
+            StimMatrixRaw(:,9),'VariableNames',{'ch1','ch2','ch3','ch4','ch5','ch6','ch7','ch8'});
+        StimMatrixRaw.Time = StimMatrixTopicFromBag.MessageList.Time;
+        % Save matrix data to file
+        disp('Saving mat file with matrix data...');
+        save(Filename,'StimPulseWidthRaw','StimMatrixRaw','StimCurrentRaw','SpeedRaw',...
+            'PedalAngleRaw','Filename','DistanceRaw','ElapsedRaw','CadenceRaw');
+    % Carry on considering a conventional dataset
+    else  % Save conventional data to file
+        disp('Saving mat file with conventional data...');
+        save(Filename,'StimPulseWidthRaw','StimCurrentRaw','SpeedRaw',...
+            'PedalAngleRaw','Filename','DistanceRaw','ElapsedRaw','CadenceRaw');
+    end
 end
