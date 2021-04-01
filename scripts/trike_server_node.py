@@ -60,11 +60,15 @@ reverse_ref = {
     'shift':             99010,
     'ramp_start':        99013,
     'ramp_end':          99015,
-    'autoPW_enable':     99020,
-    'autoPW_max':        99030,
-    'autoPW_tramp':      99040,
-    'autoPW_tcons':      99050,
     'all_link_current':  99060,
+
+    'autoPW_max_1':      90311,
+    'autoPW_tramp_1':    90321,
+    'autoPW_tcons_1':    90331,
+    'autoPW_max_2':      90312,
+    'autoPW_tramp_2':    90322,
+    'autoPW_tcons_2':    90332,
+    'autoPW_on':         90300,
 
     'ch12_link_current': 12100,
     'ch1_current':       12111,
@@ -186,7 +190,7 @@ def enable_updated(config, item):
         retset.update(current_updated(config, c2))
     else:
         # Check if the automatic sequence is not going on
-        if not config['autoPW_enable']:
+        if not config['autoPW_on']:
             # Show/expand group
             config['groups']['groups']['ch'+pair]['state'] = True
     return retset
@@ -212,9 +216,9 @@ def auto_updated(config, item):
     """
     global callback_ref
 
-    # No changes allowed when 'autoPW_enable'
-    if config['autoPW_enable']:
-        if item.element == 'autoPW_enable':  # Start the sequence now
+    # No changes allowed when 'autoPW_on'
+    if config['autoPW_on']:
+        if item.element == 'autoPW_on':  # Start the sequence now
             # Hide/collapse all groups to avoid user intervention
             for pair in ['12','34','56','78']:
                 config['groups']['groups']['ch'+pair]['state'] = False
@@ -222,11 +226,16 @@ def auto_updated(config, item):
             config[item.element] = callback_ref[item.level]['prev']
             return set()
     else:  # Automatic sequence deactivated
-        if item.element == 'autoPW_enable':
+        if item.element == 'autoPW_on':
             # Show/expand all active groups to allow user intervention
             for pair in ['12','34','56','78']:
                 if config['ch'+pair+'_enable']:
                     config['groups']['groups']['ch'+pair]['state'] = True
+        elif item.element in ['autoPW_max_1','autoPW_max_2']:
+            # 2nd maximum value has to be >= to the 1st
+            if not (config['autoPW_max_2'] >= config['autoPW_max_1']):
+                config[item.element] = callback_ref[item.level]['prev']
+                return set()
     callback_ref[item.level]['prev'] = config[item.element]  # Update previous value
     return set([item.element])
 
@@ -347,14 +356,7 @@ def pulse_width_updated(config, item):
     """
     global callback_ref
 
-    # Pass through if 'autoPW_enable'
-    if config['autoPW_enable']:
-        callback_ref[item.level]['prev'] = config[item.element]  # Update previous value
-        return set([item.element])
     prev = callback_ref[item.level]['prev']  # Value before update
-    # Prevents the user from abruptly increasing the pulse width
-    if (config[item.element]-prev) > 10:  # Check for how much it changed
-        config[item.element] = prev+10
     callback_ref[item.level]['prev'] = config[item.element]  # Update previous value
     # Modifies the pulse width for all active channels
     if config['all_link_current']:
@@ -367,9 +369,6 @@ def pulse_width_updated(config, item):
             active = ''.join(active)
             # Find the pulse width minimum
             value = min([config['ch'+char+'_pulse_width'] for char in active])
-            # Prevents the user from abruptly increasing the pulse width
-            if (config[item.element]-value) > 10:  # Check for how much it changed
-                config[item.element] = value+10
             callback_ref[item.level]['prev'] = config[item.element]  # Update previous value
             active.replace(str(item.channel),'')
             # Change the pulse width for all other active channels
@@ -420,11 +419,15 @@ callback_ref = {
     99010: {'name': 'shift',             'flag': general_updated,      'prev':    10},
     99013: {'name': 'ramp_start',        'flag': general_updated,      'prev':    25},
     99015: {'name': 'ramp_end',          'flag': general_updated,      'prev':    20},
-    99020: {'name': 'autoPW_enable',     'flag': auto_updated,         'prev': False},
-    99030: {'name': 'autoPW_max',        'flag': auto_updated,         'prev':   450},
-    99040: {'name': 'autoPW_tramp',      'flag': auto_updated,         'prev':    30},
-    99050: {'name': 'autoPW_tcons',      'flag': auto_updated,         'prev':    60},
     99060: {'name': 'all_link_current',  'flag': general_updated,      'prev': False},
+
+    90311: {'name': 'autoPW_max_1',      'flag': auto_updated,         'prev':   200},
+    90321: {'name': 'autoPW_tramp_1',    'flag': auto_updated,         'prev':    60},
+    90331: {'name': 'autoPW_tcons_1',    'flag': auto_updated,         'prev':    60},
+    90312: {'name': 'autoPW_max_2',      'flag': auto_updated,         'prev':   450},
+    90322: {'name': 'autoPW_tramp_2',    'flag': auto_updated,         'prev':    30},
+    90332: {'name': 'autoPW_tcons_2',    'flag': auto_updated,         'prev':    30},
+    90300: {'name': 'autoPW_on',         'flag': auto_updated,         'prev': False},
 
     12100: {'name': 'ch12_link_current', 'flag': link_current_updated, 'prev':  True},
     12111: {'name': 'ch1_current',       'flag': current_updated,      'prev':     0},

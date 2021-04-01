@@ -213,15 +213,16 @@ class TrikeWrapper(object):
             elif param[4:] == 'pulse_width':
                 channel = int(param[2])
                 self.trike.set_stim_pw(value=update, ch=channel)
-            elif param == 'autoPW_enable':
+            elif param == 'autoPW_on':
                 if update:  # Automatic pulse width sequence enabled
                     self.trike.set_status('autopw')
                     self.time_elapsed = 0
                     self.time_start = rospy.Time.now()
-                else:  # Back to training status keeping the distance stored
+                else:
                     # Update the pulse width on the server
                     for k, v in self.trike.stim_pw.items():
                         self.paramserver.update_configuration({k+'_pulse_width':v})
+                    # Back to training status keeping the distance stored
                     self.trike.set_status('training', zero_distance=False)
 
     def refresh(self):
@@ -281,36 +282,47 @@ class TrikeWrapper(object):
         """Define an automatic pulse width sequence based on elapsed time.
         The pulse width is increased to the 'interval' value on the corse
         of 'autoPW_tramp' seconds and remains the same for 'autoPW_tcons'
-        seconds. It repeats for multiples of interval until 'autoPW_enable'
+        seconds. It repeats for multiples of interval until 'autoPW_on'
         is false or 'autoPW_max' is reached. Before calling this function
         it's necessary to execute "self.time_start=rospy.Time.now()",
         "self.time_elapsed=0" and "self.trike.set_status('autopw')" to
         indicate the beginning of the sequence.
         """
-        autopw_on = self.trike.config_dict['autoPW_enable']  # Sequence on/off
-        max_pw = self.trike.config_dict['autoPW_max']  # Stop at this pulse width value
-        time_ramp = self.trike.config_dict['autoPW_tramp']  # Transition ramp duration
-        time_cons = self.trike.config_dict['autoPW_tcons']  # Constant duration
-        interval = 50  # Constant pulse width values are multiples of this
-        pw_now = self.trike.stim_pw_max  # Instant max pulse width from all channels
-        time_elapsed = self.time_elapsed.to_sec()  # Elapsed time since sequence started
-        pw_updated = 0  # Used to calculate the new pulse width value
-        # Check if it's still going on
-        if (not autopw_on) or (pw_now == max_pw):
+        autopw_on = self.trike.config_dict['autoPW_on']  # Sequence on/off
+        if (not autopw_on):  # Check if it's enabled
             return
+        pw_now = self.trike.stim_pw_max  # Instant max pulse width from all channels
+        time_elapsed = self.time_elapsed.to_sec()  # Elapsed time since autoPW was enabled
+        time_ramp = self.trike.config_dict['autoPW_tramp_1']  # 1st ramp phase duration
+        time_cons = self.trike.config_dict['autoPW_tcons_1']  # 1st constant phase duration
+        max_pw = self.trike.config_dict['autoPW_max_1']  # 1st maximum pulse width
+        initial_pw = 0  # Pulse Width where the sequence begins
         period = time_ramp+time_cons  # Cycle period
+        interval = 50  # Height of each ramp phase
+        if pw_now >= max_pw:  # 1st sequence is over or ending
+            time_over_1 = ((max_pw/interval)+(max_pw%interval > 0))*period  # Total 1st sequence duration
+            if time_elapsed > time_over_1:  # 1st sequence is over
+                max_pw = self.trike.config_dict['autoPW_max_2']  # 2nd maximum pulse width
+                if pw_now == max_pw:  # 2nd sequence is over
+                    return
+                else:  # 2nd sequence is still going on
+                    initial_pw = self.trike.config_dict['autoPW_max_1']
+                    time_ramp = self.trike.config_dict['autoPW_tramp_2']  # 1st ramp phase duration
+                    time_cons = self.trike.config_dict['autoPW_tcons_2']  # 1st constant phase duration
+                    period = time_ramp+time_cons  # Cycle period
+                    time_elapsed -= time_over_1  # Ignore the time spent on 1st sequence
         time_served = time_elapsed%period  # How much time of current period has passed
         # Find what's the current phase
         if (time_served < time_ramp):  # On transition ramp phase
             ramp_end = pw_now-(pw_now%interval)+interval  # Pulse width when ramp ends
             if ramp_end > max_pw:  # In case the maximum value is not multiple of interval
                 ramp_end = max_pw
-            ramp_start = pw_now-(pw_now%interval)  # Pulse width value when ramp started
+            ramp_start = pw_now-(pw_now%interval)  # Pulse width when ramp started
             ramp_slope = (ramp_end-ramp_start)/time_ramp
             pw_updated = int(ramp_start+time_served*ramp_slope)
         else:  # On constant phase
             # Confirm the constant value was reached
-            cons_now = (1+int(time_elapsed/period))*interval
+            cons_now = initial_pw+(1+int(time_elapsed/period))*interval
             if cons_now > max_pw:
                 cons_now = max_pw
             if (pw_now == cons_now):
