@@ -68,6 +68,7 @@ reverse_ref = {
     'autoPW_max_2':      90312,
     'autoPW_tramp_2':    90322,
     'autoPW_tcons_2':    90332,
+    'autoPW_step':       90340,
     'autoPW_on':         90300,
 
     'ch12_link_current': 12100,
@@ -427,6 +428,7 @@ callback_ref = {
     90312: {'name': 'autoPW_max_2',      'flag': auto_updated,         'prev':   450},
     90322: {'name': 'autoPW_tramp_2',    'flag': auto_updated,         'prev':    30},
     90332: {'name': 'autoPW_tcons_2',    'flag': auto_updated,         'prev':    30},
+    90340: {'name': 'autoPW_step',       'flag': auto_updated,         'prev':    50},
     90300: {'name': 'autoPW_on',         'flag': auto_updated,         'prev': False},
 
     12100: {'name': 'ch12_link_current', 'flag': link_current_updated, 'prev':  True},

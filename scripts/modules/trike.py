@@ -45,6 +45,7 @@ class Trike(object):
         self.speed_ref (int): reference speed
         self.passed_half_turn (bool): flag if 180 deg has passed
         self.cycle_speed (list): appended angular speeds from latest cycle
+        self.autopw_initial (int): initial pulse width for automatic sequence
     """
     def __init__(self, config_dict):
         self.config_dict = config_dict
@@ -67,6 +68,7 @@ class Trike(object):
         self.speed_ref = 300
         self.passed_half_turn = False
         self.cycle_speed = [0]
+        self.autopw_initial = 0
 
     def get_latest_measurements(self):
         """Return latest trike data."""
@@ -218,9 +220,12 @@ class Trike(object):
                 self.stim_current_max = 0
                 self.stim_current = dict.fromkeys(stim_order,0)
             elif self.status == 'autopw':
-                # Zero pulse width
-                self.stim_pw_max = 0
-                self.stim_pw = dict.fromkeys(stim_order,0)
+                # Reset all to maximum pulse width of active channels
+                active = [k for k, v in self.stim_current.items() if v != 0]
+                self.stim_pw_max = max([v for k, v in self.stim_pw.items() if k in active])
+                self.stim_pw = dict.fromkeys(stim_order,self.stim_pw_max)
+                # Set the starting point for the automatic sequence
+                self.autopw_initial = self.stim_pw_max
         else:
             raise ValueError
 
@@ -288,6 +293,60 @@ class Trike(object):
             for channel, current in self.stim_current.items():
                 action = self.calculate_control_action(channel, angle_now, speed_now, self.speed_ref)
                 self.stim_current_now[channel] = round(action*current)
+
+    def update_autopw_sequence(self, elapsed):
+        """Define an automatic pulse width sequence based on elapsed time.
+        The pulse width is incremented with 'autoPW_step' on the corse
+        of 'autoPW_tramp' seconds and remains the same for 'autoPW_tcons'
+        seconds. It goes on like this until 'autoPW_max'.
+
+        Attributes:
+            elapsed (float): time since the sequence was activated
+        """
+        autopw_on = self.config_dict['autoPW_on']  # Sequence on/off
+        pw_now = self.stim_pw_max  # Instant maximum pulse width from all channels
+        # Either turned off or there is no point in increasing
+        if (not autopw_on) or (pw_now >= self.config_dict['autoPW_max_2']):
+            return
+        # Assume 1st sequence ongoing
+        max_pw = self.config_dict['autoPW_max_1']  # 1st plateau
+        initial_pw = self.autopw_initial  # Starting point for the sequence
+        time_ramp = self.config_dict['autoPW_tramp_1']  # 1st ramp phase duration
+        time_cons = self.config_dict['autoPW_tcons_1']  # 1st constant phase duration
+        interval = self.config_dict['autoPW_step']  # Pulse width change interval - step size
+        period = time_ramp+time_cons  # Cycle period
+        # Check if on 2nd sequence or transitioning
+        if pw_now >= max_pw:
+            # Check 1st sequence total duration
+            height_1 = max_pw-initial_pw
+            duration_1 = ((height_1/interval)+(height_1%interval > 0))*period
+            if (pw_now > max_pw) or (elapsed > duration_1):
+                # 2nd sequence ongoing
+                max_pw = self.config_dict['autoPW_max_2']  # 2nd maximum pulse width
+                initial_pw = max(self.config_dict['autoPW_max_1'],initial_pw)  # Starting point for the sequence
+                time_ramp = self.config_dict['autoPW_tramp_2']  # 2nd ramp phase duration
+                time_cons = self.config_dict['autoPW_tcons_2']  # 2nd constant phase duration
+                period = time_ramp+time_cons  # Cycle period
+                elapsed -= duration_1  # Ignore the time spent on 1st sequence
+        # Logic behind the sequence phases
+        time_served = elapsed%period  # How much time of current period has passed
+        # Find what's the current phase
+        if (time_served < time_ramp):  # On transition ramp phase
+            ramp_end = initial_pw+(1+int(elapsed/period))*interval  # Pulse width when ramp ends
+            if ramp_end > max_pw:  # In case the maximum value is not multiple of interval
+                ramp_end = max_pw
+            ramp_start = initial_pw+int(elapsed/period)*interval  # Pulse width when ramp started
+            ramp_slope = (ramp_end-ramp_start)/time_ramp
+            pw_updated = int(ramp_start+time_served*ramp_slope)
+        else:  # On constant phase
+            # Confirm the constant value was reached
+            pw_updated = initial_pw+(1+int(elapsed/period))*interval
+            if pw_updated > max_pw:
+                pw_updated = max_pw
+        # Avoid unecessary updates
+        if pw_updated != pw_now:
+            self.stim_pw_max = pw_updated
+            self.stim_pw = dict.fromkeys(stim_order,pw_updated)
 
     def calculate_control_action(self, ch, angle, speed, speed_ref):
         """Return the control action according to specified inputs.
