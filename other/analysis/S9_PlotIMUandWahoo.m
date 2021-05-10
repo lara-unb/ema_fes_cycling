@@ -38,30 +38,31 @@ Fig1 = figure;
 colors = lines(7);
 p = line();
 % l = cell(1,length(Files));
-w=1;
-D = TheData.(['Sequence' num2str(w)]);
-PulseWidthTime = D.StimPulseWidthRaw.Time(...
-    (D.StimPulseWidthRaw.Time>=D.TimeStimStart+D.TimeOffset) &...
-    (D.StimPulseWidthRaw.Time < D.EndTime+D.TimeStimStart+D.TimeOffset));
-PulseWidthData = D.StimPulseWidthRaw.ch1(...
-    (D.StimPulseWidthRaw.Time>=D.TimeStimStart+D.TimeOffset) &...
-    (D.StimPulseWidthRaw.Time < D.EndTime+D.TimeStimStart+D.TimeOffset));
-temp = plot(PulseWidthTime-PulseWidthTime(1),PulseWidthData,...
-    'Color',colors(4,:)); hold on
-
 for w = 1:length(Files)
     D = TheData.(['Sequence' num2str(w)]);
-    p(w) = plot(D.StartNoAssistance,D.StimPulseWidthRaw.ch1(...
+    PulseWidthTime = D.StimPulseWidthRaw.Time(...
+        (D.StimPulseWidthRaw.Time>=D.TimeStimStart+D.TimeOffset) &...
+        (D.StimPulseWidthRaw.Time < D.EndTime+D.TimeStimStart+D.TimeOffset));
+    PulseWidthData = D.StimPulseWidthRaw.ch1(...
+        (D.StimPulseWidthRaw.Time>=D.TimeStimStart+D.TimeOffset) &...
+        (D.StimPulseWidthRaw.Time < D.EndTime+D.TimeStimStart+D.TimeOffset));
+    if mod(w,2)
+        p(w) = plot(PulseWidthTime-PulseWidthTime(1),PulseWidthData,...
+            '-','Color',colors(w,:)); hold on
+    else
+        p(w) = plot(PulseWidthTime-PulseWidthTime(1),PulseWidthData,...
+            '--','Color',colors(w,:)); hold on
+    end
+    temp = plot(D.StartNoAssistance,D.StimPulseWidthRaw.ch1(...
         find(D.StimPulseWidthRaw.Time > D.StartNoAssistance+D.TimeStimStart+D.TimeOffset,1)),'o',...
         'MarkerSize',6,'Color',colors(w,:),'MarkerFaceColor',colors(w,:));
-    temp = plot([D.StartNoAssistance D.StartNoAssistance],ylim,'--','Color',[colors(w,:),0.4]);
+    temp = plot([D.StartNoAssistance D.StartNoAssistance],ylim,'--','Color',[colors(w,:),0.5]);
 end
 hold off
 ylabel(['Largura de Pulso (',char(181),'s)'])
 xlabel('Tempo (s)')
 xlim([0 D.EndTime+15])
-title(['Compara',char(231),char(227),'o de Velocidade'])
-legend(p,l,'Interpreter','none','Location','North','Orientation','horizontal')
+legend(p,l,'Interpreter','none','Location','NorthOutside','Orientation','horizontal')
 
 %% Plot speed comparison
 disp('Speed comparison (maxNA, meanNA):')
@@ -91,14 +92,13 @@ end
 
 for w = 1:length(Files)
     D = TheData.(['Sequence' num2str(w)]);
-    plot([D.StartNoAssistance D.StartNoAssistance],ylim,'--','Color',[colors(w,:),0.4])
+    plot([D.StartNoAssistance D.StartNoAssistance],ylim,'--','Color',[colors(w,:),0.5])
 end
 hold off
 ylabel('Velocidade (km/h)')
 xlabel('Tempo (s)')
 xlim([0 D.EndTime+15])
-% title(['Compara',char(231),char(227),'o de Velocidade'])
-legend(p,l,'Interpreter','none','Location','North','Orientation','horizontal')
+legend(p,l,'Interpreter','none','Location','NorthOutside','Orientation','horizontal')
 
 %% Plot distance comparison
 disp('Distance comparison (max, maxNA):')
@@ -128,14 +128,13 @@ end
 
 for w = 1:length(Files)
     D = TheData.(['Sequence' num2str(w)]);
-    plot([D.StartNoAssistance D.StartNoAssistance],ylim,'--','Color',[colors(w,:),0.4])
+    plot([D.StartNoAssistance D.StartNoAssistance],ylim,'--','Color',[colors(w,:),0.5])
 end
 hold off
 ylabel(['Dist',char(226),'ncia (km)'])
 xlabel('Tempo (s)')
 xlim([0 D.EndTime+15])
-% title(['Compara',char(231),char(227),'o de Velocidade'])
-legend(p,l,'Interpreter','none','Location','North','Orientation','horizontal')
+legend(p,l,'Interpreter','none','Location','NorthOutside','Orientation','horizontal')
 
 %% Save figures
 saveas(Fig1,[Prefix,'Pulse_Width'],'fig');  % savefig() was giving wrong filenames

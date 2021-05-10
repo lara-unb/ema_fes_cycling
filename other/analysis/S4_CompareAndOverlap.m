@@ -39,7 +39,7 @@ for w = 1:length(Files)
 end
 hold off
 ylabel('Velocidade (graus/s)')
-xlabel('Tempo Deslocado (s)')
+xlabel('Tempo (s)')
 title('Comparacao de Velocidade')
 legend(FileNames,'Interpreter','none',...
     'Location','southoutside','Orientation','horizontal')
@@ -51,13 +51,16 @@ for w = 1:length(Files)
     CadenceTime = D.CadenceRaw.Time(D.CadenceRaw.Time>=D.TimeStimStart);
     CadenceData = D.CadenceRaw.Data(D.CadenceRaw.Time>=D.TimeStimStart);
     plot(CadenceTime-CadenceTime(1),CadenceData); hold on
+    disp(D.Filename.Filename1)
+    disp(mean(CadenceData))
 end
 hold off
 ylabel('Cadencia (km/h)')
-xlabel('Tempo Deslocado (s)')
+xlabel('Tempo (s)')
 title('Comparacao de Cadencia')
 legend(FileNames,'Interpreter','none',...
     'Location','southoutside','Orientation','horizontal')
+disp('')
 
 %% Plot pulse width comparison
 figure;
@@ -68,36 +71,36 @@ for w = 1:length(Files)
     plot(PulseWidthTime-PulseWidthTime(1),PulseWidthData); hold on
 end
 hold off
-ylabel(['Largura de Pulso (',char(181),'s)'])
-xlabel('Tempo Deslocado (s)')
+ylabel(['Dist',char(226),'ncia (km)'])
+xlabel('Tempo (s)')
 title('Comparacao de Largura de Pulso')
 legend(FileNames,'Interpreter','none',...
     'Location','southoutside','Orientation','horizontal')
 
 %% Plot cadence and pulse width ratio comparison
-figure;
-for w = 1:length(Files)
-    D = TheData.(['Sequence' num2str(w)]);
-    CadenceTime = D.CadenceRaw.Time(D.CadenceRaw.Time>=D.TimeStimStart);
-    CadenceData = D.CadenceRaw.Data(D.CadenceRaw.Time>=D.TimeStimStart);
-    PulseWidthTime = D.StimPulseWidthRaw.Time(D.StimPulseWidthRaw.Time>=D.TimeStimStart);
-    PulseWidthData = D.StimPulseWidthRaw.ch1(D.StimPulseWidthRaw.Time>=D.TimeStimStart);
-    % Decide which time to use based on fewer samples
-    if length(PulseWidthTime) < length(CadenceTime)
-        Samples = length(PulseWidthTime);
-        Time = PulseWidthTime;
-    else
-        Samples = length(CadenceTime);
-        Time = CadenceTime;
-    end
-    % Compute the ratio between cadence and pulse width (microseconds)
-    Ratio = CadenceData(1:Samples)./double(PulseWidthData(1:Samples));
-    plot(Time-Time(1),Ratio); hold on
-end
-hold off
-ylabel(['Cadencia(km/h)/Largura de Pulso(',char(181),'s)'])
-xlabel('Tempo Deslocado (s)')
-title('Comparacao da Razao entre Cadencia e Largura de Pulso')
-legend(FileNames,'Interpreter','none',...
-    'Location','southoutside','Orientation','horizontal')
+% figure;
+% for w = 1:length(Files)
+%     D = TheData.(['Sequence' num2str(w)]);
+%     CadenceTime = D.CadenceRaw.Time(D.CadenceRaw.Time>=D.TimeStimStart);
+%     CadenceData = D.CadenceRaw.Data(D.CadenceRaw.Time>=D.TimeStimStart);
+%     PulseWidthTime = D.StimPulseWidthRaw.Time(D.StimPulseWidthRaw.Time>=D.TimeStimStart);
+%     PulseWidthData = D.StimPulseWidthRaw.ch1(D.StimPulseWidthRaw.Time>=D.TimeStimStart);
+%     % Decide which time to use based on fewer samples
+%     if length(PulseWidthTime) < length(CadenceTime)
+%         Samples = length(PulseWidthTime);
+%         Time = PulseWidthTime;
+%     else
+%         Samples = length(CadenceTime);
+%         Time = CadenceTime;
+%     end
+%     % Compute the ratio between cadence and pulse width (microseconds)
+%     Ratio = CadenceData(1:Samples)./double(PulseWidthData(1:Samples));
+%     plot(Time-Time(1),Ratio); hold on
+% end
+% hold off
+% ylabel(['Cadencia(km/h)/Largura de Pulso(',char(181),'s)'])
+% xlabel('Tempo Deslocado (s)')
+% title('Comparacao da Razao entre Cadencia e Largura de Pulso')
+% legend(FileNames,'Interpreter','none',...
+%     'Location','southoutside','Orientation','horizontal')
 
