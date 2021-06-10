@@ -88,6 +88,7 @@ for w = 1:length(Files)
     disp(FileNames(w))
     disp(MaxSpeedNA(w))
     disp(MeanSpeedNA(w))
+    disp(std(SpeedNA))
 end
 
 for w = 1:length(Files)
