@@ -27,21 +27,21 @@ for w = 1:length(Files)
     p1 = plot(WahooData.secs,WahooData.kph,'Color',lines(1)); hold on
     p2 = plot(StartNoAssistance,WahooData.kph(StartNoAssistance+1),'o',...
         'MarkerSize',8,'Color',lines(1),'MarkerFaceColor',lines(1)); hold off
-    xlabel('Tempo (s)')
-    ylabel('Velocidade (km/h)')
-    title(Filename(1:end-4),'Interpreter','none')
-    legend(p1,{Filename(1:end-4)},'Interpreter','none')
+    xlabel('Time (s)')
+    ylabel('Speed (km/h)')
+    title(strtok(Filename,'.'),'Interpreter','none')
+%     legend(p1,{Filename(1:end-4)},'Interpreter','none')
     
     subplot(2,1,2)
     p1 = plot(WahooData.secs,WahooData.km,'Color',lines(1)); hold on
     p2 = plot(StartNoAssistance,WahooData.km(StartNoAssistance+1),'o',...
         'MarkerSize',8,'Color',lines(1),'MarkerFaceColor',lines(1)); hold off
-    xlabel('Tempo (s)')
-    ylabel(['Dist',char(226),'ncia (km)'])
-    title(Filename(1:end-4),'Interpreter','none')
-    legend(p1,{Filename(1:end-4)},'Interpreter','none')
+    xlabel('Time (s)')
+    ylabel(['Distance (km)'])
+%     title(strtok(Filename,'.'),'Interpreter','none')
+%     legend(p1,{Filename(1:end-4)},'Interpreter','none')
 
     %% Save figure
-    saveas(Fig,Filename(1:end-4),'fig');  % savefig() was giving wrong filenames
+    saveas(Fig,strtok(Filename,'.'),'fig');  % savefig() was giving wrong filenames
 
 end
