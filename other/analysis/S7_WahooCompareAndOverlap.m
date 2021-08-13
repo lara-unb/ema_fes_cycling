@@ -18,10 +18,10 @@ end
 TheData = struct();
 
 % Get race or warmup from file name
-if isempty(strfind(Files(1),'Corrida'))
-    Type = 'Race';
-else
+if isempty(regexp(Files{1},'Corrida','once'))
     Type = 'Warmup';
+else
+    Type = 'Race';
 end
 
 % FileNames = cellfun(@(x) x(1:end-4),Files,'UniformOutput',false);
