@@ -289,7 +289,7 @@ class Interface(object):
                     new_screen['prev'] = siblings[position-1]
                 # Get where to go when selected (first child):
                 if menu['submenus']:
-                    new_screen['select'] = menu['submenus'].keys()[0]
+                    new_screen['select'] = list(menu['submenus'].keys())[0]
                 else:
                     new_screen['type'] = 'action'
                 # Screen type is root:
@@ -371,8 +371,8 @@ class Interface(object):
         """
         msg = msg[0:(DISPLAY_SIZE[1]-(2*margin))]
         remainder = DISPLAY_SIZE[1]-(2*margin)-len(msg)
-        paddingL = remainder/2
-        paddingR = (remainder/2)+(remainder%2)
+        paddingL = round(remainder/2)
+        paddingR = round((remainder/2)+(remainder%2))
         msg = (paddingL*' ')+msg+(paddingR*' ')
         return msg
 
