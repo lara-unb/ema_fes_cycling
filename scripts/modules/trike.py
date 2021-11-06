@@ -185,7 +185,7 @@ class Trike(object):
             proportion (dict): multipliers for every stimulation channel (pulse width).
         """
         # Check safe limit
-        limit = 500
+        limit = self.config_dict['pw_limit'] if 'pw_limit' in self.config_dict else 500
         # Every pulse width amplitude specified
         if isinstance(value, dict):
             if value.keys() != self.stim_pw.keys():

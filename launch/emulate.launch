@@ -16,6 +16,10 @@ http://wiki.ros.org/roslaunch/XML
         <!-- declare and load launch arguments-->
         <arg name="platform" value="rasp" doc="specify which platform to use: rasp/pc"/>
         <param name="platform" value="$(arg platform)"/>
+        <arg name="display_type" value="lcd" doc="specify display type connected: lcd/oled"/>
+        <param name="display_type" value="$(arg display_type)"/>
+        <arg name="emulate" value="imu" doc="specify which emulations to do use: imu/display/both"/>
+        <param name="emulate" value="$(arg emulate)"/>
         <!-- <arg name="stimulator/matrix" value="64" doc="specify electrode matrix loop rate"/> -->
         <!-- <param name="stimulator/matrix" value="$(arg stimulator/matrix)"/> -->
 
@@ -25,10 +29,24 @@ http://wiki.ros.org/roslaunch/XML
         <rosparam command="load" file="$(find ema_fes_cycling)/config/trike.yaml" ns="trike"/>
 
         <!-- launch common nodes -->
-        <node name="imu_emulator" pkg="ema_fes_cycling" type="imu_emulator.py" output="screen" respawn="true" respawn_delay="5"/>
         <!-- <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/> -->
         <!-- <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/> -->
         <node name="trike" pkg="ema_fes_cycling" type="trike_node.py" output="screen" respawn="true" respawn_delay="5"/>
+
+        <!-- launch emulation-settings -->
+        <group if="$(eval emulate == 'imu')">
+            <node name="imu_emulator" pkg="ema_fes_cycling" type="imu_emulator.py" output="screen" respawn="true" respawn_delay="5"/>
+        </group>
+
+        <group if="$(eval emulate == 'display')">
+            <node name="display" pkg="ema_fes_cycling" type="display_emulator.py" output="screen" respawn="true" respawn_delay="5"/>
+            <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/>
+        </group>
+
+        <group if="$(eval emulate == 'both')">
+            <node name="display" pkg="ema_fes_cycling" type="display_emulator.py" output="screen" respawn="true" respawn_delay="5"/>
+            <node name="imu_emulator" pkg="ema_fes_cycling" type="imu_emulator.py" output="screen" respawn="true" respawn_delay="5"/>
+        </group>
 
         <!-- launch pc-exclusive nodes -->
         <group if="$(eval platform == 'pc')">
@@ -41,10 +59,20 @@ http://wiki.ros.org/roslaunch/XML
         <group if="$(eval platform == 'rasp')">
             <rosparam command="load" file="$(find ema_fes_cycling)/config/automated_rasp.yaml" ns="trike"/>
             <node name="interface" pkg="ema_fes_cycling" type="interface_node.py" output="screen" respawn="true" respawn_delay="5"/>
-            <node name="display" pkg="ema_fes_cycling" type="display_emulator.py" output="screen" respawn="true" respawn_delay="5"/>
-            <!-- <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/> -->
-            <!-- <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/> -->
-        </group>
 
+            <group if="$(eval emulate == 'imu')">
+                <node name="button" pkg="ema_fes_cycling" type="button_node.py" output="screen" respawn="true" respawn_delay="5"/>
+
+                <!-- launch lcd-exclusive node -->
+                <group if="$(eval display_type == 'lcd')">
+                    <node name="display" pkg="ema_fes_cycling" type="display_node.py" output="screen" respawn="true" respawn_delay="5"/>
+                </group>
+
+                <!-- launch oled-exclusive node -->
+                <group if="$(eval display_type == 'oled')">
+                    <node name="display" pkg="ema_fes_cycling" type="display_node.py" output="screen" respawn="true" respawn_delay="5"/>
+                </group>
+            </group>
+        </group>
     </group>
 </launch>

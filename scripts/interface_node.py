@@ -1013,7 +1013,7 @@ class Interface(object):
             self.update_display()
         # Confirm reboot or display error msg
         elif button == 'double_right':
-            result = self.reboot()
+            result = self.reboot_machine()
             if result:
                 self.display_write(self.format_msg('Aguarde...', 0), 1, 0, True)
                 rospy.sleep(3)  # Avoid changing the display
@@ -1040,7 +1040,7 @@ class Interface(object):
             self.update_display()
         # Confirm shutdown or display error msg
         elif button == 'double_right':
-            result = self.shutdown()
+            result = self.shutdown_machine()
             if result:
                 self.display_write(self.format_msg('Aguarde...', 0), 1, 0, True)
                 rospy.sleep(3)  # Avoid changing the display
@@ -1068,7 +1068,7 @@ class Interface(object):
             rospy.logerr(e)
         return
 
-    def reboot(self):
+    def reboot_machine(self):
         """Call a ROS Service to reboot the machine."""
         try:
             rospy.wait_for_service('trike/reboot')
@@ -1078,7 +1078,7 @@ class Interface(object):
             rospy.logerr(e)
         return False
     
-    def shutdown(self):
+    def shutdown_machine(self):
         """Call a ROS Service to shutdown the machine."""
         try:
             rospy.wait_for_service('trike/shutdown')

@@ -2,12 +2,12 @@ autopw_on: False
 autoPW_current: 100
 autoPW_init: 0
 autoPW_max_1: {racing_conv: 200, racing_matrix: 200, training_conv: 200, training_matrix: 200}
-autoPW_max_2: {racing_conv: 450, racing_matrix: 500, training_conv: 450, training_matrix: 500}
-autoPW_step:  {racing_conv: 50, racing_matrix: 50, training_conv: 25, training_matrix: 25}
-autoPW_tcons_1: {racing_conv: 2, racing_matrix: 2, training_conv: 2, training_matrix: 2}
-autoPW_tcons_2: {racing_conv: 2, racing_matrix: 2, training_conv: 2, training_matrix: 2}
-autoPW_tramp_1: {racing_conv: 5, racing_matrix: 5, training_conv: 5, training_matrix: 5}
-autoPW_tramp_2: {racing_conv: 5, racing_matrix: 5, training_conv: 5, training_matrix: 5}
+autoPW_max_2: {racing_conv: 450, racing_matrix: 450, training_conv: 450, training_matrix: 350}
+autoPW_step:  {racing_conv: 10, racing_matrix: 10, training_conv: 10, training_matrix: 25}
+autoPW_tcons_1: {racing_conv: 25, racing_matrix: 25, training_conv: 25, training_matrix: 30}
+autoPW_tcons_2: {racing_conv: 25, racing_matrix: 25, training_conv: 25, training_matrix: 15}
+autoPW_tramp_1: {racing_conv: 5, racing_matrix: 5, training_conv: 5, training_matrix: 30}
+autoPW_tramp_2: {racing_conv: 5, racing_matrix: 5, training_conv: 5, training_matrix: 15}
 
 # autopw_on # Sequence on/off (True/False)
 # autopw_current # Fixed stim current in mA
