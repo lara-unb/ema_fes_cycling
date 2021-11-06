@@ -14,7 +14,7 @@ http://wiki.ros.org/roslaunch/XML
     <group ns="ema">
 
         <!-- declare and load launch arguments-->
-        <arg name="platform" value="pc" doc="specify which platform to use: rasp/pc"/>
+        <arg name="platform" value="rasp" doc="specify which platform to use: rasp/pc"/>
         <param name="platform" value="$(arg platform)"/>
         <!-- <arg name="stimulator/matrix" value="64" doc="specify electrode matrix loop rate"/> -->
         <!-- <param name="stimulator/matrix" value="$(arg stimulator/matrix)"/> -->
