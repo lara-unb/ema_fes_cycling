@@ -63,41 +63,41 @@ class Stimulator:
             self.channel_stim = config_dict['channel_stim']
         except KeyError:
             self.channel_stim = []
-            print 'channel_stim not found in config_dict, defaulting to []'
+            print('channel_stim not found in config_dict, defaulting to []')
 
         try:
             self.channel_lf = config_dict['channel_lf']
         except KeyError:
             self.channel_lf = []
-            print 'channel_lf not found in config_dict, defaulting to []'
+            print('channel_lf not found in config_dict, defaulting to []')
 
         try:
             self.n_factor = config_dict['n_factor']
         except KeyError:
             self.n_factor = 0
-            print 'n_factor not found in config_dict, defaulting to 0'
+            print('n_factor not found in config_dict, defaulting to 0')
 
         try:
             self.freq = config_dict['freq']
             self.ts1 = round((1/float(self.freq))*1000)
         except KeyError:
-            print 'freq not found in config_dict, using ts1 for Main_Time'
+            print('freq not found in config_dict, using ts1 for Main_Time')
             try:
                 self.ts1 = config_dict['ts1']
             except KeyError:
-                print 'ts1 not found in config_dict, defaulting to 20ms (50 Hz)'
+                print('ts1 not found in config_dict, defaulting to 20ms (50 Hz)')
                 self.ts1 = 20
 
         try:
             self.ts2 = config_dict['ts2']
         except KeyError:
-            print 'ts2 not found in config_dict, defaulting to 1.5'
+            print('ts2 not found in config_dict, defaulting to 1.5')
             self.ts2 = 1.5
 
         try:
             self.port = config_dict['port']
         except KeyError:
-            print 'port not found in config_dict, defaulting to /dev/ttyUSB0'
+            print('port not found in config_dict, defaulting to /dev/ttyUSB0')
             self.port = '/dev/ttyUSB0'
 
         # Build ccl_settings and set them to default values

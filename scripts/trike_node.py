@@ -14,11 +14,11 @@ http://wiki.ros.org/Nodes
 
 """
 
-# # Python 2 and 3 compatibility
-# from __future__ import absolute_import
-# from __future__ import division
-# from __future__ import print_function
-# from builtins import *
+# Python 2 and 3 compatibility
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from builtins import *
 
 import rospy
 import modules.trike as trike
@@ -36,7 +36,7 @@ from ema_common_msgs.msg import Stimulator
 from ema_common_msgs.srv import SetUInt16
 
 # Import utilities
-from tf import transformations
+from tf.transformations import euler_from_quaternion
 from math import pi
 import os
 import yaml
@@ -130,6 +130,8 @@ class TrikeWrapper(object):
         # List provided services
         self.services['prov']['reboot'] = rospy.Service('trike/reboot',
             Empty, self.reboot_callback)
+        self.services['prov']['shutdown'] = rospy.Service('trike/shutdown',
+            Empty, self.shutdown_callback)
         self.services['prov']['kill_all'] = rospy.Service('trike/kill_all',
             Empty, self.kill_all_callback)
         self.services['prov']['set_status'] = rospy.Service('trike/set_status',
@@ -140,8 +142,8 @@ class TrikeWrapper(object):
             SetUInt16, self.set_init_intensity_callback)
         self.services['prov']['change_intensity'] = rospy.Service('trike/change_intensity',
             SetBool, self.change_intensity_callback)
-        # Apply default pulse width for all channels
-        self.trike.set_stim_pw(rospy.get_param('trike/pulse_width'))
+        self.services['prov']['auto_pulse_width'] = rospy.Service('trike/auto_pulse_width',
+            SetBool, self.auto_pulse_width_callback) # not used yet
 
     def platform_pc_adapt(self):
         """Adjust and add what's specific of stationary platform."""
@@ -170,7 +172,7 @@ class TrikeWrapper(object):
         qz = data.orientation.z
         qw = data.orientation.w
         # rzxy - return (pitch, roll, yaw)
-        euler = transformations.euler_from_quaternion([qx, qy, qz, qw], axes='rzxy')
+        euler = euler_from_quaternion([qx, qy, qz, qw], axes='rzxy')
         roll = euler[1]
         yaw = euler[2]
         # Correct issues with range and more than one axis rotating
@@ -215,7 +217,7 @@ class TrikeWrapper(object):
                 self.trike.set_stim_pw(value=update, ch=channel)
             elif param == 'autoPW_on':
                 if update:  # Automatic pulse width sequence enabled
-                    self.trike.set_status('autopw')
+                    self.trike.set_status('autopw-PC') # PC autopw status
                     self.time_elapsed = 0
                     self.time_start = rospy.Time.now()
                 else:
@@ -236,9 +238,15 @@ class TrikeWrapper(object):
                 if (self.time_elapsed.to_sec() > 8.0*60) or (self.trike.distance > 1.2):
                     self.trike.set_status('off')
                     return
-            elif self.trike.status == 'autopw':
-                # Automatic pulse width sequence
-                self.trike.update_autopw_sequence(self.time_elapsed.to_sec())
+            elif 'autopw' in self.trike.status:
+                # Adapt autopw sequence to rasp and pc configs
+                if self.platform == 'rasp':
+                    # Automatic pulse width sequence with proportions on rasp
+                    self.trike.update_autopw_sequence(self.time_elapsed.to_sec(), 
+                        proportion=rospy.get_param('trike/pw_proportion'))
+                elif self.platform == 'pc':
+                    # Automatic pulse width sequence on pc
+                    self.trike.update_autopw_sequence(self.time_elapsed.to_sec())
             flag = ''
             if self.time_elapsed.to_sec() <= 0:
                 # Don't count distance yet
@@ -295,6 +303,23 @@ class TrikeWrapper(object):
         os.system('sudo reboot')
         return {}
 
+    def shutdown_callback(self, data):
+        """ROS Service handler to shutdown the machine.
+
+        Attributes:
+            req (Empty): empty input
+        """
+        rospy.loginfo('Shutdown: service request')
+        # Attempt to shutdown all nodes except this
+        nodes = rosnode.get_node_names('ema')
+        nodes.remove(rospy.get_name())
+        success_list, fail_list = rosnode.kill_nodes(nodes)
+        if fail_list:
+            rospy.logerr('Shutdown: failed on %s shutdown', fail_list)
+        rospy.loginfo('Shutting down machine...')
+        os.system('sudo halt')
+        return {}
+
     def kill_all_callback(self, req):
         """ROS Service handler to shutdown all nodes.
 
@@ -316,12 +341,13 @@ class TrikeWrapper(object):
         """ROS Service handler to change the cycling mode.
 
         Attributes:
-            req (UInt16): 0 is off, 1 is training, 2 is racing
+            req (UInt16): 0 is off, 1 is training, 2 is racing and 3,4,5,6,7 are automated
         """
         rospy.logdebug('Set status: service request')
-        enum = ['off','training','racing']
+        enum = ['off','training','racing','autopw-PC','autopw-CC','autopw-CM','autopw-TC','autopw-TM']
         try:
-            self.trike.set_status(enum[req.data])
+            # Using proportion to check activated stim channels to all automated status
+            self.trike.set_status(enum[req.data], proportion=rospy.get_param('trike/stim_proportion'))
         except IndexError as e:
             self.trike.set_status('off')
             rospy.logerr('Set status: failed, received %s', req.data)
@@ -333,13 +359,30 @@ class TrikeWrapper(object):
         elif stat == 'training':
             self.time_elapsed = 0
             self.time_start = rospy.Time.now()
+            # Apply default current with proportions for all channels
             self.trike.set_stim_current(value=rospy.get_param('trike/training_current'),
                 proportion=rospy.get_param('trike/stim_proportion'))
+            # Apply default pulse width for all channels
+            self.trike.set_stim_pw(rospy.get_param('trike/pulse_width'), 
+                proportion=rospy.get_param('trike/pw_proportion'))
         elif stat == 'racing':
             self.time_elapsed = 0
             self.time_start = rospy.Time.now()+rospy.Duration(30)
+            # Apply default current with proportions for all channels
             self.trike.set_stim_current(value=rospy.get_param('trike/racing_current'),
                 proportion=rospy.get_param('trike/stim_proportion'))
+            # Apply default pulse width for all channels
+            self.trike.set_stim_pw(rospy.get_param('trike/pulse_width'), 
+                proportion=rospy.get_param('trike/pw_proportion'))
+        elif 'autopw' in stat:
+            self.time_elapsed = 0
+            self.time_start = rospy.Time.now()
+            # Apply default current with proportions for all channels
+            self.trike.set_stim_current(value=rospy.get_param('trike/autoPW_current'),
+                proportion=rospy.get_param('trike/stim_proportion'))
+            # Apply initial default pulse width with proportions for all channels
+            self.trike.set_stim_pw(rospy.get_param('trike/autoPW_init'), 
+                proportion=rospy.get_param('trike/pw_proportion'))
         return {'success':True, 'message':stat}
 
     def set_pulse_width_callback(self, req):
@@ -415,6 +458,16 @@ class TrikeWrapper(object):
                 proportion=rospy.get_param('trike/stim_proportion'))
         return {'success':True, 'message':str(self.trike.stim_current_max)}
 
+    def auto_pulse_width_callback(self, req):
+        """Call a ROS Service to request new pulse width value (automated cycling)
+
+        Attributes:
+            req (int): updated pulse width
+        """
+        rospy.logdebug('Auto Pulse Width: service request')
+        current_list, pw_list = self.trike.get_stim_list()
+        return {'success':True, 'message':str(self.trike.stim_pw_max)}
+
 
 def main():
     # Init control node
@@ -424,7 +477,7 @@ def main():
     rospy.loginfo('Creating auxiliary class')
     aux = TrikeWrapper()
     # Define loop rate (in hz)
-    rate = rospy.Rate(64)
+    rate = rospy.Rate(48)
     # Node loop
     while not rospy.is_shutdown():
         # New interaction

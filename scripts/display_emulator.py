@@ -15,24 +15,25 @@ http://wiki.ros.org/Nodes
 """
 
 # Python 2 and 3 compatibility
-# from __future__ import absolute_import
-# from __future__ import division
-# from __future__ import print_function
-# from builtins import *
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from builtins import *
 
 import rospy
 import time
 import pygame
-from std_msgs.msg import UInt8
-from ema_common_msgs.srv import Display, DisplayResponse
 
+# import ros msgs
+from std_msgs.msg import UInt8
+from ema_common_msgs.srv import Display as disp 
+from ema_common_msgs.srv import DisplayResponse
 
 global screen
 global myfont
 global scale
 global chars 
-global lines 
-global scale 
+global lines
 global size 
 
 
@@ -54,7 +55,8 @@ def screen_clear():
     for pos in range(1,size[0],12*scale):
         for line in range (0,lines):
             pygame.draw.rect(screen, pygame.Color("green"), pygame.Rect(pos, 20*scale*line+2, 12*scale-1, 20*scale-4))
-    pygame.display.flip()
+    # pygame.display.flip()
+    pygame.display.update()
 
 def draw_text(text,line,position):
     global myfont
@@ -68,7 +70,8 @@ def draw_text(text,line,position):
     
     text_object= myfont.render(text, 2*scale, (0,0,0))
     screen.blit(text_object, (start, 20*line*scale))
-    pygame.display.flip()
+    # pygame.display.flip()
+    pygame.display.update()
 
 def display_request(req):
     
@@ -82,7 +85,7 @@ def main():
     # init display node
     
     rospy.init_node('display_emulator', anonymous=False)
-    display_service =rospy.Service('display/write', Display, display_request)
+    display_service=rospy.Service('display/write', disp, display_request)
     pub = rospy.Publisher('button/action', UInt8, queue_size=10)
     screen_clear()
     draw_text("Pronto para Uso", 0,1)

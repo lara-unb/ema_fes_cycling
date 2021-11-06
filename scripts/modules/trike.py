@@ -13,6 +13,8 @@ establish serial comm and treat raw measurements instead of publishing a
 filtered sensor measurement as a ROS message to other ROS nodes.
 
 """
+from enum import auto
+import rospy
 
 # Stimulation channel mapping
 stim_order = [
@@ -21,6 +23,10 @@ stim_order = [
     'ch5', 'ch6',
     'ch7', 'ch8'
 ]
+
+# Cycling types mapping
+cycling_type = ['racing_conv', 'racing_matrix',
+                'training_conv', 'training_matrix']
 
 
 class Trike(object):
@@ -34,7 +40,8 @@ class Trike(object):
         self.stim_pw (dict): pulse width peak for each channel
         self.stim_pw_now (dict): instant pulse width for each channel
         self.stim_pw_max (int): max from all values of stim_pw
-        self.status (string): 'off', 'training' or 'racing'
+        self.status (string): 'off', 'training', 'racing' or 5 automated
+            automated: 'autopw-PC','autopw-PC'
         self.angle (list): appended pedal angles
         self.speed (list): appended angular speeds
         self.speed_err (list): appended speed errors
@@ -68,7 +75,16 @@ class Trike(object):
         self.speed_ref = 300
         self.passed_half_turn = False
         self.cycle_speed = [0]
+        # Automated components
+        self.autopw_on = False
         self.autopw_initial = 0
+        self.autopw_max_1 = 0
+        self.autopw_max_2 = 0
+        self.autopw_tcons_1 = 0
+        self.autopw_tcons_2 = 0
+        self.autopw_tramp_1 = 0
+        self.autopw_tramp_2 = 0
+        self.autopw_step = 0
 
     def get_latest_measurements(self):
         """Return latest trike data."""
@@ -106,7 +122,7 @@ class Trike(object):
         Attributes:
             value (int/dict): current ampitude/s.
             ch (int): respective stimulation channel.
-            proportion (dict): multipliers for every stimulation channel.
+            proportion (dict): multipliers for every stimulation channel (current).
         """
         # Check for off status
         if self.status == 'off':
@@ -116,7 +132,7 @@ class Trike(object):
         # Check safe limit
         limit = self.config_dict['stim_limit'] if 'stim_limit' in self.config_dict else 110
         if isinstance(value, dict):
-            if values.keys() != self.stim_current.keys():
+            if value.keys() != self.stim_current.keys():
                 raise KeyError
             else:
                 for v in value.values():
@@ -158,7 +174,7 @@ class Trike(object):
                     self.stim_current_max = max(self.stim_current.values())
         return
 
-    def set_stim_pw(self, value, ch=None):
+    def set_stim_pw(self, value, ch=None, proportion=None):
         """Change the stimulation pulse width. When value is an int, ch
         is used to update a specific channel, when None all channels get
         the same value.
@@ -166,6 +182,7 @@ class Trike(object):
         Attributes:
             value (int/dict): pulse width ampitude/s.
             ch (int): respective stimulation channel.
+            proportion (dict): multipliers for every stimulation channel (pulse width).
         """
         # Check safe limit
         limit = 500
@@ -199,18 +216,28 @@ class Trike(object):
                     self.stim_pw[k] = value
                     self.stim_pw_max = max(self.stim_pw.values())
             # All channels at once
-            else:
+            elif value == 0:
                 self.stim_pw_max = value
                 self.stim_pw = dict.fromkeys(stim_order,value)
+            # Apply proportion dict
+            elif isinstance(proportion, dict):
+                if proportion.keys() != self.stim_pw.keys():
+                    raise KeyError
+                else:
+                    maxx = value
+                    value = dict((k, int(maxx*proportion[k])) for k in self.stim_pw)
+                    self.stim_pw = value
+                    self.stim_pw_max = max(self.stim_pw.values())
 
-    def set_status(self, value, zero_distance=True):
+    def set_status(self, value, zero_distance=True, proportion=None):
         """Change system status.
 
         Attributes:
             value (string): new system status
             zero_distance (bool): flag to reset distance
+            proportion (dict): check active stim channel using current multipliers (rasp platform).
         """
-        if value in ('off','training','racing','autopw'):
+        if value in ('off','training','racing','autopw','autopw-CC','autopw-CM','autopw-TC','autopw-TM'):
             if zero_distance:
                 # Reset cycling data
                 self.cycles = self.distance = 0
@@ -219,13 +246,58 @@ class Trike(object):
                 # Zero stimulation
                 self.stim_current_max = 0
                 self.stim_current = dict.fromkeys(stim_order,0)
-            elif self.status == 'autopw':
-                # Reset all to maximum pulse width of active channels
-                active = [k for k, v in self.stim_current.items() if v != 0]
-                self.stim_pw_max = max([v for k, v in self.stim_pw.items() if k in active])
-                self.stim_pw = dict.fromkeys(stim_order,self.stim_pw_max)
-                # Set the starting point for the automatic sequence
-                self.autopw_initial = self.stim_pw_max
+            elif 'autopw' in self.status:
+                if self.status == 'autopw-PC': # PC plataform automatic sequence
+                    # Reset all to maximum pulse width of active channels
+                    active = [k for k, v in self.stim_current.items() if v != 0]
+                    self.stim_pw_max = max([v for k, v in self.stim_pw.items() if k in active])
+                    self.stim_pw = dict.fromkeys(stim_order,self.stim_pw_max)
+                    # Set the starting point for the automatic sequence
+                    self.autopw_initial = self.stim_pw_max
+                    # Configure automated parameters to PC
+                    self.autopw_tramp_1 = self.config_dict['autoPW_tramp_1'] # 1st ramp phase duration
+                    self.autopw_tramp_2 = self.config_dict['autoPW_tramp_2']
+                    self.autopw_tcons_1 = self.config_dict['autoPW_tcons_1']
+                    self.autopw_tcons_2 = self.config_dict['autoPW_tcons_2']
+                    self.autopw_max_1 = self.config_dict['autoPW_max_1']
+                    self.autopw_max_2 = self.config_dict['autoPW_max_2']
+                    self.autopw_step = self.config_dict['autoPW_step']
+                    self.autopw_on = self.config_dict['autoPW_on']
+                else:
+                    # Configure automated parameters to Rasp
+                    if self.status == 'autopw-CC': # Conventional Racing
+                        automated_type = cycling_type[0]
+                    elif self.status == 'autopw-CM': # Matrix Racing
+                        automated_type = cycling_type[1]
+                    elif self.status == 'autopw-TC': # Conventional Training
+                        automated_type = cycling_type[2]
+                    elif self.status == 'autopw-TM': # Matrix Training
+                        automated_type = cycling_type[3]
+                    # Load specific automated pw parameters
+                    print(automated_type)
+                    self.autopw_tramp_1 = self.config_dict['autoPW_tramp_1'][automated_type]  # 1st ramp phase duration
+                    self.autopw_tramp_2 = self.config_dict['autoPW_tramp_2'][automated_type]  # 2nd ramp phase duration
+                    self.autopw_tcons_1 = self.config_dict['autoPW_tcons_1'][automated_type]  # 1st constant phase duration
+                    self.autopw_tcons_2 = self.config_dict['autoPW_tcons_2'][automated_type]  # 2nd constant phase duration
+                    self.autopw_max_1 = self.config_dict['autoPW_max_1'][automated_type] # 1st Maximum pulse width
+                    self.autopw_max_2 = self.config_dict['autoPW_max_2'][automated_type] # 2nd Maximum pulse width
+                    self.autopw_step = self.config_dict['autoPW_step'][automated_type] # Pulse width change interval - step size
+                    self.autopw_on = True
+                    # Check if proportion exist
+                    if isinstance(proportion, dict):
+                        if proportion.keys() != self.stim_pw.keys():
+                            raise KeyError
+                        else:
+                            active = [k for k, v in proportion.items() if v != 0]
+                            self.stim_pw_max = max([v for k, v in self.stim_pw.items() if k in active])
+                            self.stim_pw = dict.fromkeys(stim_order,self.stim_pw_max)
+                            # Set the starting point for the automatic sequence
+                            self.autopw_initial = self.stim_pw_max
+                            print(self.stim_pw_max)
+                    else:
+                        self.autopw_initial = 0
+                        print('Need to specify stim_proportion for this cycling mode')
+                        print('Setting Initial Automated PUlse Width to 0')
         else:
             raise ValueError
 
@@ -294,7 +366,7 @@ class Trike(object):
                 action = self.calculate_control_action(channel, angle_now, speed_now, self.speed_ref)
                 self.stim_current_now[channel] = round(action*current)
 
-    def update_autopw_sequence(self, elapsed):
+    def update_autopw_sequence(self, elapsed, proportion=None):
         """Define an automatic pulse width sequence based on elapsed time.
         The pulse width is incremented with 'autoPW_step' on the corse
         of 'autoPW_tramp' seconds and remains the same for 'autoPW_tcons'
@@ -302,18 +374,19 @@ class Trike(object):
 
         Attributes:
             elapsed (float): time since the sequence was activated
+            proportion (dict): multipliers for every stimulation channel (pulse width).
         """
-        autopw_on = self.config_dict['autoPW_on']  # Sequence on/off
+        autopw_on = self.autopw_on # Sequence on/off
         pw_now = self.stim_pw_max  # Instant maximum pulse width from all channels
         # Either turned off or there is no point in increasing
-        if (not autopw_on) or (pw_now >= self.config_dict['autoPW_max_2']):
+        if (not autopw_on) or (pw_now >= self.autopw_max_2):
             return
         # Assume 1st sequence ongoing
-        max_pw = self.config_dict['autoPW_max_1']  # 1st plateau
+        max_pw = self.autopw_max_1  # 1st plateau
         initial_pw = self.autopw_initial  # Starting point for the sequence
-        time_ramp = self.config_dict['autoPW_tramp_1']  # 1st ramp phase duration
-        time_cons = self.config_dict['autoPW_tcons_1']  # 1st constant phase duration
-        interval = self.config_dict['autoPW_step']  # Pulse width change interval - step size
+        time_ramp = self.autopw_tramp_1  # 1st ramp phase duration
+        time_cons = self.autopw_tcons_1  # 1st constant phase duration
+        interval = self.autopw_step  # Pulse width change interval - step size
         period = time_ramp+time_cons  # Cycle period
         # Check if on 2nd sequence or transitioning
         if pw_now >= max_pw:
@@ -322,10 +395,10 @@ class Trike(object):
             duration_1 = ((height_1/interval)+(height_1%interval > 0))*period
             if (pw_now > max_pw) or (elapsed > duration_1):
                 # 2nd sequence ongoing
-                max_pw = self.config_dict['autoPW_max_2']  # 2nd maximum pulse width
-                initial_pw = max(self.config_dict['autoPW_max_1'],initial_pw)  # Starting point for the sequence
-                time_ramp = self.config_dict['autoPW_tramp_2']  # 2nd ramp phase duration
-                time_cons = self.config_dict['autoPW_tcons_2']  # 2nd constant phase duration
+                max_pw = self.autopw_max_2  # 2nd maximum pulse width
+                initial_pw = max(self.autopw_max_1,initial_pw)  # Starting point for the sequence
+                time_ramp = self.autopw_tramp_2  # 2nd ramp phase duration
+                time_cons = self.autopw_tcons_2  # 2nd constant phase duration
                 period = time_ramp+time_cons  # Cycle period
                 elapsed -= duration_1  # Ignore the time spent on 1st sequence
         # Logic behind the sequence phases
@@ -345,8 +418,18 @@ class Trike(object):
                 pw_updated = max_pw
         # Avoid unecessary updates
         if pw_updated != pw_now:
-            self.stim_pw_max = pw_updated
-            self.stim_pw = dict.fromkeys(stim_order,pw_updated)
+            # Check if proportion exist
+            if isinstance(proportion, dict):
+                if proportion.keys() != self.stim_pw.keys():
+                    raise KeyError
+                else:
+                    maxx = pw_updated
+                    pw_updated = dict((k, int(maxx*proportion[k])) for k in self.stim_pw)
+                    self.stim_pw = pw_updated
+                    self.stim_pw_max = max(pw_updated.values())
+            else:
+                self.stim_pw_max = pw_updated
+                self.stim_pw = dict.fromkeys(stim_order,pw_updated)
 
     def calculate_control_action(self, ch, angle, speed, speed_ref):
         """Return the control action according to specified inputs.

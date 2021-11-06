@@ -35,10 +35,10 @@ with their own characteristcs:
 """
 
 # Python 2 and 3 compatibility
-# from __future__ import absolute_import
-# from __future__ import division
-# from __future__ import print_function
-# from builtins import *
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from builtins import *
 
 import rospy
 
@@ -46,6 +46,7 @@ import rospy
 from std_msgs.msg import Float64
 from std_msgs.msg import UInt8
 from std_msgs.msg import Duration
+from std_msgs.msg import Int32MultiArray
 from std_srvs.srv import Empty
 from std_srvs.srv import SetBool
 from ema_common_msgs.srv import Display
@@ -60,12 +61,12 @@ menu_ref = {
         'msg':'~ EMA Trike ~',
         'submenus': {
             '0-cycling': {
-                'msg':'Corrida',
+                'msg':'Corrida\nManual',
                 'submenus': {
-                    'confirm-C': {
+                    'confirm-M-C': {
                         'msg':'Iniciar?\nNao      Sim',
                         'submenus': {
-                            'cycling-C': {
+                            'cycling-M-C': {
                                 'msg':'00.0km/h 00.00km\n 000mA   00\'00" ',
                                 'submenus': {}
                             }
@@ -74,12 +75,12 @@ menu_ref = {
                 }
             },
             '1-cycling': {
-                'msg':'Treino',
+                'msg':'Treino\nManual',
                 'submenus': {
-                    'confirm-T': {
+                    'confirm-M-T': {
                         'msg':'Iniciar?\nNao      Sim',
                         'submenus': {
-                            'cycling-T': {
+                            'cycling-M-T': {
                                 'msg':'00.0km/h 00.00km\n 000mA   00\'00" ',
                                 'submenus': {}
                             }
@@ -87,7 +88,73 @@ menu_ref = {
                     }
                 }
             },
-            '2-config': {
+            '2-cycling': {
+                'msg':'Corrida\nAutomatizada',
+                'submenus': {
+                    'conventional-A-C': {
+                        'msg':'Convencional',
+                        'submenus': {
+                            'confirm-A-CC': {
+                                'msg':'Iniciar?\nNao      Sim',
+                                'submenus': {
+                                    'cycling-A-CC': {
+                                        'msg':'00.0km/h 00.00km\n 000uS   00\'00" ',
+                                        'submenus': {}
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    'matrix-A-C': {
+                        'msg':'Matrix',
+                        'submenus': {
+                            'confirm-A-CM': {
+                                'msg':'Iniciar?\nNao      Sim',
+                                'submenus': {
+                                    'cycling-A-CM': {
+                                        'msg':'00.0km/h 00.00km\n 000uS   00\'00" ',
+                                        'submenus': {}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+            },
+            '3-cycling': {
+                'msg':'Treino\nAutomatizado',
+                'submenus': {
+                    'conventional-A-T': {
+                        'msg':'Convencional',
+                        'submenus': {
+                            'confirm-A-TC': {
+                                'msg':'Iniciar?\nNao      Sim',
+                                'submenus': {
+                                    'cycling-A-TC': {
+                                        'msg':'00.0km/h 00.00km\n 000uS   00\'00" ',
+                                        'submenus': {}
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    'matrix-A-T': {
+                        'msg':'Matrix',
+                        'submenus': {
+                            'confirm-A-TM': {
+                                'msg':'Iniciar?\nNao      Sim',
+                                'submenus': {
+                                    'cycling-A-TM': {
+                                        'msg':'00.0km/h 00.00km\n 000uS   00\'00" ',
+                                        'submenus': {}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+            },
+            '4-config': {
                 'msg':'Config',
                 'submenus': {
                     'imu': {
@@ -128,11 +195,20 @@ menu_ref = {
                     }
                 }
             },
-            'X-reboot': {
+            '5-reboot': {
                 'msg':'Religar',
                 'submenus': {
                     'reboot_screen': {
                         'msg':'Religar?\nNao      Sim',
+                        'submenus': {}
+                    }
+                }
+            },
+            'X-shutdown': {
+                'msg':'Desligar',
+                'submenus': {
+                    'shutdown_screen': {
+                        'msg':'Desligar?\nNao      Sim',
                         'submenus': {}
                     }
                 }
@@ -177,6 +253,13 @@ class Interface(object):
             rospy.wait_for_service('trike/reboot')
             self.services['reboot'] = rospy.ServiceProxy(
                 'trike/reboot', Empty)
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logerr(e)
+            raise
+        try:
+            rospy.wait_for_service('trike/shutdown')
+            self.services['shutdown'] = rospy.ServiceProxy(
+                'trike/shutdown', Empty)
         except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
             raise
@@ -235,6 +318,12 @@ class Interface(object):
         except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
         try:
+            rospy.wait_for_service('trike/auto_pulse_width', timeout=30.0)
+            self.services['auto_pw'] = rospy.ServiceProxy(
+                'trike/auto_pulse_width', SetBool, persistent=True)
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logerr(e)
+        try:
             rospy.wait_for_service('trike/set_status', timeout=30.0)
             self.services['set_status'] = rospy.ServiceProxy(
                 'trike/set_status', SetUInt16)
@@ -248,6 +337,8 @@ class Interface(object):
             Float64, self.distance_callback)
         self.topics['sub']['duration'] = rospy.Subscriber('trike/elapsed',
             Duration, self.duration_callback)
+        self.topics['sub']['pw'] = rospy.Subscriber('stimulator/pulse_width', Int32MultiArray,
+                self.pw_update_callback)
         self.topics['sub']['buttons'] = rospy.Subscriber('button/action',
             UInt8, self.button_callback)
 
@@ -289,7 +380,7 @@ class Interface(object):
                     new_screen['prev'] = siblings[position-1]
                 # Get where to go when selected (first child):
                 if menu['submenus']:
-                    new_screen['select'] = menu['submenus'].keys()[0]
+                    new_screen['select'] = list(menu['submenus'].keys())[0]
                 else:
                     new_screen['type'] = 'action'
                 # Screen type is root:
@@ -315,26 +406,40 @@ class Interface(object):
         if self.services.get('set_stim_freq'):
             screen_ref['change_freq'] = str(rospy.get_param('stimulator/freq'))
         if self.services.get('set_init_intensity'):
-            screen_ref['change_current'] = str(rospy.get_param('trike/training_current'))
+            screen_ref['change_current'] = str(rospy.get_param('trike/racing_current'))
         # Adapt for multiple cycling modes/screens
         if self.services.get('intensity'):
             for k, v in self.screens.items():
-                if k == 'cycling-C':
+                if k == 'cycling-M-C':
                     screen_ref[k] = str(rospy.get_param('trike/racing_current'))
-                elif k == 'cycling-T':
+                elif k == 'cycling-M-T':
                     screen_ref[k] = str(rospy.get_param('trike/training_current'))
+        elif self.services.get('auto_pulse_width'):
+            for k, v in self.screens.items():
+                if k == 'cycling-A-CC':
+                    screen_ref[k] = str(rospy.get_param('trike/automated_pw'))
+                elif k == 'cycling-A-CM':
+                    screen_ref[k] = str(rospy.get_param('trike/automated_pw'))
+                elif k == 'cycling-A-TC':
+                    screen_ref[k] = str(rospy.get_param('trike/automated_pw'))
+                elif k == 'cycling-A-TM':
+                    screen_ref[k] = str(rospy.get_param('trike/automated_pw'))
         else:
             for k, v in self.screens.items():
-                if k in {'cycling-C', 'cycling-T'}:
+                if k in {'cycling-M-C', 'cycling-M-T', 'cycling-A-CC', 'cycling-A-CM', 'cycling-A-TC', 'cycling-A-TM'}:
                     screen_ref[k] = None
         # Load the parameters to each screen msg
         for k, v in screen_ref.items():
             if v:
                 msg_now = self.screens[k]['msg']
                 # Adapt for multiple cycling modes/screens
-                if 'cycling' in k:
+                if 'cycling-M' in k:
                     param_new = float(v)
                     msg_new, _ = self.update_parameter(msg_now, param_new, 'mA')
+                    self.screens[k]['msg'] = msg_new
+                elif 'cycling-A' in k:
+                    param_new = float(v)
+                    msg_new, _ = self.update_parameter(msg_now, param_new, 'uS')
                     self.screens[k]['msg'] = msg_new
                 else:
                     param_now = ''.join(x for x in msg_now if x.isdigit())  # int in str
@@ -371,9 +476,10 @@ class Interface(object):
         """
         msg = msg[0:(DISPLAY_SIZE[1]-(2*margin))]
         remainder = DISPLAY_SIZE[1]-(2*margin)-len(msg)
-        paddingL = remainder/2
-        paddingR = (remainder/2)+(remainder%2)
+        paddingL = round(remainder/2)
+        paddingR = round((remainder/2)+(remainder%2))
         msg = (paddingL*' ')+msg+(paddingR*' ')
+        # print('message:'+msg)
         return msg
 
     def update_parameter(self, string, param_new, unit=''):
@@ -451,7 +557,7 @@ class Interface(object):
         Attributes:
             data (Float64): latest msg for cadence in km/h
         """
-        if self.screen_now['label'] in {'cycling-C', 'cycling-T'}:
+        if self.screen_now['label'] in {'cycling-M-C', 'cycling-M-T', 'cycling-A-CC', 'cycling-A-CM', 'cycling-A-TC', 'cycling-A-TM'}:
             param_new = data.data
             if param_new < 0:
                 param_new = float(0)
@@ -472,7 +578,7 @@ class Interface(object):
         Attributes:
             data (Float64): latest msg for distance in km
         """
-        if self.screen_now['label'] in {'cycling-C', 'cycling-T'}:
+        if self.screen_now['label'] in {'cycling-M-C', 'cycling-M-T', 'cycling-A-CC', 'cycling-A-CM', 'cycling-A-TC', 'cycling-A-TM'}:
             param_new = data.data
             if param_new < 0:
                 param_new = float(0)
@@ -482,13 +588,35 @@ class Interface(object):
             if line is not None:  # None if there was no change
                 self.screen_now['msg'] = msg_new
 
+    def pw_update_callback(self, data):
+        """ROS Topic callback to get the current pulse width
+
+        Attributes:
+            data (Int32MultiArray): latest pulse width array for all channels in us
+        """
+        if self.screen_now['label'] in {'cycling-A-CC', 'cycling-A-CM', 'cycling-A-TC', 'cycling-A-TM'}:
+            param_new = max(data.data)
+            # print('pw_update'+str(param_new))
+            if param_new < 0:
+                param_new = float(0)
+            # Update displayed value
+            msg_now = self.screen_now['msg']
+            msg_new, line = self.update_parameter(msg_now, param_new, 'uS')
+            if line is not None:  # None if there was no change
+                self.screen_now['msg'] = msg_new
+                # split_lines = msg_new.split('\n')
+                # update = self.format_msg(split_lines[line], 0)
+                # # Avoid excessive display update
+                # if (rospy.Time.now()-self.display_t) > self.display_dt:
+                #     self.display_write(update, line, 0, False)
+
     def duration_callback(self, data):
         """ROS Topic callback to get the cycling duration.
 
         Attributes:
             data (Duration): latest msg for elapsed time in rospy.Duration
         """
-        if self.screen_now['label'] in {'cycling-C', 'cycling-T'}:
+        if self.screen_now['label'] in {'cycling-M-C', 'cycling-M-T', 'cycling-A-CC', 'cycling-A-CM', 'cycling-A-TC', 'cycling-A-TM'}:
             param_new = abs(data.data.to_sec())
             t_min, t_sec = divmod(param_new, 60)
             # Update displayed value
@@ -556,10 +684,18 @@ class Interface(object):
                     output_screen_name = self.screen_now['select']
                     self.screen_now = self.screens[output_screen_name]
                     # Turn control on when cycling screen is selected
-                    if self.screen_now['label'] == 'cycling-C':
-                        self.set_status('racing')  # Racing mode
-                    elif self.screen_now['label'] == 'cycling-T':
-                        self.set_status('training')  # Training mode
+                    if self.screen_now['label'] == 'cycling-M-C':
+                        self.set_status('racing')    # Manual Racing mode
+                    elif self.screen_now['label'] == 'cycling-M-T':
+                        self.set_status('training')  # Manual Training mode
+                    elif self.screen_now['label'] == 'cycling-A-CC':
+                        self.set_status('autopw-CC')    # Automated PW Conventional Racing mode
+                    elif self.screen_now['label'] == 'cycling-A-CM':
+                        self.set_status('autopw-CM')    # Automated PW Matrix Racing mode
+                    elif self.screen_now['label'] == 'cycling-A-TC':
+                        self.set_status('autopw-TC')    # Automated PW Conventional Training mode
+                    elif self.screen_now['label'] == 'cycling-A-TM':
+                        self.set_status('autopw-TM')    # Automated PW Matrix Training mode
             except KeyError as e:  # e.g. the menu doesnt have a next
                 pass
         elif self.screen_now['type'] == 'action':
@@ -575,11 +711,17 @@ class Interface(object):
             elif self.screen_now['label'] == 'change_current':
                 self.change_current(action)
                 return
-            elif self.screen_now['label'] in {'cycling-C', 'cycling-T'}:
-                self.cycling(action)
+            elif self.screen_now['label'] in {'cycling-M-C', 'cycling-M-T'}:
+                self.manual_cycling(action)
+                return
+            elif self.screen_now['label'] in {'cycling-A-CC', 'cycling-A-CM', 'cycling-A-TC', 'cycling-A-TM'}:
+                self.auto_cycling(action)
                 return
             elif self.screen_now['label'] == 'reboot_screen':
                 self.reboot_screen(action)
+                return
+            elif self.screen_now['label'] == 'shutdown_screen':
+                self.shutdown_screen(action)
                 return
         self.update_display()
         return
@@ -772,11 +914,11 @@ class Interface(object):
                     self.screen_now['msg'] = msg_now.replace(param_now,result)
                     stat = 'OK'
                     # Replace on training screen as well
-                    cycling_msg = self.screens['cycling-T']['msg']
+                    cycling_msg = self.screens['cycling-M-T']['msg']
                     param_new = int(result)
                     msg_new, line = self.update_parameter(cycling_msg, param_new, 'mA')
                     if line is not None:  # None if there was no change
-                        self.screens['cycling-T']['msg'] = msg_new
+                        self.screens['cycling-M-T']['msg'] = msg_new
                 else:
                     # If error reset the value
                     param_new = str(rospy.get_param('trike/training_current'))
@@ -786,7 +928,7 @@ class Interface(object):
             rospy.sleep(5)
             self.update_display()
 
-    def cycling(self, button):
+    def manual_cycling(self, button):
         """Deal with user action on the cycling training screen.
 
         Attributes:
@@ -819,6 +961,40 @@ class Interface(object):
                     if (rospy.Time.now()-self.display_t) > self.display_dt:
                         self.display_write(update, line, 0, False)
         return
+    
+    def auto_cycling(self, button):
+            """Deal with user action on the cycling training screen.
+
+            Attributes:
+                button (string): describes button event
+            """
+            if button == 'both':
+                self.display_write(self.format_msg('Aguarde...', 0), 1, 0, True)
+                self.set_status('off')  # Make sure controller is off
+                self.kill_all()
+                rospy.sleep(3)  # Avoid changing the display
+                return
+            # request = 1
+            # result = self.auto_pulse_width(request)
+            # if result:
+            #     msg_now = self.screen_now['msg']
+            #     param_new = int(result)
+            #     msg_new, line = self.update_parameter(msg_now, param_new, 'uS')
+            #     if line is not None:  # None if there was no change
+            #         self.screen_now['msg'] = msg_new
+            #         split_lines = msg_new.split('\n')
+            #         update = self.format_msg(split_lines[line], 0)
+            #         # Avoid excessive display update
+            #         if (rospy.Time.now()-self.display_t) > self.display_dt:
+            #             self.display_write(update, line, 0, False)
+            # Kill all nodes and rely on launch respawn
+            # Request new auto pulse width value and modify the displayed value
+            # else:
+            # # Incapable of changing param
+            # if 'Indisponivel' in self.screen_now['msg']:
+            #     return
+            # Replace param value and update display
+            return
 
     def reboot_screen(self, button):
         """Deal with user action on the reboot screen.
@@ -838,6 +1014,33 @@ class Interface(object):
         # Confirm reboot or display error msg
         elif button == 'double_right':
             result = self.reboot()
+            if result:
+                self.display_write(self.format_msg('Aguarde...', 0), 1, 0, True)
+                rospy.sleep(3)  # Avoid changing the display
+            else:
+                self.screen_now = self.screens[self.screen_now['parent']]
+                self.display_write(self.format_msg('ERRO', 0), 1, 0, True)
+                rospy.sleep(5)
+                self.update_display()
+
+    def shutdown_screen(self, button):
+        """Deal with user action on the shutdown screen.
+
+        Attributes:
+            button (string): describes button event
+        """
+        # Kill all nodes and rely on launch respawn
+        if button == 'both':
+            self.display_write(self.format_msg('Aguarde...', 0), 1, 0, True)
+            self.kill_all()
+            rospy.sleep(3)  # Avoid changing the display
+        # Go to parent, previous upper level menu
+        elif button == 'double_left':
+            self.screen_now = self.screens[self.screen_now['parent']]
+            self.update_display()
+        # Confirm shutdown or display error msg
+        elif button == 'double_right':
+            result = self.shutdown()
             if result:
                 self.display_write(self.format_msg('Aguarde...', 0), 1, 0, True)
                 rospy.sleep(3)  # Avoid changing the display
@@ -870,6 +1073,16 @@ class Interface(object):
         try:
             rospy.wait_for_service('trike/reboot')
             self.services['reboot']()
+            return True
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logerr(e)
+        return False
+    
+    def shutdown(self):
+        """Call a ROS Service to shutdown the machine."""
+        try:
+            rospy.wait_for_service('trike/shutdown')
+            self.services['shutdown']()
             return True
         except (rospy.ServiceException, rospy.ROSException) as e:
             rospy.logerr(e)
@@ -956,13 +1169,28 @@ class Interface(object):
             rospy.logerr(e)
         return
 
+    def auto_pulse_width(self, req):
+        """Call a ROS Service to request new pulse width value (automated cycling)
+
+        Attributes:
+            req (int): updated pulse width
+        """
+        try:
+            rospy.wait_for_service('trike/auto_pulse_width', timeout=1.0)
+            resp = self.services['auto_pw'](req)
+            return resp.message  # Return the pulse width now as str
+        except (rospy.ServiceException, rospy.ROSException) as e:
+            rospy.logerr(e)
+        return
+
     def set_status(self, req):
         """Call a ROS Service to change the cycling mode.
 
         Attributes:
-            req (UInt16): 'off', 'training' or 'racing'
+            req (UInt16): 'off', 'training', 'racing', 'autopw','autopw-CC',
+            'autopw-CM','autopw-TC' or 'autopw-TM'
         """
-        enum = ['off','training','racing']
+        enum = ['off','training','racing','autopw','autopw-CC','autopw-CM','autopw-TC','autopw-TM']
         try:
             rospy.wait_for_service('trike/set_status', timeout=1.0)
             resp = self.services['set_status'](enum.index(req))

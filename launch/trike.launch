@@ -29,15 +29,17 @@ http://wiki.ros.org/roslaunch/XML
         <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/>
         <node name="trike" pkg="ema_fes_cycling" type="trike_node.py" output="log" respawn="true" respawn_delay="5"/>
 
-        <!-- launch pc-exclusive nodes -->
+        <!-- launch pc-exclusive nodes and load config files-->
         <group if="$(eval platform == 'pc')">
+            <rosparam command="load" file="$(find ema_fes_cycling)/config/automated_pc.yaml" ns="trike"/>
             <node name="trike_config" pkg="ema_fes_cycling" type="trike_server_node.py" output="log" respawn="true" respawn_delay="5"/>
             <node name="dashboard" pkg="rqt_gui" type="rqt_gui" output="log" args="--perspective-file $(find ema_fes_cycling)/perspective/EMA_Trike_Cadence.perspective"/>
             <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args=" -a -o $(env HOME)/bagfiles/matrix/ --split --duration 5m"/>
         </group>
 
-        <!-- launch rasp-exclusive nodes -->
+        <!-- launch rasp-exclusive nodes and load config files-->
         <group if="$(eval platform == 'rasp')">
+            <rosparam command="load" file="$(find ema_fes_cycling)/config/automated_rasp.yaml" ns="trike"/>
             <node name="interface" pkg="ema_fes_cycling" type="interface_node.py" output="screen" respawn="true" respawn_delay="5"/>
             <node name="button" pkg="ema_fes_cycling" type="button_node.py" output="screen" respawn="true" respawn_delay="5"/>
 

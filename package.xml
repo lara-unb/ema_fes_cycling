@@ -11,7 +11,7 @@ http://wiki.ros.org/catkin/package.xml
 
 <package format="2">
     <name>ema_fes_cycling</name>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
     <description>
         The ema_fes_cycling package provides the main code to run the Project EMA
         FES cycling application. 

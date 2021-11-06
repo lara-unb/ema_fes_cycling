@@ -16,27 +16,30 @@ http://wiki.ros.org/roslaunch/XML
         <!-- declare and load launch arguments-->
         <arg name="platform" value="pc" doc="specify which platform to use: rasp/pc"/>
         <param name="platform" value="$(arg platform)"/>
-        <arg name="stimulator/matrix" value="64" doc="specify electrode matrix loop rate"/>
-        <param name="stimulator/matrix" value="$(arg stimulator/matrix)"/>
+        <!-- <arg name="stimulator/matrix" value="64" doc="specify electrode matrix loop rate"/> -->
+        <!-- <param name="stimulator/matrix" value="$(arg stimulator/matrix)"/> -->
 
         <!-- load common config files-->
         <rosparam command="load" file="$(find yostlabs_3space_imu)/config/imu.yaml" ns="imu"/>
-        <rosparam command="load" file="$(find hasomed_rehastim_stimulator)/config/SINGLES.yaml" ns="stimulator"/>
+        <rosparam command="load" file="$(find hasomed_rehastim_stimulator)/config/CCL18F48.yaml" ns="stimulator"/>
         <rosparam command="load" file="$(find ema_fes_cycling)/config/trike.yaml" ns="trike"/>
 
         <!-- launch common nodes -->
-        <node name="imu_emulator" pkg="ema_fes_cycling" type="imu_emulator.py" output="log" respawn="true" respawn_delay="5"/>
-        <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/>
-        <node name="trike" pkg="ema_fes_cycling" type="trike_node.py" output="log" respawn="true" respawn_delay="5"/>
+        <node name="imu_emulator" pkg="ema_fes_cycling" type="imu_emulator.py" output="screen" respawn="true" respawn_delay="5"/>
+        <!-- <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/> -->
+        <!-- <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/> -->
+        <node name="trike" pkg="ema_fes_cycling" type="trike_node.py" output="screen" respawn="true" respawn_delay="5"/>
 
         <!-- launch pc-exclusive nodes -->
         <group if="$(eval platform == 'pc')">
+            <rosparam command="load" file="$(find ema_fes_cycling)/config/automated_pc.yaml" ns="trike"/>
             <node name="trike_config" pkg="ema_fes_cycling" type="trike_server_node.py" output="screen" respawn="true" respawn_delay="5"/>
             <node name="dashboard" pkg="rqt_gui" type="rqt_gui" output="screen" args="--perspective-file $(find ema_fes_cycling)/perspective/EMA_Trike_Matrix.perspective"/>
         </group>
 
         <!-- launch rasp-exclusive nodes -->
         <group if="$(eval platform == 'rasp')">
+            <rosparam command="load" file="$(find ema_fes_cycling)/config/automated_rasp.yaml" ns="trike"/>
             <node name="interface" pkg="ema_fes_cycling" type="interface_node.py" output="screen" respawn="true" respawn_delay="5"/>
             <node name="display" pkg="ema_fes_cycling" type="display_emulator.py" output="screen" respawn="true" respawn_delay="5"/>
             <!-- <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/> -->
