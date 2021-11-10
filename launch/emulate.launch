@@ -18,8 +18,10 @@ http://wiki.ros.org/roslaunch/XML
         <param name="platform" value="$(arg platform)"/>
         <arg name="display_type" value="lcd" doc="specify display type connected: lcd/oled"/>
         <param name="display_type" value="$(arg display_type)"/>
-        <arg name="emulate" value="imu" doc="specify which emulations to do use: imu/display/both"/>
+        <arg name="emulate" value="none" doc="specify which emulations to do: none/imu/display/both"/>
         <param name="emulate" value="$(arg emulate)"/>
+        <arg name="log_config" value="critical" doc="specify rosbag configurations: off/critical/all"/>
+        <param name="log_config" value="$(arg log_config)"/>
         <!-- <arg name="stimulator/matrix" value="64" doc="specify electrode matrix loop rate"/> -->
         <!-- <param name="stimulator/matrix" value="$(arg stimulator/matrix)"/> -->
 
@@ -30,10 +32,13 @@ http://wiki.ros.org/roslaunch/XML
 
         <!-- launch common nodes -->
         <!-- <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/> -->
-        <!-- <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/> -->
         <node name="trike" pkg="ema_fes_cycling" type="trike_node.py" output="screen" respawn="true" respawn_delay="5"/>
 
         <!-- launch emulation-settings -->
+        <group if="$(eval emulate == 'none')">
+            <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/>
+        </group>
+
         <group if="$(eval emulate == 'imu')">
             <node name="imu_emulator" pkg="ema_fes_cycling" type="imu_emulator.py" output="screen" respawn="true" respawn_delay="5"/>
         </group>
@@ -46,6 +51,22 @@ http://wiki.ros.org/roslaunch/XML
         <group if="$(eval emulate == 'both')">
             <node name="display" pkg="ema_fes_cycling" type="display_emulator.py" output="screen" respawn="true" respawn_delay="5"/>
             <node name="imu_emulator" pkg="ema_fes_cycling" type="imu_emulator.py" output="screen" respawn="true" respawn_delay="5"/>
+        </group>
+
+        <!-- launch log-settings (rosbag) -->
+        <!-- Setting = OFF (no log) -->
+        <group if="$(eval log_config == 'off')">
+        </group>
+
+        <!-- Setting = critical - record speed,cadence,distance,stimsignal,ccl_update -->
+        <group if="$(eval log_config == 'critical')">
+            <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args="/ema/trike/angle /ema/trike/speed /ema/trike/cadence /ema/trike/distance
+                /ema/stimulator/current /ema/stimulator/pulse_width -o $(env HOME)/bagfiles/ema_fes_cycling/ --split --max-splits 12 --duration 5m"/>
+        </group>
+
+        <!-- Setting = all - record all topics -->
+        <group if="$(eval log_config == 'all')">
+            <node name="logger" pkg="rosbag" type="record" respawn="true" respawn_delay="5" args=" -a -o $(env HOME)/bagfiles/ema_fes_cycling/ --split --duration 5m"/>
         </group>
 
         <!-- launch pc-exclusive nodes -->
@@ -61,6 +82,20 @@ http://wiki.ros.org/roslaunch/XML
             <node name="interface" pkg="ema_fes_cycling" type="interface_node.py" output="screen" respawn="true" respawn_delay="5"/>
 
             <group if="$(eval emulate == 'imu')">
+                <node name="button" pkg="ema_fes_cycling" type="button_node.py" output="screen" respawn="true" respawn_delay="5"/>
+
+                <!-- launch lcd-exclusive node -->
+                <group if="$(eval display_type == 'lcd')">
+                    <node name="display" pkg="ema_fes_cycling" type="display_node.py" output="screen" respawn="true" respawn_delay="5"/>
+                </group>
+
+                <!-- launch oled-exclusive node -->
+                <group if="$(eval display_type == 'oled')">
+                    <node name="display" pkg="ema_fes_cycling" type="display_node.py" output="screen" respawn="true" respawn_delay="5"/>
+                </group>
+            </group>
+
+            <group if="$(eval emulate == 'none')">
                 <node name="button" pkg="ema_fes_cycling" type="button_node.py" output="screen" respawn="true" respawn_delay="5"/>
 
                 <!-- launch lcd-exclusive node -->

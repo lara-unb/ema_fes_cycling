@@ -1,7 +1,7 @@
-ch1_angle_max: 15
-ch1_angle_min: 280
-ch2_angle_max: 195
-ch2_angle_min: 100
+ch1_angle_max: 20
+ch1_angle_min: 275
+ch2_angle_max: 200
+ch2_angle_min: 95
 ch3_angle_max: 105
 ch3_angle_min: 30
 ch4_angle_max: 285

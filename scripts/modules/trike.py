@@ -263,18 +263,22 @@ class Trike(object):
                     self.autopw_max_2 = self.config_dict['autoPW_max_2']
                     self.autopw_step = self.config_dict['autoPW_step']
                     self.autopw_on = self.config_dict['autoPW_on']
+                    rospy.loginfo('Set status: Automated PW - PC Platform')
                 else:
                     # Configure automated parameters to Rasp
                     if self.status == 'autopw-CC': # Conventional Racing
                         automated_type = cycling_type[0]
+                        rospy.loginfo('Set status: Automated Pulse Width - Conventional Racing')
                     elif self.status == 'autopw-CM': # Matrix Racing
                         automated_type = cycling_type[1]
+                        rospy.loginfo('Set status: Automated Pulse Width - Matrix Racing')
                     elif self.status == 'autopw-TC': # Conventional Training
                         automated_type = cycling_type[2]
+                        rospy.loginfo('Set status: Automated Pulse Width - Conventional Training')
                     elif self.status == 'autopw-TM': # Matrix Training
                         automated_type = cycling_type[3]
+                        rospy.loginfo('Set status: Automated Pulse Width - Matrix Training')
                     # Load specific automated pw parameters
-                    print(automated_type)
                     self.autopw_tramp_1 = self.config_dict['autoPW_tramp_1'][automated_type]  # 1st ramp phase duration
                     self.autopw_tramp_2 = self.config_dict['autoPW_tramp_2'][automated_type]  # 2nd ramp phase duration
                     self.autopw_tcons_1 = self.config_dict['autoPW_tcons_1'][automated_type]  # 1st constant phase duration
@@ -293,11 +297,11 @@ class Trike(object):
                             self.stim_pw = dict.fromkeys(stim_order,self.stim_pw_max)
                             # Set the starting point for the automatic sequence
                             self.autopw_initial = self.stim_pw_max
-                            print(self.stim_pw_max)
+                            # print(self.stim_pw_max)
                     else:
                         self.autopw_initial = 0
-                        print('Need to specify stim_proportion for this cycling mode')
-                        print('Setting Initial Automated PUlse Width to 0')
+                        rospy.logerr('Set status: Need to specify stim_proportion for this cycling mode')
+                        rospy.logerr('Set status: Setting Initial Automated PUlse Width to 0')
         else:
             raise ValueError
 
