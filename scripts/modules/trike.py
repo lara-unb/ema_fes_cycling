@@ -237,7 +237,7 @@ class Trike(object):
             zero_distance (bool): flag to reset distance
             proportion (dict): check active stim channel using current multipliers (rasp platform).
         """
-        if value in ('off','training','racing','autopw','autopw-CC','autopw-CM','autopw-TC','autopw-TM'):
+        if value in ('off','training','racing','autopw-PC','autopw-CC','autopw-CM','autopw-TC','autopw-TM'):
             if zero_distance:
                 # Reset cycling data
                 self.cycles = self.distance = 0

@@ -18,7 +18,7 @@ http://wiki.ros.org/roslaunch/XML
         <param name="platform" value="$(arg platform)"/>
         <arg name="display_type" value="lcd" doc="specify display type connected: lcd/oled"/>
         <param name="display_type" value="$(arg display_type)"/>
-        <arg name="log_config" value="critical" doc="specify rosbag configurations: off/critical/all"/>
+        <arg name="log_config" value="off" doc="specify rosbag configurations: off/critical/all"/>
         <param name="log_config" value="$(arg log_config)"/>
         
         <!-- load common config files-->
@@ -29,7 +29,7 @@ http://wiki.ros.org/roslaunch/XML
         <!-- launch common nodes -->
         <node name="imu" pkg="yostlabs_3space_imu" type="imu_node.py" output="log" respawn="true" respawn_delay="5"/>
         <node name="stimulator" pkg="hasomed_rehastim_stimulator" type="stimulator_node.py" output="log" respawn="true" respawn_delay="5"/>
-        <node name="trike" pkg="ema_fes_cycling" type="trike_node.py" output="log" respawn="true" respawn_delay="5"/>
+        <node name="trike" pkg="ema_fes_cycling" type="trike_node.py" output="screen" respawn="true" respawn_delay="5"/>
 
         <!-- launch pc-exclusive nodes and load config files-->
         <group if="$(eval platform == 'pc')">

@@ -232,6 +232,13 @@ class TrikeWrapper(object):
         if self.trike.status == 'off':
             self.trike.check_new_cycle()
         else:
+            # if self.time_elapsed == 0:
+            #     rospy.loginfo('No callback delay - set_status_callback started at the right time')
+            if (self.time_elapsed or self.time_start) == None:
+                rospy.logwarn('Callback delay detected - set_status_callback - Variables time_start and time_elapsed = NoneType')
+                rospy.loginfo('Fixing delay - setting time_elapsed = 0 and time_start = rospy.Time.now()')
+                self.time_elapsed = 0
+                self.time_elapsed = rospy.Time.now()
             self.time_elapsed = rospy.Time.now()-self.time_start
             if self.trike.status == 'racing':
                 # Stop after 8 min or 1.2 km
@@ -249,6 +256,7 @@ class TrikeWrapper(object):
                     self.trike.update_autopw_sequence(self.time_elapsed.to_sec())
             flag = ''
             if self.time_elapsed.to_sec() <= 0:
+                rospy.loginfo('Set Status Function Initialized at Correct Time: '+str(self.trike.status))
                 # Don't count distance yet
                 flag = 'distance'
             self.trike.check_new_cycle(ignored=flag)
@@ -377,6 +385,8 @@ class TrikeWrapper(object):
         elif 'autopw' in stat:
             self.time_elapsed = 0
             self.time_start = rospy.Time.now()
+            # rospy.loginfo('set_status_callback: '+str(stat))
+            # rospy.loginfo('Time start before: '+str(self.time_start))
             # Apply default current with proportions for all channels
             self.trike.set_stim_current(value=rospy.get_param('trike/autoPW_current'),
                 proportion=rospy.get_param('trike/stim_proportion'))
