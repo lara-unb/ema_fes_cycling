@@ -38,6 +38,9 @@ qtcreator-*
 /planning/docs
 /planning/src
 
+# visual code settings
+.vscode
+
 *~
 
 # Emacs
@@ -47,3 +50,4 @@ qtcreator-*
 CATKIN_IGNORE
 
 \.idea/
+launch/demo_new.launch

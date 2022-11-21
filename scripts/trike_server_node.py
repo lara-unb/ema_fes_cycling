@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 
@@ -25,18 +25,13 @@ Level identifies each parameter and consists of 5 numbers described here:
     - Next 2: refer to the element/parameter itself
     - Last: refer to the stimulator channel affected
 
-ch12: used with quadriceps (rectus), refers to stimulator channels 1 and 2
-ch34: used with hamstrings, refers to stimulator channels 3 and 4
-ch56: used with gluteal, refers to stimulator channels 5 and 6
-ch78: used with quadriceps (lateral), refers to stimulator channels 7 and 8
-
 """
 
 # # Python 2 and 3 compatibility
-# from __future__ import absolute_import
-# from __future__ import division
-# from __future__ import print_function
-# from builtins import *
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from builtins import *
 
 import rospy
 from ema_fes_cycling.cfg import TrikeServerConfig  # pkgname.cfg, cfgfilenameConfig
@@ -65,11 +60,19 @@ reverse_ref = {
     'shift':             99010,
     'ramp_start':        99013,
     'ramp_end':          99015,
-    'mark_assistance':   99020,
-    'autoC_enable':      99030,
-    'autoC_shift':       99040,
-    'autoC_velocity':    99050,
     'all_link_current':  99060,
+
+
+    'autoPW_initial':    90301,
+    'autoPW_max_1':      90311,
+    'autoPW_tramp_1':    90321,
+    'autoPW_tcons_1':    90331,
+    'autoPW_step_1':     90341,
+    'autoPW_max_2':      90312,
+    'autoPW_tramp_2':    90322,
+    'autoPW_tcons_2':    90332,
+    'autoPW_step_2':     90342,
+    'autoPW_on':         90300,
 
     'ch12_link_current': 12100,
     'ch1_current':       12111,
@@ -190,8 +193,10 @@ def enable_updated(config, item):
         retset.update(current_updated(config, c1))
         retset.update(current_updated(config, c2))
     else:
-        # Show/expand group
-        config['groups']['groups']['ch'+pair]['state'] = True
+        # Check if the automatic sequence is not going on
+        if not config['autoPW_on']:
+            # Show/expand group
+            config['groups']['groups']['ch'+pair]['state'] = True
     return retset
 
 def general_updated(config, item):
@@ -203,6 +208,38 @@ def general_updated(config, item):
     """
     global callback_ref
 
+    callback_ref[item.level]['prev'] = config[item.element]  # Update previous value
+    return set([item.element])
+
+def auto_updated(config, item):
+    """Deal with the automatic pulse width sequence.
+
+    Attributes:
+        config (dict): server dictionary with its parameters
+        item (Param): parameter class instance
+    """
+    global callback_ref
+
+    # No changes allowed when 'autoPW_on'
+    if config['autoPW_on']:
+        if item.element == 'autoPW_on':  # Start the sequence now
+            # Hide/collapse all groups to avoid user intervention
+            for pair in ['12','34','56','78']:
+                config['groups']['groups']['ch'+pair]['state'] = False
+        else:  # Parameters are not changed during the sequence
+            config[item.element] = callback_ref[item.level]['prev']
+            return set()
+    else:  # Automatic sequence deactivated
+        if item.element == 'autoPW_on':
+            # Show/expand all active groups to allow user intervention
+            for pair in ['12','34','56','78']:
+                if config['ch'+pair+'_enable']:
+                    config['groups']['groups']['ch'+pair]['state'] = True
+        elif item.element in ['autoPW_max_1','autoPW_max_2']:
+            # 2nd maximum value has to be >= to the 1st
+            if not (config['autoPW_max_2'] >= config['autoPW_max_1']):
+                config[item.element] = callback_ref[item.level]['prev']
+                return set()
     callback_ref[item.level]['prev'] = config[item.element]  # Update previous value
     return set([item.element])
 
@@ -286,13 +323,13 @@ def current_updated(config, item):
     if config['all_link_current']:
         retset = set([item.element])
         # Get enabled channels
-        active = [i for i in config if 'enable' in i]
+        active = [i for i in config if ('ch' in i) and ('enable' in i)]
         active = [v[2:4] for v in active if config[v]]
         # Ignore if there're no active channels
         if active:
             active = ''.join(active)
             # Find the current minimum
-            value = min([config['ch'+t+'_current'] for t in active])
+            value = min([config['ch'+char+'_current'] for char in active])
             # Prevents the user from abruptly increasing the current
             if (config[item.element]-value) > 2:  # Check for how much it changed
                 config[item.element] = value+2
@@ -324,24 +361,18 @@ def pulse_width_updated(config, item):
     global callback_ref
 
     prev = callback_ref[item.level]['prev']  # Value before update
-    # Prevents the user from abruptly increasing the pulse width
-    if (config[item.element]-prev) > 10:  # Check for how much it changed
-        config[item.element] = prev+10
     callback_ref[item.level]['prev'] = config[item.element]  # Update previous value
     # Modifies the pulse width for all active channels
     if config['all_link_current']:
         retset = set([item.element])
         # Get enabled channels
-        active = [i for i in config if 'enable' in i]
+        active = [i for i in config if ('ch' in i) and ('enable' in i)]
         active = [v[2:4] for v in active if config[v]]
         # Ignore if there're no active channels
         if active:
             active = ''.join(active)
             # Find the pulse width minimum
-            value = min([config['ch'+t+'_pulse_width'] for t in active])
-            # Prevents the user from abruptly increasing the pulse width
-            if (config[item.element]-value) > 10:  # Check for how much it changed
-                config[item.element] = value+10
+            value = min([config['ch'+char+'_pulse_width'] for char in active])
             callback_ref[item.level]['prev'] = config[item.element]  # Update previous value
             active.replace(str(item.channel),'')
             # Change the pulse width for all other active channels
@@ -392,57 +423,64 @@ callback_ref = {
     99010: {'name': 'shift',             'flag': general_updated,      'prev':    10},
     99013: {'name': 'ramp_start',        'flag': general_updated,      'prev':    25},
     99015: {'name': 'ramp_end',          'flag': general_updated,      'prev':    20},
-    99020: {'name': 'mark_assistance',   'flag': general_updated,      'prev': False},
-    99030: {'name': 'autoC_enable',      'flag': general_updated,      'prev': False},
-    99040: {'name': 'autoC_shift',       'flag': general_updated,      'prev':    10},
-    99050: {'name': 'autoC_velocity',    'flag': general_updated,      'prev':    48},
     99060: {'name': 'all_link_current',  'flag': general_updated,      'prev': False},
+
+    90301: {'name': 'autoPW_initial',    'flag': auto_updated,         'prev':     0},
+    90311: {'name': 'autoPW_max_1',      'flag': auto_updated,         'prev':   200},
+    90321: {'name': 'autoPW_tramp_1',    'flag': auto_updated,         'prev':    60},
+    90331: {'name': 'autoPW_tcons_1',    'flag': auto_updated,         'prev':    60},
+    90341: {'name': 'autoPW_step_1',     'flag': auto_updated,         'prev':    50},
+    90312: {'name': 'autoPW_max_2',      'flag': auto_updated,         'prev':   450},
+    90322: {'name': 'autoPW_tramp_2',    'flag': auto_updated,         'prev':    30},
+    90332: {'name': 'autoPW_tcons_2',    'flag': auto_updated,         'prev':    30},
+    90342: {'name': 'autoPW_step_2',     'flag': auto_updated,         'prev':    50},
+    90300: {'name': 'autoPW_on',         'flag': auto_updated,         'prev': False},
 
     12100: {'name': 'ch12_link_current', 'flag': link_current_updated, 'prev':  True},
     12111: {'name': 'ch1_current',       'flag': current_updated,      'prev':     0},
     12112: {'name': 'ch2_current',       'flag': current_updated,      'prev':     0},
-    12121: {'name': 'ch1_pulse_width',   'flag': pulse_width_updated,  'prev':   500},
-    12122: {'name': 'ch2_pulse_width',   'flag': pulse_width_updated,  'prev':   500},
+    12121: {'name': 'ch1_pulse_width',   'flag': pulse_width_updated,  'prev':     0},
+    12122: {'name': 'ch2_pulse_width',   'flag': pulse_width_updated,  'prev':     0},
 
     12200: {'name': 'ch12_link_angle',   'flag': link_angle_updated,   'prev':  True},
     12211: {'name': 'ch1_angle_min',     'flag': angle_updated,        'prev':   275},
     12221: {'name': 'ch1_angle_max',     'flag': angle_updated,        'prev':    20},
-    12212: {'name': 'ch2_angle_min',     'flag': angle_updated,        'prev':    95},
-    12222: {'name': 'ch2_angle_max',     'flag': angle_updated,        'prev':   200},
+    12212: {'name': 'ch2_angle_min',     'flag': angle_updated,        'prev':   275},
+    12222: {'name': 'ch2_angle_max',     'flag': angle_updated,        'prev':    20},
 
     34100: {'name': 'ch34_link_current', 'flag': link_current_updated, 'prev':  True},
     34113: {'name': 'ch3_current',       'flag': current_updated,      'prev':     0},
     34114: {'name': 'ch4_current',       'flag': current_updated,      'prev':     0},
-    34123: {'name': 'ch3_pulse_width',   'flag': pulse_width_updated,  'prev':   500},
-    34124: {'name': 'ch4_pulse_width',   'flag': pulse_width_updated,  'prev':   500},
+    34123: {'name': 'ch3_pulse_width',   'flag': pulse_width_updated,  'prev':     0},
+    34124: {'name': 'ch4_pulse_width',   'flag': pulse_width_updated,  'prev':     0},
 
     34200: {'name': 'ch34_link_angle',   'flag': link_angle_updated,   'prev':  True},
-    34213: {'name': 'ch3_angle_min',     'flag': angle_updated,        'prev':    30},
-    34223: {'name': 'ch3_angle_max',     'flag': angle_updated,        'prev':   105},
-    34214: {'name': 'ch4_angle_min',     'flag': angle_updated,        'prev':   210},
-    34224: {'name': 'ch4_angle_max',     'flag': angle_updated,        'prev':   285},
+    34213: {'name': 'ch3_angle_min',     'flag': angle_updated,        'prev':   275},
+    34223: {'name': 'ch3_angle_max',     'flag': angle_updated,        'prev':    20},
+    34214: {'name': 'ch4_angle_min',     'flag': angle_updated,        'prev':   275},
+    34224: {'name': 'ch4_angle_max',     'flag': angle_updated,        'prev':    20},
 
     56100: {'name': 'ch56_link_current', 'flag': link_current_updated, 'prev':  True},
     56115: {'name': 'ch5_current',       'flag': current_updated,      'prev':     0},
     56116: {'name': 'ch6_current',       'flag': current_updated,      'prev':     0},
-    56125: {'name': 'ch5_pulse_width',   'flag': pulse_width_updated,  'prev':   500},
-    56126: {'name': 'ch6_pulse_width',   'flag': pulse_width_updated,  'prev':   500},
+    56125: {'name': 'ch5_pulse_width',   'flag': pulse_width_updated,  'prev':     0},
+    56126: {'name': 'ch6_pulse_width',   'flag': pulse_width_updated,  'prev':     0},
 
     56200: {'name': 'ch56_link_angle',   'flag': link_angle_updated,   'prev':  True},
-    56215: {'name': 'ch5_angle_min',     'flag': angle_updated,        'prev':    70},
-    56225: {'name': 'ch5_angle_max',     'flag': angle_updated,        'prev':   170},
-    56216: {'name': 'ch6_angle_min',     'flag': angle_updated,        'prev':   250},
-    56226: {'name': 'ch6_angle_max',     'flag': angle_updated,        'prev':   350},
+    56215: {'name': 'ch5_angle_min',     'flag': angle_updated,        'prev':    95},
+    56225: {'name': 'ch5_angle_max',     'flag': angle_updated,        'prev':   200},
+    56216: {'name': 'ch6_angle_min',     'flag': angle_updated,        'prev':    95},
+    56226: {'name': 'ch6_angle_max',     'flag': angle_updated,        'prev':   200},
 
     78100: {'name': 'ch78_link_current', 'flag': link_current_updated, 'prev':  True},
     78117: {'name': 'ch7_current',       'flag': current_updated,      'prev':     0},
     78118: {'name': 'ch8_current',       'flag': current_updated,      'prev':     0},
-    78127: {'name': 'ch7_pulse_width',   'flag': pulse_width_updated,  'prev':   500},
-    78128: {'name': 'ch8_pulse_width',   'flag': pulse_width_updated,  'prev':   500},
+    78127: {'name': 'ch7_pulse_width',   'flag': pulse_width_updated,  'prev':     0},
+    78128: {'name': 'ch8_pulse_width',   'flag': pulse_width_updated,  'prev':     0},
 
     78200: {'name': 'ch78_link_angle',   'flag': link_angle_updated,   'prev':  True},
-    78217: {'name': 'ch7_angle_min',     'flag': angle_updated,        'prev':   275},
-    78227: {'name': 'ch7_angle_max',     'flag': angle_updated,        'prev':    20},
+    78217: {'name': 'ch7_angle_min',     'flag': angle_updated,        'prev':    95},
+    78227: {'name': 'ch7_angle_max',     'flag': angle_updated,        'prev':   200},
     78218: {'name': 'ch8_angle_min',     'flag': angle_updated,        'prev':    95},
     78228: {'name': 'ch8_angle_max',     'flag': angle_updated,        'prev':   200},
 }

@@ -1,0 +1,11 @@
+autopw_on: False
+autoPW_current: 100
+autoPW_init: 0
+autoPW_max_1: 0
+autoPW_max_2: 0
+autoPW_step_1:  0
+autoPW_step_2:  0
+autoPW_tcons_1: 0
+autoPW_tcons_2: 0
+autoPW_tramp_1: 0
+autoPW_tramp_2: 0
