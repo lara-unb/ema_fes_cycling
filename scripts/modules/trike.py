@@ -84,7 +84,8 @@ class Trike(object):
         self.autopw_tcons_2 = 0
         self.autopw_tramp_1 = 0
         self.autopw_tramp_2 = 0
-        self.autopw_step = 0
+        self.autopw_step_1 = 0
+        self.autopw_step_2 = 0
 
     def get_latest_measurements(self):
         """Return latest trike data."""
@@ -253,7 +254,8 @@ class Trike(object):
                     self.stim_pw_max = max([v for k, v in self.stim_pw.items() if k in active])
                     self.stim_pw = dict.fromkeys(stim_order,self.stim_pw_max)
                     # Set the starting point for the automatic sequence
-                    self.autopw_initial = self.stim_pw_max
+                    # self.autopw_initial = self.stim_pw_max
+                    self.autopw_initial = self.config_dict['autoPW_initial']
                     # Configure automated parameters to PC
                     self.autopw_tramp_1 = self.config_dict['autoPW_tramp_1'] # 1st ramp phase duration
                     self.autopw_tramp_2 = self.config_dict['autoPW_tramp_2']
@@ -261,7 +263,8 @@ class Trike(object):
                     self.autopw_tcons_2 = self.config_dict['autoPW_tcons_2']
                     self.autopw_max_1 = self.config_dict['autoPW_max_1']
                     self.autopw_max_2 = self.config_dict['autoPW_max_2']
-                    self.autopw_step = self.config_dict['autoPW_step']
+                    self.autopw_step_1 = self.config_dict['autoPW_step_1']
+                    self.autopw_step_2 = self.config_dict['autoPW_step_2']
                     self.autopw_on = self.config_dict['autoPW_on']
                     rospy.loginfo('Set status: Automated PW - PC Platform')
                 else:
@@ -279,13 +282,15 @@ class Trike(object):
                         automated_type = cycling_type[3]
                         rospy.loginfo('Set status: Automated Pulse Width - Matrix Training')
                     # Load specific automated pw parameters
+                    self.autopw_initial = self.config_dict['autoPW_initial'][automated_type]
                     self.autopw_tramp_1 = self.config_dict['autoPW_tramp_1'][automated_type]  # 1st ramp phase duration
                     self.autopw_tramp_2 = self.config_dict['autoPW_tramp_2'][automated_type]  # 2nd ramp phase duration
                     self.autopw_tcons_1 = self.config_dict['autoPW_tcons_1'][automated_type]  # 1st constant phase duration
                     self.autopw_tcons_2 = self.config_dict['autoPW_tcons_2'][automated_type]  # 2nd constant phase duration
                     self.autopw_max_1 = self.config_dict['autoPW_max_1'][automated_type] # 1st Maximum pulse width
                     self.autopw_max_2 = self.config_dict['autoPW_max_2'][automated_type] # 2nd Maximum pulse width
-                    self.autopw_step = self.config_dict['autoPW_step'][automated_type] # Pulse width change interval - step size
+                    self.autopw_step_1 = self.config_dict['autoPW_step_1'][automated_type] # 1st Pulse width change interval - step size
+                    self.autopw_step_2 = self.config_dict['autoPW_step_2'][automated_type] # 2nd Pulse width change interval - step size
                     self.autopw_on = True
                     # Check if proportion exist
                     if isinstance(proportion, dict):
@@ -390,7 +395,7 @@ class Trike(object):
         initial_pw = self.autopw_initial  # Starting point for the sequence
         time_ramp = self.autopw_tramp_1  # 1st ramp phase duration
         time_cons = self.autopw_tcons_1  # 1st constant phase duration
-        interval = self.autopw_step  # Pulse width change interval - step size
+        interval = self.autopw_step_1  # Pulse width change interval 1 - step size
         period = time_ramp+time_cons  # Cycle period
         # Check if on 2nd sequence or transitioning
         if pw_now >= max_pw:
@@ -403,6 +408,7 @@ class Trike(object):
                 initial_pw = max(self.autopw_max_1,initial_pw)  # Starting point for the sequence
                 time_ramp = self.autopw_tramp_2  # 2nd ramp phase duration
                 time_cons = self.autopw_tcons_2  # 2nd constant phase duration
+                interval = self.autopw_step_2  # Pulse width change interval 2 - step size
                 period = time_ramp+time_cons  # Cycle period
                 elapsed -= duration_1  # Ignore the time spent on 1st sequence
         # Logic behind the sequence phases

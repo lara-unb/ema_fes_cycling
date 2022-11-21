@@ -1,9 +1,10 @@
 autopw_on: False
 autoPW_current: 100
-autoPW_init: 0
+autoPW_init: {racing_conv: 0, racing_matrix: 0, training_conv: 0, training_matrix: 0}
 autoPW_max_1: {racing_conv: 200, racing_matrix: 200, training_conv: 200, training_matrix: 200}
 autoPW_max_2: {racing_conv: 450, racing_matrix: 450, training_conv: 450, training_matrix: 350}
-autoPW_step:  {racing_conv: 10, racing_matrix: 10, training_conv: 10, training_matrix: 25}
+autoPW_step_1:  {racing_conv: 10, racing_matrix: 10, training_conv: 10, training_matrix: 25}
+autoPW_step_2:  {racing_conv: 10, racing_matrix: 10, training_conv: 10, training_matrix: 25}
 autoPW_tcons_1: {racing_conv: 25, racing_matrix: 25, training_conv: 25, training_matrix: 30}
 autoPW_tcons_2: {racing_conv: 25, racing_matrix: 25, training_conv: 25, training_matrix: 15}
 autoPW_tramp_1: {racing_conv: 5, racing_matrix: 5, training_conv: 5, training_matrix: 30}
@@ -16,9 +17,9 @@ autoPW_tramp_2: {racing_conv: 5, racing_matrix: 5, training_conv: 5, training_ma
 # autoPW_max_1   # 1st maximum pulse width
 # autoPW_tramp_1 # 1st ramp phase duration
 # autoPW_tcons_1 # 1st constant phase duration
-# autoPW_step    # Pulse width change interval - step size
+# autoPW_step_1  # 1st Pulse width change interval - step size
 
 # autoPW_max_2   # 2nd maximum pulse width
 # autoPW_tramp_2 # 2nd ramp phase duration
 # autoPW_tcons_2 # 2nd constant phase duration
-
+# autoPW_step_2  # 2nd Pulse width change interval - step size

@@ -14,13 +14,13 @@ http://wiki.ros.org/roslaunch/XML
     <group ns="ema">
 
         <!-- declare and load launch arguments-->
-        <arg name="platform" value="rasp" doc="specify which platform to use: rasp/pc"/>
+        <arg name="platform" value="pc" doc="specify which platform to use: rasp/pc"/>
         <param name="platform" value="$(arg platform)"/>
         <arg name="display_type" value="lcd" doc="specify display type connected: lcd/oled"/>
         <param name="display_type" value="$(arg display_type)"/>
-        <arg name="emulate" value="none" doc="specify which emulations to do: none/imu/display/both"/>
+        <arg name="emulate" value="imu" doc="specify which emulations to do: none/imu/display/both"/>
         <param name="emulate" value="$(arg emulate)"/>
-        <arg name="log_config" value="critical" doc="specify rosbag configurations: off/critical/all"/>
+        <arg name="log_config" value="off" doc="specify rosbag configurations: off/critical/all"/>
         <param name="log_config" value="$(arg log_config)"/>
         <!-- <arg name="stimulator/matrix" value="64" doc="specify electrode matrix loop rate"/> -->
         <!-- <param name="stimulator/matrix" value="$(arg stimulator/matrix)"/> -->
@@ -73,7 +73,7 @@ http://wiki.ros.org/roslaunch/XML
         <group if="$(eval platform == 'pc')">
             <rosparam command="load" file="$(find ema_fes_cycling)/config/automated_pc.yaml" ns="trike"/>
             <node name="trike_config" pkg="ema_fes_cycling" type="trike_server_node.py" output="screen" respawn="true" respawn_delay="5"/>
-            <node name="dashboard" pkg="rqt_gui" type="rqt_gui" output="screen" args="--perspective-file $(find ema_fes_cycling)/perspective/EMA_Trike_Matrix.perspective"/>
+            <node name="dashboard" pkg="rqt_gui" type="rqt_gui" output="screen" args="--perspective-file $(find ema_fes_cycling)/perspective/EMA_Trike_Cadence2.perspective"/>
         </group>
 
         <!-- launch rasp-exclusive nodes -->

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 
@@ -62,13 +62,16 @@ reverse_ref = {
     'ramp_end':          99015,
     'all_link_current':  99060,
 
+
+    'autoPW_initial':    90301,
     'autoPW_max_1':      90311,
     'autoPW_tramp_1':    90321,
     'autoPW_tcons_1':    90331,
+    'autoPW_step_1':     90341,
     'autoPW_max_2':      90312,
     'autoPW_tramp_2':    90322,
     'autoPW_tcons_2':    90332,
-    'autoPW_step':       90340,
+    'autoPW_step_2':     90342,
     'autoPW_on':         90300,
 
     'ch12_link_current': 12100,
@@ -422,13 +425,15 @@ callback_ref = {
     99015: {'name': 'ramp_end',          'flag': general_updated,      'prev':    20},
     99060: {'name': 'all_link_current',  'flag': general_updated,      'prev': False},
 
+    90301: {'name': 'autoPW_initial',    'flag': auto_updated,         'prev':     0},
     90311: {'name': 'autoPW_max_1',      'flag': auto_updated,         'prev':   200},
     90321: {'name': 'autoPW_tramp_1',    'flag': auto_updated,         'prev':    60},
     90331: {'name': 'autoPW_tcons_1',    'flag': auto_updated,         'prev':    60},
+    90341: {'name': 'autoPW_step_1',     'flag': auto_updated,         'prev':    50},
     90312: {'name': 'autoPW_max_2',      'flag': auto_updated,         'prev':   450},
     90322: {'name': 'autoPW_tramp_2',    'flag': auto_updated,         'prev':    30},
     90332: {'name': 'autoPW_tcons_2',    'flag': auto_updated,         'prev':    30},
-    90340: {'name': 'autoPW_step',       'flag': auto_updated,         'prev':    50},
+    90342: {'name': 'autoPW_step_2',     'flag': auto_updated,         'prev':    50},
     90300: {'name': 'autoPW_on',         'flag': auto_updated,         'prev': False},
 
     12100: {'name': 'ch12_link_current', 'flag': link_current_updated, 'prev':  True},
